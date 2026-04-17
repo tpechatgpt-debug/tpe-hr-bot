@@ -306,19 +306,29 @@ function createLeaveCard(emp, imgUrl) {
 
 function leaveRow(icon, label, total, left, color) {
   return {
-    type: 'box', layout: 'horizontal', alignItems: 'center',
+    type: 'box', 
+    layout: 'horizontal', 
+    alignItems: 'center',
     contents: [
-      { type: 'box', layout: 'horizontal', flex: 7, contents: [
-        { type: 'text', text: icon, size: 'xl', flex: 0, margin: 'sm' },
-        { type: 'box', layout: 'vertical', paddingStart: '10px', contents: [
-          { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#333333' },
-          { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' },
-        ]},
-      ]},
-      { type: 'box', layout: 'vertical', flex: 3, alignItems: 'flex-end', contents: [
-        { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color },
-        { type: 'text', text: 'วัน', size: 'xxs', color, offsetTop: '-3px' },
-      ]},
+      { type: 'text', text: icon, size: 'xl', flex: 1 },
+      { 
+        type: 'box', 
+        layout: 'vertical', 
+        flex: 5, 
+        contents: [
+          { type: 'text', text: label, weight: 'bold', color: '#333333' },
+          { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' }
+        ]
+      },
+      { 
+        type: 'text', 
+        text: String(left), 
+        flex: 2, 
+        size: 'xl', 
+        weight: 'bold', 
+        color: color, // ใส่ color ตรงนี้ที่เดียว (เฉพาะ component text)
+        align: 'end' 
+      }
     ]
   };
 }
