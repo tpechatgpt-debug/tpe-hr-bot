@@ -123,7 +123,8 @@ app.post('/send-doc', async (req, res) => {
           type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
           contents: [
             { type: 'text', text: '✅ เอกสารพร้อมแล้วครับ', weight: 'bold', color: '#06C755' },
-            { type: 'text', text: `ประจำเดือน ${data.month || ''}`, size: 'sm', color: '#555', margin: 'sm' },
+            // แก้สีบรรทัดนี้ จาก #555 เป็น #555555
+            { type: 'text', text: `ประจำเดือน ${data.month || ''}`, size: 'sm', color: '#555555', margin: 'sm' },
           ]
         },
         footer: {
@@ -156,8 +157,9 @@ async function handlePayslipRequest(userId, token) {
     contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
       contents: [
         { type: 'text', text: '✅ ส่งคำขอแล้ว', weight: 'bold', size: 'lg', color: '#06C755' },
-        { type: 'text', text: 'สลิปเงินเดือน', size: 'sm', color: '#555', margin: 'sm' },
-        { type: 'text', text: 'HR จะดำเนินการและส่ง PDF กลับมาให้คุณเร็วๆ นี้ครับ', size: 'sm', color: '#888', wrap: true, margin: 'md' },
+        // แก้สี 2 บรรทัดนี้ให้ครบ 6 หลัก
+        { type: 'text', text: 'สลิปเงินเดือน', size: 'sm', color: '#555555', margin: 'sm' },
+        { type: 'text', text: 'HR จะดำเนินการและส่ง PDF กลับมาให้คุณเร็วๆ นี้ครับ', size: 'sm', color: '#888888', wrap: true, margin: 'md' },
       ]
     }}
   });
@@ -180,8 +182,9 @@ async function handleCertRequest(userId, token) {
     contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
       contents: [
         { type: 'text', text: '✅ ส่งคำขอแล้ว', weight: 'bold', size: 'lg', color: '#06C755' },
-        { type: 'text', text: 'ใบรับรองเงินเดือน', size: 'sm', color: '#555', margin: 'sm' },
-        { type: 'text', text: 'HR จะดำเนินการและส่ง PDF กลับมาให้คุณเร็วๆ นี้ครับ', size: 'sm', color: '#888', wrap: true, margin: 'md' },
+        // แก้สี 2 บรรทัดนี้ให้ครบ 6 หลัก
+        { type: 'text', text: 'ใบรับรองเงินเดือน', size: 'sm', color: '#555555', margin: 'sm' },
+        { type: 'text', text: 'HR จะดำเนินการและส่ง PDF กลับมาให้คุณเร็วๆ นี้ครับ', size: 'sm', color: '#888888', wrap: true, margin: 'md' },
       ]
     }}
   });
@@ -333,7 +336,6 @@ function leaveRow(icon, label, total, left, color) {
         flex: 3,
         alignItems: 'flex-end',
         contents: [
-          // ย้าย color มาใส่เฉพาะใน text สองบรรทัดนี้เท่านั้น
           { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color: color }, 
           { type: 'text', text: 'วัน', size: 'xxs', color: color }
         ]
