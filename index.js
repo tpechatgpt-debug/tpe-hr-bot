@@ -337,3 +337,22 @@ async function getProfile(userId) {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`TPE HR Bot running on port ${PORT}`));
+
+// --- ส่วนที่เพิ่มใหม่เพื่อตรวจสอบ Error 400 ---
+app.use((req, res, next) => {
+    // เก็บ log ข้อมูลที่ส่งเข้ามาหาบอท
+    console.log("------------------------------------");
+    console.log("New Request:", req.method, req.url);
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+    next();
+});
+
+// ดักจับ Error ตอนบอทพยายามส่งข้อมูลออกไป
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    if (reason.response) {
+        // นี่คือจุดที่จะบอกว่าทำไม API ถึงส่ง Error 400 กลับมา
+        console.error('API Error Details:', reason.response.data);
+    }
+});
+// ------------------------------------------
