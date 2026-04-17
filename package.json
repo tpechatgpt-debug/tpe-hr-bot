@@ -1,9 +1,11 @@
 {
-  "name": "tpe-hr-bot-v2",
+  "name": "tpe-hr-bot",
   "version": "2.0.0",
-  "description": "TPE HR Bot v2 — Excel payroll integration",
+  "description": "TPE HR Bot v2 - Excel payroll integration",
   "main": "index.js",
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
