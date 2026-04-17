@@ -310,24 +310,33 @@ function leaveRow(icon, label, total, left, color) {
     layout: 'horizontal', 
     alignItems: 'center',
     contents: [
-      { type: 'text', text: icon, size: 'xl', flex: 1 },
-      { 
-        type: 'box', 
-        layout: 'vertical', 
-        flex: 5, 
+      {
+        type: 'box',
+        layout: 'horizontal',
+        flex: 7,
         contents: [
-          { type: 'text', text: label, weight: 'bold', color: '#333333' },
-          { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' }
+          { type: 'text', text: icon, size: 'xl', flex: 0, margin: 'sm' },
+          {
+            type: 'box',
+            layout: 'vertical',
+            paddingStart: '10px',
+            contents: [
+              { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#333333' },
+              { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' }
+            ]
+          }
         ]
       },
-      { 
-        type: 'text', 
-        text: String(left), 
-        flex: 2, 
-        size: 'xl', 
-        weight: 'bold', 
-        color: color, // ใส่ color ตรงนี้ที่เดียว (เฉพาะ component text)
-        align: 'end' 
+      {
+        type: 'box',
+        layout: 'vertical',
+        flex: 3,
+        alignItems: 'flex-end',
+        contents: [
+          // แก้ตรงนี้: ย้าย color มาไว้ใน text เท่านั้น
+          { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color: color }, 
+          { type: 'text', text: 'วัน', size: 'xxs', color: color }
+        ]
       }
     ]
   };
