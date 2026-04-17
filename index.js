@@ -398,7 +398,7 @@ function createLeaveCard(emp, imgUrl) {
           { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'md',
             contents: [
               { type: 'text', text: 'วันลาคงเหลือ', weight: 'bold', color: '#888888', size: 'xs' },
-              leaveRow('🏖️','ลาพักร้อน',  d.vacationTotal,  d.vacationLeft,  '#F39C12'),
+              leaveRow('🏖','ลาพักร้อน',  d.vacationTotal,  d.vacationLeft,  '#F39C12'),
               { type: 'separator', color: '#F0F0F0' },
               leaveRow('🚗','ลากิจ',       d.personalTotal,  d.personalLeft,  '#3498DB'),
               { type: 'separator', color: '#F0F0F0' },
