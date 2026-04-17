@@ -1,8 +1,6 @@
 // payroll.js — อ่านไฟล์ Excel และบันทึก/ดึงข้อมูลเงินเดือน
-const xlrd    = require('xlrd-js') // ใช้ exceljs แทน
-const ExcelJS = require('exceljs');
 const { google } = require('googleapis');
-const path    = require('path');
+const { execSync } = require('child_process');
 const fs      = require('fs');
 
 // ── โครงสร้าง column ของ Sheet "ค่าแรง" ──────────────────
