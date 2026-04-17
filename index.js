@@ -195,8 +195,13 @@ async function handleCertRequest(userId, token) {
 // ── แจ้ง HR พร้อม Flex card + ปุ่มเปิดฟอร์ม ─────────────
 async function notifyHR(requestId, empName, docType, empUserId) {
   const docTypeParam = docType.includes('สลิป') ? 'payslip' : 'certificate';
+  // URL ยังต้อง encode ตามปกติ
   const formUrl = `${FORM_URL}?rid=${encodeURIComponent(requestId)}&type=${docTypeParam}&name=${encodeURIComponent(empName)}&lineId=${encodeURIComponent(empUserId)}`;
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+  // ตัดชื่อให้สั้นลงนิดนึงป้องกันเกินโควต้า และเอา encode ออกสำหรับ postback payload
+  const shortName = empName.length > 30 ? empName.substring(0, 30) : empName;
+  const postbackData = `action=reject&uid=${empUserId}&name=${shortName}&doc=${docType}`;
 
   await push(HR_USER_ID, {
     type: 'flex',
@@ -234,7 +239,7 @@ async function notifyHR(requestId, empName, docType, empUserId) {
           { type: 'button', style: 'primary', color: '#C9952A', height: 'sm',
             action: { type: 'uri', label: 'กรอกข้อมูลและออกเอกสาร', uri: formUrl } },
           { type: 'button', style: 'secondary', height: 'sm',
-            action: { type: 'postback', label: 'ปฏิเสธ', data: `action=reject&requestId=${requestId}&empId=${empUserId}&empName=${encodeURIComponent(empName)}&docType=${encodeURIComponent(docType)}` } },
+            action: { type: 'postback', label: 'ปฏิเสธ', data: postbackData } },
         ]
       }
     }
@@ -246,9 +251,9 @@ async function handlePostback(event) {
   const params = Object.fromEntries(event.postback.data.split('&').map(p => p.split('=')));
   if (params.action !== 'reject') return;
 
-  const empId   = params.empId || '';
-  const empName = decodeURIComponent(params.empName || 'พนักงาน');
-  const docType = decodeURIComponent(params.docType || 'เอกสาร');
+  const empId   = params.uid || '';
+  const empName = params.name || 'พนักงาน';
+  const docType = params.doc || 'เอกสาร';
 
   if (empId) await push(empId, `❌ คำขอ${docType}ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ`);
   await push(event.source.userId, `✅ ปฏิเสธคำขอของ ${empName} แล้ว`);
