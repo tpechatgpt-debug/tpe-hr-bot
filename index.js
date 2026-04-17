@@ -19,6 +19,8 @@ const FORM_URL   = process.env.FORM_URL;
 
 // pending requests: { requestId -> { empName, empLineId, docType, month, token } }
 const pending = {};
+const requestLog = {};  // เก็บประวัติคำขอทั้งหมด
+
 
 app.get('/', (req, res) => res.send('TPE HR Bot v2 OK'));
 
@@ -109,6 +111,7 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
 
   // บันทึก pending request
   pending[requestId] = { empName, empLineId: userId, docType, larkToken };
+  requestLog[requestId] = { empName, empLineId: userId, docType, status: 'pending', time: Date.now() };
 
   // ดึงเดือนที่มีข้อมูล
   const months = await payroll.getAvailableMonths();
@@ -146,6 +149,7 @@ async function handleMonthSelected(userId, month, requestId) {
   }
 
   req.month = month;
+  if (requestLog[requestId]) { requestLog[requestId].month = month; }
   const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
 
   // ยืนยันกับพนักงาน
@@ -242,6 +246,7 @@ async function handlePostback(event) {
     if (empId) await push(empId, `❌ คำขอ${doc}ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ`);
     await push(hrUserId, `✅ ปฏิเสธคำขอของ ${name} แล้ว`);
     delete pending[params.rid];
+    if (requestLog[params.rid]) requestLog[params.rid].status = 'rejected';
     return;
   }
 
@@ -305,6 +310,7 @@ async function handlePostback(event) {
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
       delete pending[params.rid];
+      if (requestLog[params.rid]) requestLog[params.rid].status = 'sent';
 
       // log ลง sheet
       await sheet.log({ ...data, docType: req.docType });
@@ -458,6 +464,69 @@ async function getProfile(userId) {
     return r.data;
   } catch { return null; }
 }
+
+
+// ════════════════════════════════════════════════════════
+// Portal endpoints
+// ════════════════════════════════════════════════════════
+const path = require('path');
+
+app.get('/portal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'portal.html'));
+});
+
+app.get('/portal/stats', async (req, res) => {
+  try {
+    const larkToken = await lark.getToken();
+    const employees = await lark.getAllEmployees(larkToken);
+    const months    = await payroll.getAvailableMonths();
+    const pendCount = Object.keys(pending).length;
+    res.json({
+      employees:   employees.length,
+      pending:     pendCount,
+      latestMonth: months.length ? months[months.length-1] : '—',
+    });
+  } catch(e) {
+    res.json({ employees: 0, pending: 0, latestMonth: '—' });
+  }
+});
+
+app.get('/portal/employees', async (req, res) => {
+  try {
+    const token = await lark.getToken();
+    const emps  = await lark.getAllEmployees(token);
+    res.json(emps.map(e => ({
+      name:     e['ชื่อ - นามสกุล'] || '',
+      position: e['ตำแหน่ง'] || '',
+      lineId:   e['Line ID'] || '',
+    })));
+  } catch(e) {
+    res.json([]);
+  }
+});
+
+app.get('/portal/requests', (req, res) => {
+  const list = Object.entries(requestLog)
+    .sort((a,b) => b[1].time - a[1].time)
+    .slice(0, parseInt(req.query.limit) || 50)
+    .map(([id, r]) => ({
+      name:    r.empName,
+      docType: r.docType,
+      month:   r.month || '—',
+      status:  r.status || 'pending',
+      time:    new Date(r.time).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
+    }));
+  res.json(list);
+});
+
+app.get('/portal/months', async (req, res) => {
+  try {
+    const months = await payroll.getAvailableMonths();
+    res.json(months);
+  } catch(e) {
+    res.json([]);
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`TPE HR Bot v2 on port ${PORT}`));
