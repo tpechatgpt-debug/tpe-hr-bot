@@ -1,3 +1,4 @@
+require('./logger');
 require('dotenv').config();
 const express = require('express');
 const axios   = require('axios');
@@ -346,13 +347,3 @@ app.use((req, res, next) => {
     console.log("Body:", JSON.stringify(req.body, null, 2));
     next();
 });
-
-// ดักจับ Error ตอนบอทพยายามส่งข้อมูลออกไป
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    if (reason.response) {
-        // นี่คือจุดที่จะบอกว่าทำไม API ถึงส่ง Error 400 กลับมา
-        console.error('API Error Details:', reason.response.data);
-    }
-});
-// ------------------------------------------
