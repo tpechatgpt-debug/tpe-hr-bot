@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path     = require('path');
 const express  = require('express');
 const axios    = require('axios');
 const multer   = require('multer');
@@ -469,8 +470,6 @@ async function getProfile(userId) {
 // ════════════════════════════════════════════════════════
 // Portal endpoints
 // ════════════════════════════════════════════════════════
-const path = require('path');
-
 app.get('/portal', (req, res) => {
   res.sendFile(path.join(__dirname, 'portal.html'));
 });
