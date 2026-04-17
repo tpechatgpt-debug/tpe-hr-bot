@@ -1,3 +1,16 @@
+const axios = require('axios');
+axios.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response && err.response.status === 400) {
+      console.log("=== [FOUND 400 ERROR] ===");
+      console.log("URL:", err.config.url);
+      console.log("Response Data:", JSON.stringify(err.response.data, null, 2));
+      console.log("==========================");
+    }
+    throw err;
+  }
+);
 require('./logger');
 require('dotenv').config();
 const express = require('express');
