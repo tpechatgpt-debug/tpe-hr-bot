@@ -259,12 +259,12 @@ function createLeaveCard(emp, imgUrl) {
     vacationLeft:   emp['คงเหลือพักร้อน']   || '0',
     personalTotal:  emp['สิทธิ์ลากิจ']      || '0',
     personalLeft:   emp['คงเหลือลากิจ']     || '0',
-    sickTotal:      emp['สิทธิ์ลาป่วย']     || '0',
-    sickLeft:       emp['คงเหลือลาป่วย']    || '0',
+    sickTotal:      emp['สิทธิ์ลาป่วย']      || '0',
+    sickLeft:       emp['คงเหลือลาป่วย']     || '0',
     birthdayTotal:  emp['สิทธิ์วันเกิด']    || '0',
     birthdayLeft:   emp['คงเหลือลาวันเกิด'] || '0',
-    maternityTotal: emp['สิทธิ์ลาคลอด']     || '0',
-    maternityLeft:  emp['คงเหลือลาคลอด']    || '0',
+    maternityTotal: emp['สิทธิ์ลาคลอด']      || '0',
+    maternityLeft:  emp['คงเหลือลาคลอด']     || '0',
   };
   return {
     type: 'flex', altText: `สรุปวันลาของ ${d.name}`,
@@ -333,7 +333,6 @@ function leaveRow(icon, label, total, left, color) {
         flex: 3,
         alignItems: 'flex-end',
         contents: [
-          // แก้ตรงนี้: ย้าย color มาไว้ใน text เท่านั้น
           { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color: color }, 
           { type: 'text', text: 'วัน', size: 'xxs', color: color }
         ]
@@ -370,9 +369,7 @@ async function getProfile(userId) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`TPE HR Bot running on port ${PORT}`));
 
-// --- ส่วนที่เพิ่มใหม่เพื่อตรวจสอบ Error 400 ---
 app.use((req, res, next) => {
-    // เก็บ log ข้อมูลที่ส่งเข้ามาหาบอท
     console.log("------------------------------------");
     console.log("New Request:", req.method, req.url);
     console.log("Body:", JSON.stringify(req.body, null, 2));
