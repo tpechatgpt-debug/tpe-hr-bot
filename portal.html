@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TPE HR Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#C9952A;--gold-l:#FDF5E8;--gold-d:#8B6914;--navy:#1E3A5F;--navy-l:#EEF4FF;--green:#1B7F4E;--green-l:#E8F5EE;--red:#C0392B;--red-l:#FDEEEC;--bg:#F4F1EC;--surface:#FDFCFA;--border:#E2DAD0;--text:#1a1a1a;--muted:#7A7368}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy)}
+.login-card{background:var(--surface);border-radius:16px;padding:40px 36px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;justify-content:center}
+.logo-sq{width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;line-height:1.2}
+.login-title{font-size:20px;font-weight:700;color:var(--navy)}
+.login-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;display:block}
+.form-input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--gold)}
+.btn-login{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-login:hover{background:#2a4f80}
+.login-err{background:var(--red-l);border:1px solid rgba(192,57,43,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;display:none}
+/* LAYOUT */
+.app{display:none;min-height:100vh;flex-direction:column}
+.topbar{background:var(--navy);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-title{color:#fff;font-size:14px;font-weight:600}
+.topbar-title span{color:var(--gold)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-user{color:rgba(255,255,255,.8);font-size:12px;display:flex;align-items:center;gap:8px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600}
+.btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:5px 12px;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:12px;cursor:pointer}
+.btn-logout:hover{background:rgba(255,255,255,.2)}
+.body{display:flex;flex:1}
+.sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;flex-shrink:0}
+.nav-sep{font-size:10px;color:var(--muted);font-weight:500;padding:8px 10px 4px;letter-spacing:.05em}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:2px;transition:all .1s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.on{background:var(--navy);color:#fff;font-weight:500}
+.nav-item.on .ni{color:var(--gold)}
+.ni{font-size:15px;width:18px;text-align:center}
+.main{flex:1;padding:20px;overflow-y:auto}
+/* PAGES */
+.page{display:none}.page.on{display:block}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat-val{font-size:24px;font-weight:700;color:var(--navy)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--gold);border-radius:10px;padding:32px 20px;text-align:center;background:var(--gold-l);cursor:pointer;transition:all .15s}
+.upload-zone:hover{background:#f5e8cc}
+.upload-zone.drag{background:#f0ddb0;border-color:var(--gold-d)}
+.upload-icon{font-size:36px;margin-bottom:8px}
+.upload-label{font-size:14px;font-weight:600;color:var(--gold-d);margin-bottom:4px}
+.upload-sub{font-size:12px;color:var(--muted)}
+.btn-pick{margin-top:14px;padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-pick:hover{background:#2a4f80}
+.upload-progress{display:none;margin-top:14px}
+.prog-bar{height:8px;background:#e0d8cc;border-radius:4px;overflow:hidden;margin-bottom:6px}
+.prog-fill{height:100%;background:var(--gold);border-radius:4px;width:0%;transition:width .3s}
+.prog-label{font-size:12px;color:var(--muted);text-align:center}
+.upload-result{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;font-size:13px}
+.result-ok{background:var(--green-l);color:var(--green);border:1px solid rgba(27,127,78,.2)}
+.result-err{background:var(--red-l);color:var(--red);border:1px solid rgba(192,57,43,.2)}
+/* REQUEST LIST */
+.req-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.req-item:last-child{border-bottom:none}
+.req-av{width:36px;height:36px;border-radius:50%;background:var(--navy-l);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--navy);flex-shrink:0}
+.req-name{font-size:13px;font-weight:600;color:var(--text)}
+.req-meta{font-size:11px;color:var(--muted);margin-top:1px}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500;margin-left:auto;white-space:nowrap}
+.badge-pend{background:#FEF3C7;color:#92400E}
+.badge-ok{background:var(--green-l);color:var(--green)}
+.badge-rej{background:var(--red-l);color:var(--red)}
+/* BTN */
+.btn{padding:8px 16px;border-radius:7px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{background:#2a4f80}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:var(--gold-d)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-danger{background:var(--red);color:#fff}
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:var(--bg);padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg)}
+/* NOTICE */
+.notice{background:var(--gold-l);border:1px solid rgba(201,149,42,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#5C3D00;margin-bottom:14px}
+/* MONTHS LIST */
+.month-pill{display:inline-block;padding:4px 12px;background:var(--navy-l);border-radius:20px;font-size:12px;color:var(--navy);margin:3px;cursor:pointer;border:1px solid transparent}
+.month-pill:hover{border-color:var(--navy)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-sq"><div>TP</div><div style="font-size:9px">CB</div></div>
+      <div class="login-title">TPE HR Portal</div>
+    </div>
+    <p class="login-sub">เข้าสู่ระบบสำหรับ HR Admin</p>
+    <div class="login-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
+    <div class="form-group">
+      <label class="form-label">รหัสผ่าน</label>
+      <input class="form-input" type="password" id="pwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-sq" style="width:34px;height:34px;font-size:10px"><div>TP</div><div style="font-size:8px">CB</div></div>
+      <div class="topbar-title">TPE <span>HR Portal</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-user"><div class="av">ป</div>ปภัสนันท์ (HR Admin)</div>
+      <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="nav-sep">เมนูหลัก</div>
+      <button class="nav-item on" onclick="gotoPage('overview',this)"><span class="ni">⊞</span> ภาพรวม</button>
+      <button class="nav-item" onclick="gotoPage('upload',this)"><span class="ni">↑</span> อัปโหลดเงินเดือน</button>
+      <button class="nav-item" onclick="gotoPage('employees',this)"><span class="ni">◎</span> รายการพนักงาน</button>
+      <button class="nav-item" onclick="gotoPage('requests',this)"><span class="ni">◷</span> ประวัติคำขอ</button>
+      <div class="nav-sep">จัดการ</div>
+      <button class="nav-item" onclick="gotoPage('months',this)"><span class="ni">📅</span> ข้อมูลเดือน</button>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+      <!-- PAGE: OVERVIEW -->
+      <div class="page on" id="page-overview">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-label">พนักงานทั้งหมด</div>
+            <div class="stat-val" id="statEmp">—</div>
+            <div class="stat-sub">คน</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">คำขอค้างอยู่</div>
+            <div class="stat-val" id="statPend">—</div>
+            <div class="stat-sub">รายการ</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">ข้อมูลล่าสุด</div>
+            <div class="stat-val" id="statMonth" style="font-size:15px;padding-top:6px">—</div>
+            <div class="stat-sub">ในระบบ</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">อัปโหลดไฟล์เงินเดือน</div>
+            <div id="uploadZone2" class="upload-zone" onclick="document.getElementById('fileInput2').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'2')">
+              <div class="upload-icon">📁</div>
+              <div class="upload-label">ลากไฟล์มาวาง หรือเลือกไฟล์</div>
+              <div class="upload-sub">รองรับ .xls และ .xlsx</div>
+              <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput2').click()">เลือกไฟล์</button>
+            </div>
+            <input type="file" id="fileInput2" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'2')">
+            <div class="upload-progress" id="prog2"><div class="prog-bar"><div class="prog-fill" id="progFill2"></div></div><div class="prog-label" id="progLabel2">กำลังอัปโหลด...</div></div>
+            <div class="upload-result" id="result2"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">คำขอล่าสุด</div>
+            <div id="recentList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: UPLOAD -->
+      <div class="page" id="page-upload">
+        <div class="card">
+          <div class="card-title">อัปโหลดไฟล์เงินเดือนรายเดือน</div>
+          <div class="notice">ระบบจะอ่าน Sheet "ค่าแรง" จากไฟล์ Excel แล้วบันทึกลง Google Sheets และ Google Drive อัตโนมัติ</div>
+          <div id="uploadZone1" class="upload-zone" onclick="document.getElementById('fileInput1').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'1')">
+            <div class="upload-icon">📊</div>
+            <div class="upload-label">ลากไฟล์ Excel มาวางที่นี่</div>
+            <div class="upload-sub">ไฟล์เงินเดือนรายเดือน รองรับ .xls และ .xlsx</div>
+            <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput1').click()">เลือกไฟล์</button>
+          </div>
+          <input type="file" id="fileInput1" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'1')">
+          <div class="upload-progress" id="prog1"><div class="prog-bar"><div class="prog-fill" id="progFill1"></div></div><div class="prog-label" id="progLabel1">กำลังอัปโหลด...</div></div>
+          <div class="upload-result" id="result1"></div>
+        </div>
+      </div>
+
+      <!-- PAGE: EMPLOYEES -->
+      <div class="page" id="page-employees">
+        <div class="card">
+          <div class="card-title">
+            รายการพนักงานทั้งหมด
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="empSearch" placeholder="ค้นหาชื่อ..." style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:12px;outline:none;width:160px" oninput="filterEmp()">
+              <button class="btn btn-primary btn-sm" onclick="loadEmployees()">รีโหลด</button>
+            </div>
+          </div>
+          <div id="empTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+        </div>
+      </div>
+
+      <!-- PAGE: REQUESTS -->
+      <div class="page" id="page-requests">
+        <div class="card">
+          <div class="card-title">
+            ประวัติคำขอเอกสาร
+            <button class="btn btn-primary btn-sm" onclick="loadRequests()">รีโหลด</button>
+          </div>
+          <div id="reqTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+        </div>
+      </div>
+
+      <!-- PAGE: MONTHS -->
+      <div class="page" id="page-months">
+        <div class="card">
+          <div class="card-title">
+            ข้อมูลเงินเดือนในระบบ
+            <button class="btn btn-primary btn-sm" onclick="loadMonths()">รีโหลด</button>
+          </div>
+          <div class="notice">แต่ละเดือนที่อัปโหลดจะเก็บในแท็บแยกของ Google Sheets</div>
+          <div id="monthList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://tpe-hr-bot.onrender.com';
+// รหัสผ่านตรวจที่ client (ง่ายสุด — ถ้าต้องการปลอดภัยกว่าให้ตรวจที่ server)
+const PASS = 'tpe2569';
+
+let allEmployees = [];
+
+// ── LOGIN ────────────────────────────────────────
+function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (pw === PASS) {
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    sessionStorage.setItem('hr_auth','1');
+    initApp();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('hr_auth');
+  location.reload();
+}
+
+window.onload = function() {
+  if (sessionStorage.getItem('hr_auth') === '1') {
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  }
+};
+
+// ── INIT ─────────────────────────────────────────
+function initApp() {
+  loadStats();
+  loadRecent();
+}
+
+// ── PAGE NAV ──────────────────────────────────────
+function gotoPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('on'));
+  document.getElementById('page-'+id).classList.add('on');
+  btn.classList.add('on');
+  if (id === 'employees') loadEmployees();
+  if (id === 'requests')  loadRequests();
+  if (id === 'months')    loadMonths();
+}
+
+// ── LOAD STATS ────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(API + '/portal/stats');
+    const d = await r.json();
+    document.getElementById('statEmp').textContent   = d.employees || '—';
+    document.getElementById('statPend').textContent  = d.pending   || '0';
+    document.getElementById('statMonth').textContent = d.latestMonth || '—';
+  } catch(e) {
+    document.getElementById('statEmp').textContent = '—';
+  }
+}
+
+async function loadRecent() {
+  try {
+    const r = await fetch(API + '/portal/requests?limit=5');
+    const list = await r.json();
+    renderRecent(list);
+  } catch(e) {
+    document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+function renderRecent(list) {
+  if (!list || !list.length) {
+    document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ยังไม่มีคำขอ</div>';
+    return;
+  }
+  document.getElementById('recentList').innerHTML = list.map(r =>
+    `<div class="req-item">
+      <div class="req-av">${(r.name||'?').charAt(0)}</div>
+      <div>
+        <div class="req-name">${r.name||'—'}</div>
+        <div class="req-meta">${r.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรอง'} · ${r.month||''}</div>
+      </div>
+      <div class="badge ${r.status === 'sent' ? 'badge-ok' : r.status === 'rejected' ? 'badge-rej' : 'badge-pend'}">${r.status === 'sent' ? 'ส่งแล้ว' : r.status === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ'}</div>
+    </div>`
+  ).join('');
+}
+
+// ── EMPLOYEES ─────────────────────────────────────
+async function loadEmployees() {
+  document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
+  try {
+    const r = await fetch(API + '/portal/employees');
+    allEmployees = await r.json();
+    renderEmployees(allEmployees);
+  } catch(e) {
+    document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ — ตรวจสอบ Render</div>';
+  }
+}
+
+function renderEmployees(list) {
+  if (!list || !list.length) {
+    document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ไม่มีข้อมูล</div>';
+    return;
+  }
+  document.getElementById('empTable').innerHTML = `
+    <table class="tbl">
+      <thead><tr>
+        <th>#</th><th>ชื่อ - นามสกุล</th><th>ตำแหน่ง</th>
+        <th style="text-align:right">Line ID</th>
+      </tr></thead>
+      <tbody>${list.map((e,i) => `
+        <tr>
+          <td style="color:var(--muted)">${i+1}</td>
+          <td><b>${e.name||'—'}</b></td>
+          <td style="color:var(--muted)">${e.position||'—'}</td>
+          <td style="text-align:right;font-size:11px;color:var(--muted);font-family:monospace">${e.lineId ? e.lineId.slice(0,12)+'...' : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function filterEmp() {
+  const q = document.getElementById('empSearch').value.toLowerCase();
+  renderEmployees(allEmployees.filter(e => (e.name||'').toLowerCase().includes(q) || (e.position||'').toLowerCase().includes(q)));
+}
+
+// ── REQUESTS ──────────────────────────────────────
+async function loadRequests() {
+  document.getElementById('reqTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
+  try {
+    const r = await fetch(API + '/portal/requests');
+    const list = await r.json();
+    if (!list.length) {
+      document.getElementById('reqTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ยังไม่มีประวัติ</div>';
+      return;
+    }
+    document.getElementById('reqTable').innerHTML = `
+      <table class="tbl">
+        <thead><tr><th>พนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">สถานะ</th></tr></thead>
+        <tbody>${list.map(r => `
+          <tr>
+            <td><b>${r.name||'—'}</b></td>
+            <td>${r.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรอง'}</td>
+            <td>${r.month||'—'}</td>
+            <td style="font-size:11px;color:var(--muted)">${r.time||'—'}</td>
+            <td style="text-align:right"><span class="badge ${r.status === 'sent' ? 'badge-ok' : r.status === 'rejected' ? 'badge-rej' : 'badge-pend'}">${r.status === 'sent' ? 'ส่งแล้ว' : r.status === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ'}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById('reqTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+// ── MONTHS ────────────────────────────────────────
+async function loadMonths() {
+  document.getElementById('monthList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
+  try {
+    const r = await fetch(API + '/portal/months');
+    const months = await r.json();
+    if (!months.length) {
+      document.getElementById('monthList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ยังไม่มีข้อมูลเดือน</div>';
+      return;
+    }
+    document.getElementById('monthList').innerHTML = `
+      <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">พบข้อมูล ${months.length} เดือน</div>
+      <div>${months.map(m => `<span class="month-pill">${m}</span>`).join('')}</div>`;
+  } catch(e) {
+    document.getElementById('monthList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>';
+  }
+}
+
+// ── UPLOAD ────────────────────────────────────────
+function onDrag(e, over) {
+  e.preventDefault();
+  const zone = e.currentTarget;
+  zone.classList.toggle('drag', over);
+}
+
+function onDrop(e, suffix) {
+  e.preventDefault();
+  document.getElementById('uploadZone'+suffix).classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) doUpload(file, suffix);
+}
+
+function uploadFile(input, suffix) {
+  if (input.files[0]) doUpload(input.files[0], suffix);
+}
+
+async function doUpload(file, suffix) {
+  const prog   = document.getElementById('prog'+suffix);
+  const fill   = document.getElementById('progFill'+suffix);
+  const label  = document.getElementById('progLabel'+suffix);
+  const result = document.getElementById('result'+suffix);
+
+  prog.style.display = 'block';
+  result.style.display = 'none';
+  label.textContent = `กำลังอัปโหลด ${file.name}...`;
+
+  let pct = 0;
+  const timer = setInterval(() => {
+    pct = Math.min(pct + 8, 85);
+    fill.style.width = pct + '%';
+  }, 200);
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('notifyUserId', 'Ud983ff5538b43bb594f479c007cf609c');
+
+    const r = await fetch(API + '/upload-payroll', { method: 'POST', body: form });
+    const d = await r.json();
+
+    clearInterval(timer);
+    fill.style.width = '100%';
+    label.textContent = 'เสร็จสิ้น';
+
+    setTimeout(() => {
+      prog.style.display = 'none';
+      result.className = 'upload-result result-ok';
+      result.style.display = 'block';
+      result.textContent = d.message || '✅ อัปโหลดสำเร็จ ระบบกำลังประมวลผล...';
+      loadStats();
+      loadRecent();
+    }, 500);
+
+  } catch(err) {
+    clearInterval(timer);
+    prog.style.display = 'none';
+    result.className = 'upload-result result-err';
+    result.style.display = 'block';
+    result.textContent = '❌ อัปโหลดไม่สำเร็จ: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>
