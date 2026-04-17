@@ -1,18 +1,14 @@
 {
-  "name": "tpe-hr-bot",
-  "version": "1.0.0",
-  "description": "TPE HR LINE Bot - Render.com",
+  "name": "tpe-hr-bot-v2",
+  "version": "2.0.0",
+  "description": "TPE HR Bot v2 — Excel payroll integration",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
-  },
+  "scripts": { "start": "node index.js" },
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
     "googleapis": "^140.0.0",
-    "puppeteer-core": "^21.0.0",
-    "@sparticuz/chromium": "^123.0.0",
+    "multer": "^1.4.5-lts.1",
     "dotenv": "^16.3.1"
   }
 }
