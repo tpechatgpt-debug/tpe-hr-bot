@@ -333,6 +333,7 @@ function leaveRow(icon, label, total, left, color) {
         flex: 3,
         alignItems: 'flex-end',
         contents: [
+          // ย้าย color มาใส่เฉพาะใน text สองบรรทัดนี้เท่านั้น
           { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color: color }, 
           { type: 'text', text: 'วัน', size: 'xxs', color: color }
         ]
