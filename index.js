@@ -14,7 +14,6 @@ axios.interceptors.response.use(
 require('./logger');
 require('dotenv').config();
 const express = require('express');
-const axios   = require('axios');
 const lark    = require('./lark');
 const payslip = require('./payslip');
 const cert    = require('./certificate');
