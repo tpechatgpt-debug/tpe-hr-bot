@@ -110,14 +110,27 @@ async function saveToGoogleDrive(fileBuffer, filename, mimeType) {
     scopes: ['https://www.googleapis.com/auth/drive'],
   });
   const drive = google.drive({ version: 'v3', auth });
+  const folderId = process.env.PAYROLL_FOLDER_ID || process.env.DRIVE_FOLDER_ID;
 
+  const { Readable } = require('stream');
   const res = await drive.files.create({
+    supportsAllDrives: true,
     requestBody: {
       name: filename,
-      parents: [process.env.PAYROLL_FOLDER_ID || process.env.DRIVE_FOLDER_ID],
+      parents: [folderId],
     },
-    media: { mimeType, body: require('stream').Readable.from([fileBuffer]) },
+    media: { mimeType, body: Readable.from([fileBuffer]) },
   });
+
+  // ให้สิทธิ์อ่านแก่ทุกคน
+  try {
+    await drive.permissions.create({
+      fileId: res.data.id,
+      supportsAllDrives: true,
+      requestBody: { role: 'reader', type: 'anyone' },
+    });
+  } catch(e) {}
+
   return res.data.id;
 }
 
@@ -188,19 +201,23 @@ async function getEmployeePayroll(empName, month) {
   });
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = process.env.LOG_SHEET_ID;
-  const sheetName = `เงินเดือน_${month}`;
+  const sheetName = 'เงินเดือน_' + month;
 
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: `${sheetName}!A:R`,
+      range: "'" + sheetName + "'!A:R",
     });
     const rows = res.data.values || [];
-    const header = rows[0] || [];
-    const target = normName(empName);
+
+    // ตัดตำแหน่งออกจากชื่อ (กรณีมี " (" ต่อท้าย)
+    const cleanName = n => normName((n || '').split('(')[0].split('（')[0]);
+    const target = cleanName(empName);
+
+    console.log('searching for:', target, 'in', sheetName);
 
     for (let i = 1; i < rows.length; i++) {
-      if (normName(rows[i][0]) === target) {
+      if (cleanName(rows[i][0]) === target) {
         const r = rows[i];
         return {
           name: r[0], position: r[1], workDays: r[2], otH: r[3],
