@@ -221,10 +221,10 @@ async function notifyHR(requestId, empName, docType, month, empUserId) {
         contents: [
           { type: 'button', style: 'primary', color: '#1B7F4E', height: 'sm',
             action: { type: 'postback', label: 'อนุมัติ และส่ง PDF',
-              data: `action=approve&rid=${requestId}` } },
+              data: 'A|' + requestId } },
           { type: 'button', style: 'secondary', height: 'sm',
             action: { type: 'postback', label: 'ปฏิเสธ',
-              data: `action=reject&rid=${requestId}&uid=${empUserId}&name=${encodeURIComponent(empName)}&doc=${encodeURIComponent(docType)}` } },
+              data: 'R|' + requestId } },
         ]
       }
     }
@@ -236,26 +236,26 @@ async function notifyHR(requestId, empName, docType, month, empUserId) {
 // ════════════════════════════════════════════════════════
 async function handlePostback(event) {
   const hrUserId = event.source.userId;
-  const params   = Object.fromEntries(
-    event.postback.data.split('&').map(p => {
-      const [k, v] = p.split('=');
-      return [k, decodeURIComponent(v || '')];
-    })
-  );
+  const data = event.postback.data;
 
-  if (params.action === 'reject') {
-    const empId  = params.uid || '';
-    const name   = params.name || 'พนักงาน';
-    const doc    = params.doc || 'เอกสาร';
-    if (empId) await push(empId, `❌ คำขอ${doc}ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ`);
-    await push(hrUserId, `✅ ปฏิเสธคำขอของ ${name} แล้ว`);
-    delete pending[params.rid];
-    if (requestLog[params.rid]) requestLog[params.rid].status = 'rejected';
+  // format ใหม่: 'A|requestId' หรือ 'R|requestId'
+  const action = data.startsWith('A|') ? 'approve' : data.startsWith('R|') ? 'reject' : null;
+  const rid    = action ? data.slice(2) : null;
+
+  if (action === 'reject') {
+    const req = pending[rid] || {};
+    const empId = req.empLineId || '';
+    const name  = req.empName  || 'พนักงาน';
+    const doc   = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+    if (empId) await push(empId, '❌ คำขอ' + doc + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ');
+    await push(hrUserId, '✅ ปฏิเสธคำขอของ ' + name + ' แล้ว');
+    delete pending[rid];
+    if (requestLog[rid]) requestLog[rid].status = 'rejected';
     return;
   }
 
-  if (params.action === 'approve') {
-    const req = pending[params.rid];
+  if (action === 'approve') {
+    const req = pending[rid];
     if (!req) {
       await push(hrUserId, '⚠️ ไม่พบคำขอนี้ อาจดำเนินการไปแล้ว');
       return;
@@ -313,8 +313,8 @@ async function handlePostback(event) {
       });
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
-      delete pending[params.rid];
-      if (requestLog[params.rid]) requestLog[params.rid].status = 'sent';
+      delete pending[rid];
+      if (requestLog[rid]) requestLog[rid].status = 'sent';
 
       // log ลง sheet
       await sheet.log({ ...data, docType: req.docType });
