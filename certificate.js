@@ -65,14 +65,14 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 .footer{border-top:3px solid #555;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#555}
 .footer-contact{display:flex;gap:20px}
 .footer-item{display:flex;align-items:center;gap:5px}
-.footer-qr{width:52px;height:52px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#888}
+
 
 /* WATERMARK */
 .watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-25deg);font-size:80px;font-weight:900;color:#C9952A;opacity:.04;pointer-events:none;white-space:nowrap;letter-spacing:6px}
 </style>
 </head><body>
 <div class="page">
-<div class="watermark">TPCB</div>
+<div class="watermark">Thanaphon Engineering</div>
 
 <!-- HEADER -->
 <div class="header">
@@ -123,7 +123,7 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
     <div class="footer-item">✉ sales@thanaphon.tech</div>
     <div class="footer-item">🌐 https://thanaphon.tech</div>
   </div>
-  <div class="footer-qr">QR</div>
+
 </div>
 
 </div>
