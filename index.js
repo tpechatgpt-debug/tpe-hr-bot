@@ -123,18 +123,26 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
   }
 
   // ส่ง Quick Reply ให้เลือกเดือน
-  const quickItems = months.slice(0, 13).map(m => ({
+  const validMonths = months.filter(m => m && m.trim().length > 0).slice(0, 13);
+  const quickItems = validMonths.map(m => ({
     type: 'action',
     action: {
       type: 'message',
-      label: m,
+      label: m.length > 20 ? m.slice(0, 20) : m,
       text: `เลือกเดือน:${m}:${requestId}`,
     }
   }));
 
+  const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+
+  if (quickItems.length === 0) {
+    await reply(replyToken, `⚠️ ยังไม่มีข้อมูลเงินเดือนในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ`);
+    return;
+  }
+
   await reply(replyToken, {
     type: 'text',
-    text: `📅 ต้องการ${docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน'}เดือนไหนครับ?`,
+    text: `📅 ต้องการ${docLabel}เดือนไหนครับ?`,
     quickReply: { items: quickItems },
   });
 }
@@ -527,5 +535,20 @@ app.get('/portal/months', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`TPE HR Bot v2 on port ${PORT}`));
+const PORT = parseInt(process.env.PORT) || 3000;
+
+function startServer(port) {
+  const srv = app.listen(port, '0.0.0.0', () => {
+    console.log(`TPE HR Bot v2 on port ${port}`);
+  });
+  srv.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`Port ${port} busy, trying ${port + 1}`);
+      srv.close(() => startServer(port + 1));
+    } else {
+      console.error('Server error:', err);
+      process.exit(1);
+    }
+  });
+}
+startServer(PORT);
