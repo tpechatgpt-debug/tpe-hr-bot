@@ -165,19 +165,52 @@ async function htmlToDriveUrl(html, filename) {
   });
   const drive = google.drive({ version: 'v3', auth });
 
+  // สร้าง Google Doc จาก HTML (ไม่ระบุ parent = เก็บใน Drive ของ Service Account)
   const uploaded = await drive.files.create({
-    requestBody: { name: filename, mimeType: 'application/vnd.google-apps.document', parents: [process.env.DRIVE_FOLDER_ID] },
+    requestBody: { name: filename, mimeType: 'application/vnd.google-apps.document' },
     media: { mimeType: 'text/html', body: Readable.from([html]) },
   });
   const fileId = uploaded.data.id;
-  const pdfRes = await drive.files.export({ fileId, mimeType: 'application/pdf' }, { responseType: 'stream' });
+
+  // Export เป็น PDF
+  const pdfRes = await drive.files.export(
+    { fileId, mimeType: 'application/pdf' },
+    { responseType: 'stream' }
+  );
+
+  // สร้างไฟล์ PDF (ไม่ระบุ parent)
   const pdfFile = await drive.files.create({
-    requestBody: { name: filename + '.pdf', mimeType: 'application/pdf', parents: [process.env.DRIVE_FOLDER_ID] },
+    requestBody: { name: filename + '.pdf', mimeType: 'application/pdf' },
     media: { mimeType: 'application/pdf', body: pdfRes.data },
   });
+
+  // ลบ HTML doc
   await drive.files.delete({ fileId });
-  await drive.permissions.create({ fileId: pdfFile.data.id, requestBody: { role: 'reader', type: 'anyone' } });
-  return `https://drive.google.com/file/d/${pdfFile.data.id}/view`;
+
+  // ให้สิทธิ์อ่านแก่ทุกคน
+  await drive.permissions.create({
+    fileId: pdfFile.data.id,
+    requestBody: { role: 'reader', type: 'anyone' },
+  });
+
+  // Transfer ownership ให้ user จริง (ถ้าตั้ง DRIVE_OWNER_EMAIL)
+  if (process.env.DRIVE_OWNER_EMAIL) {
+    try {
+      await drive.files.copy({
+        fileId: pdfFile.data.id,
+        requestBody: {
+          name: filename + '.pdf',
+          parents: [process.env.DRIVE_FOLDER_ID],
+        },
+        supportsAllDrives: true,
+      });
+      await drive.files.delete({ fileId: pdfFile.data.id });
+    } catch(e) {
+      // ถ้า copy ไม่ได้ ใช้ไฟล์เดิม
+    }
+  }
+
+  return 'https://drive.google.com/file/d/' + pdfFile.data.id + '/view';
 }
 
 module.exports = { createFromPayroll, htmlToDriveUrl };
