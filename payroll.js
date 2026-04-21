@@ -164,7 +164,7 @@ async function savePayrollToSheet(month, rows) {
       spreadsheetId: sheetId,
       range: "'" + sheetName + "'!A1",
       valueInputOption: 'USER_ENTERED',
-      resource: { values: [['ชื่อ','ตำแหน่ง','วันทำงาน','OT','ลากิจ','ลาป่วย','พักร้อน','ค่าแรง','ค่าปกติ','OT Pay','เบี้ยเลี้ยง','เบี้ยขยัน','รวมรายได้','หักล่วงหน้า','ปกส.','ภาษี','รวมหัก','เงินสุทธิ']] },
+      resource: { values: [['ชื่อ','ตำแหน่ง','วันทำงาน','วันหยุด','OT','ลากิจ','ลาป่วย','พักร้อน','ไม่รับค่าจ้าง','ลาคลอด','ลาวันเกิด','ค่าแรง','ค่าปกติ','วันหยุดPay','OT Pay','เบี้ยเลี้ยง','เบี้ยขยัน','รวมรายได้','หักล่วงหน้า','กยศ.','ปกส.','ภาษี','หักขาดงาน','หักไม่รับค่าจ้าง','หักอื่น','รวมหัก','เงินสุทธิ']] },
     });
   } else {
     // ลบข้อมูลเดิมออกก่อน (เว้น header) แล้วเขียนใหม่
@@ -176,10 +176,10 @@ async function savePayrollToSheet(month, rows) {
 
   // เพิ่มข้อมูล
   const values = rows.map(r => [
-    r.name, r.position, r.workDays, r.otH,
-    r.leaveP, r.leaveSick, r.leaveVac,
-    r.baseWage, r.basePay, r.otPay, r.allowance, r.bonus,
-    r.totalInc, r.advance, r.soc, r.tax, r.totalDed, r.netPay,
+    r.name, r.position, r.workDays, r.holidayD, r.otH,
+    r.leaveP, r.leaveSick, r.leaveVac, r.leaveNoPay, r.leaveMat, r.leaveBday,
+    r.baseWage, r.basePay, r.holidayPay, r.otPay, r.allowance, r.bonus,
+    r.totalInc, r.advance, r.kot, r.soc, r.tax, r.absentDed, r.noPayDed, r.otherDed, r.totalDed, r.netPay,
   ]);
 
   await sheets.spreadsheets.values.append({
@@ -220,12 +220,11 @@ async function getEmployeePayroll(empName, month) {
       if (cleanName(rows[i][0]) === target) {
         const r = rows[i];
         return {
-          name: r[0], position: r[1], workDays: r[2], otH: r[3],
-          leaveP: r[4], leaveSick: r[5], leaveVac: r[6],
-          baseWage: r[7], basePay: r[8], otPay: r[9],
-          allowance: r[10], bonus: r[11], totalInc: r[12],
-          advance: r[13], soc: r[14], tax: r[15],
-          totalDed: r[16], netPay: r[17], month,
+          name: r[0], position: r[1], workDays: r[2], holidayD: r[3], otH: r[4],
+          leaveP: r[5], leaveSick: r[6], leaveVac: r[7], leaveNoPay: r[8], leaveMat: r[9], leaveBday: r[10],
+          baseWage: r[11], basePay: r[12], holidayPay: r[13], otPay: r[14], allowance: r[15], bonus: r[16],
+          totalInc: r[17], advance: r[18], kot: r[19], soc: r[20], tax: r[21],
+          absentDed: r[22], noPayDed: r[23], otherDed: r[24], totalDed: r[25], netPay: r[26], month,
         };
       }
     }
