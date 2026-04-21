@@ -288,8 +288,11 @@ async function handlePostback(event) {
       // แจ้งก่อนว่ากำลังส่งไฟล์
       await push(req.empLineId, '📄 ' + docLabel + ' เดือน ' + req.month + ' พร้อมแล้วครับ กำลังส่งไฟล์...');
 
-      // ส่ง PDF เป็นไฟล์ใน LINE
+      // ส่ง PDF
+      console.log('step1: creating PDF buffer, size:', pdfBuffer.length);
+      console.log('step2: sending to LINE userId:', req.empLineId);
       await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
+      console.log('step3: sent OK');
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
       delete pending[rid];
