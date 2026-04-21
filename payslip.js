@@ -108,36 +108,44 @@ async function htmlToPdfBuffer(html) {
 
 async function sendPdfToLine(userId, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
+  const FormData   = require('form-data');
 
-  // อัปโหลดไฟล์ขึ้น LINE
+  // สร้าง form-data
+  const form = new FormData();
+  form.append('file', pdfBuffer, {
+    filename:    filename,
+    contentType: 'application/pdf',
+    knownLength: pdfBuffer.length,
+  });
+  form.append('type', 'file');
+
+  // อัปโหลดขึ้น LINE
   const uploadRes = await axios.post(
-    'https://api-data.line.me/v2/bot/upload/multipart',
-    pdfBuffer,
+    'https://api-data.line.me/v2/bot/message/upload/multipart',
+    form,
     {
       headers: {
         'Authorization': 'Bearer ' + LINE_TOKEN,
-        'Content-Type': 'application/pdf',
-        'Content-Length': pdfBuffer.length,
+        ...form.getHeaders(),
       }
     }
   );
 
-  const messageId = uploadRes.data.messageId;
+  const msgId = uploadRes.data.messageId;
 
-  // ส่ง file message
+  // ส่งให้พนักงาน
   await axios.post(
     'https://api.line.me/v2/bot/message/push',
     {
       to: userId,
       messages: [{
-        type: 'file',
-        originalContentUrl: 'https://api-data.line.me/v2/bot/message/' + messageId + '/content',
-        previewImageUrl:    'https://api-data.line.me/v2/bot/message/' + messageId + '/content/preview',
-        fileName: filename,
+        type:     'file',
         fileSize: pdfBuffer.length,
+        fileName: filename,
+        originalContentUrl: 'https://api-data.line.me/v2/bot/message/' + msgId + '/content',
       }]
     },
-    { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN } }
+    { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
   );
 }
 
