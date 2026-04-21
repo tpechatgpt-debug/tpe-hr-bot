@@ -274,45 +274,22 @@ async function handlePostback(event) {
       }
 
       // สร้าง PDF
-      let pdfUrl;
+      const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+      const safeName = req.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
+      const filename  = docLabel + '_' + safeName + '_' + req.month + '.pdf';
+
+      let pdfBuffer;
       if (req.docType === 'payslip') {
-        pdfUrl = await payslip.createFromPayroll(data);
+        pdfBuffer = await payslip.createFromPayroll(data);
       } else {
-        pdfUrl = await cert.createFromPayroll(data);
+        pdfBuffer = await cert.createFromPayroll(data);
       }
 
-      const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+      // แจ้งก่อนว่ากำลังส่งไฟล์
+      await push(req.empLineId, '📄 ' + docLabel + ' เดือน ' + req.month + ' พร้อมแล้วครับ กำลังส่งไฟล์...');
 
-      // ส่งให้พนักงาน
-      await push(req.empLineId, {
-        type: 'flex',
-        altText: `${docLabel} ${req.month} พร้อมแล้ว`,
-        contents: {
-          type: 'bubble',
-          header: {
-            type: 'box', layout: 'vertical',
-            backgroundColor: '#1E3A5F', paddingAll: '16px',
-            contents: [
-              { type: 'text', text: `📄 ${docLabel}`, color: '#ffffff', weight: 'bold' },
-              { type: 'text', text: req.empName, color: '#B8D4F0', size: 'sm', margin: 'xs' },
-            ]
-          },
-          body: {
-            type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
-            contents: [
-              { type: 'text', text: '✅ เอกสารพร้อมแล้วครับ', weight: 'bold', color: '#06C755' },
-              { type: 'text', text: `ประจำเดือน ${req.month}`, size: 'sm', color: '#555555', margin: 'sm' },
-            ]
-          },
-          footer: {
-            type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px',
-            contents: [
-              { type: 'button', style: 'primary', color: '#1E3A5F', height: 'sm',
-                action: { type: 'uri', label: 'เปิด PDF', uri: pdfUrl } },
-            ]
-          }
-        }
-      });
+      // ส่ง PDF เป็นไฟล์ใน LINE
+      await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
       delete pending[rid];
