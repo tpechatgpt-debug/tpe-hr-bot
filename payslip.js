@@ -1,4 +1,5 @@
 const axios   = require('axios');
+const pdfStore = {}; // เก็บ PDF buffer ชั่วคราว
 const { Readable } = require('stream');
 
 async function createFromPayroll(d) {
@@ -108,47 +109,16 @@ async function htmlToPdfBuffer(html) {
 
 async function sendPdfToLine(userId, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
+  const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
 
-  // LINE ไม่รองรับ push file โดยตรง
-  // ใช้ Google Drive เพื่อสร้าง temporary link แทน
-  const { google } = require('googleapis');
-  const { Readable } = require('stream');
+  // เก็บ PDF ใน memory พร้อม token สุ่ม
+  const token   = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
-    scopes: ['https://www.googleapis.com/auth/drive'],
-  });
-  const drive = google.drive({ version: 'v3', auth });
+  const pdfUrl = RENDER_URL + '/pdf/' + token;
+  console.log('sendPdf: serving at', pdfUrl);
 
-  // อัปโหลด PDF ลง Drive ของ Service Account
-  console.log('sendPdf: uploading to Drive, buffer size:', pdfBuffer.length);
-  let file;
-  try {
-    file = await drive.files.create({
-    requestBody: { name: filename, mimeType: 'application/pdf' },
-    media: { mimeType: 'application/pdf', body: Readable.from([pdfBuffer]) },
-    });
-  } catch(e) {
-    throw new Error('Drive upload failed: ' + e.message);
-  }
-  const fileId = file.data.id;
-  console.log('sendPdf: uploaded fileId:', fileId);
-
-  // ให้สิทธิ์อ่านชั่วคราว
-  try {
-  await drive.permissions.create({
-    fileId,
-    requestBody: { role: 'reader', type: 'anyone' },
-  });
-  } catch(e) {
-    throw new Error('Drive permission failed: ' + e.message);
-  }
-
-  const pdfUrl = 'https://drive.google.com/file/d/' + fileId + '/view';
-
-  console.log('sendPdf: pdfUrl:', pdfUrl);
-  // ส่ง flex message พร้อม link
-  try {
+  // ส่ง flex message พร้อม link ดาวน์โหลด
   await axios.post(
     'https://api.line.me/v2/bot/message/push',
     {
@@ -162,14 +132,15 @@ async function sendPdfToLine(userId, pdfBuffer, filename) {
             type: 'box', layout: 'vertical',
             backgroundColor: '#1E3A5F', paddingAll: '14px',
             contents: [
-              { type: 'text', text: 'เอกสารพร้อมแล้วครับ', color: '#ffffff', weight: 'bold', size: 'md' },
+              { type: 'text', text: 'เอกสารพร้อมแล้วครับ', color: '#ffffff', weight: 'bold' },
               { type: 'text', text: filename, color: '#B8D4F0', size: 'xs', margin: 'xs', wrap: true },
             ]
           },
           body: {
             type: 'box', layout: 'vertical', paddingAll: '14px',
             contents: [
-              { type: 'text', text: 'กดปุ่มด้านล่างเพื่อเปิดและดาวน์โหลด PDF ครับ', size: 'sm', color: '#555555', wrap: true },
+              { type: 'text', text: 'กดปุ่มด้านล่างเพื่อเปิดและดาวน์โหลด PDF ได้เลยครับ', size: 'sm', color: '#555', wrap: true },
+              { type: 'text', text: 'ลิงก์ใช้ได้ 1 ชั่วโมงครับ', size: 'xs', color: '#aaa', margin: 'sm' },
             ]
           },
           footer: {
@@ -184,20 +155,15 @@ async function sendPdfToLine(userId, pdfBuffer, filename) {
     },
     { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
   );
-  } catch(e) {
-    throw new Error('LINE push failed: ' + e.response?.data?.message + ' | ' + e.message);
-  }
-  console.log('sendPdf: LINE push OK');
 
-  // ลบไฟล์หลังส่งแล้ว 24 ชม. (optional - ใช้ setTimeout)
-  setTimeout(async () => {
-    try { await drive.files.delete({ fileId }); } catch(e) {}
-  }, 24 * 60 * 60 * 1000);
+  // ลบหลัง 1 ชั่วโมง
+  setTimeout(() => { delete pdfStore[token]; }, 60 * 60 * 1000);
 }
+
 
 // ใช้โดย certificate.js
 async function htmlToDriveUrl(html, filename) {
   return await htmlToPdfBuffer(html);
 }
 
-module.exports = { createFromPayroll, htmlToPdfBuffer, htmlToDriveUrl, sendPdfToLine };
+module.exports = { createFromPayroll, htmlToPdfBuffer, htmlToDriveUrl, sendPdfToLine, pdfStore };
