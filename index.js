@@ -450,6 +450,21 @@ async function getProfile(userId) {
 
 
 // ════════════════════════════════════════════════════════
+// PDF download endpoint
+// ════════════════════════════════════════════════════════
+app.get('/pdf/:token', (req, res) => {
+  const store = payslip.pdfStore;
+  const entry = store[req.params.token];
+  if (!entry) {
+    return res.status(404).send('ไฟล์หมดอายุหรือไม่พบ');
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + encodeURIComponent(entry.filename) + '"');
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.send(entry.buffer);
+});
+
+// ════════════════════════════════════════════════════════
 // Portal endpoints
 // ════════════════════════════════════════════════════════
 app.get('/portal', (req, res) => {
