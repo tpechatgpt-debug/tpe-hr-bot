@@ -1,6 +1,6 @@
-const axios   = require('axios');
-const pdfStore = {}; // เก็บ PDF buffer ชั่วคราว
+const axios    = require('axios');
 const { Readable } = require('stream');
+const pdfStore = {};
 
 async function createFromPayroll(d) {
   const fmt  = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
@@ -10,6 +10,7 @@ async function createFromPayroll(d) {
   const totalInc = n(d.totalInc);
   const totalDed = n(d.totalDed);
   const netPay   = n(d.netPay);
+  const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
@@ -50,12 +51,12 @@ tr:nth-child(even) td{background:#FDFAF4}
   </div>
   <div class="header-right">
     <div class="period-label">รอบเงินเดือน</div>
-    <div class="period-value">\${d.month||''}</div>
+    <div class="period-value">${d.month || ''}</div>
   </div>
 </div>
 <div class="emp-row">
-  <div class="emp-item"><span>ชื่อ - นามสกุล : </span><b>\${d.name}</b></div>
-  <div class="emp-item"><span>ตำแหน่ง : </span><b>\${d.position||'—'}</b></div>
+  <div class="emp-item"><span>ชื่อ - นามสกุล : </span><b>${d.name}</b></div>
+  <div class="emp-item"><span>ตำแหน่ง : </span><b>${d.position || '—'}</b></div>
 </div>
 <div class="table-wrap">
   <div class="sec-hdr"><div class="sl">รายการเงินได้</div><div>รายการเงินหัก</div></div>
@@ -66,25 +67,25 @@ tr:nth-child(even) td{background:#FDFAF4}
       <th style="width:17%">รายการเงินหัก</th><th style="width:7%">จำนวน</th><th style="width:15%">จำนวนเงิน</th>
     </tr></thead>
     <tbody>
-      <tr><td>วันทำงานปกติ</td><td class="c">\${fmtN(d.workDays)}</td><td class="n">\${fmt(d.basePay)}</td><td>ลาพักร้อน</td><td class="c">\${fmtN(d.leaveVac)}</td><td>หักเบิกล่วงหน้า</td><td class="c">\${n(d.advance)>0?'1':''}</td><td class="n">\${zero(d.advance)}</td></tr>
-      <tr><td>ทำงานวันหยุด</td><td class="c">\${fmtN(d.holidayD)}</td><td class="n">\${zero(d.holidayPay)}</td><td>ลากิจ</td><td class="c">\${fmtN(d.leaveP)}</td><td>หักประกันสังคม</td><td class="c">\${n(d.soc)>0?'1':''}</td><td class="n">\${fmt(d.soc)}</td></tr>
-      <tr><td>ทำงานล่วงเวลา</td><td class="c">\${fmtN(d.otH)}</td><td class="n">\${zero(d.otPay)}</td><td>ลาป่วย</td><td class="c">\${fmtN(d.leaveSick)}</td><td>หัก ณ ที่จ่าย</td><td class="c">\${n(d.tax)>0?'1':''}</td><td class="n">\${zero(d.tax)}</td></tr>
-      <tr><td>เบี้ยเลี้ยง</td><td class="c">\${n(d.allowance)>0?'1':''}</td><td class="n">\${zero(d.allowance)}</td><td>ลาไม่รับค่าจ้าง</td><td class="c">\${fmtN(d.leaveNoPay)}</td><td>หักขาดงาน</td><td class="c">\${n(d.absentDed)>0?'1':''}</td><td class="n">\${zero(d.absentDed)}</td></tr>
-      <tr><td>เบี้ยขยัน</td><td class="c">\${n(d.bonus)>0?'1':''}</td><td class="n">\${zero(d.bonus)}</td><td>ลาคลอด</td><td class="c">\${fmtN(d.leaveMat)}</td><td>หักกยศ.</td><td class="c">\${n(d.kot)>0?'1':''}</td><td class="n">\${n(d.kot)>0?fmt(d.kot):'-'}</td></tr>
-      <tr><td>อื่นๆ</td><td></td><td class="n">\${zero(d.otherInc)}</td><td>ลาวันเกิด</td><td class="c">\${fmtN(d.leaveBday)}</td><td>อื่นๆ</td><td></td><td class="n">\${zero(d.otherDed)}</td></tr>
-      <tr class="tot"><td colspan="2" style="text-align:right">รวมรายได้</td><td class="n">\${fmt(totalInc)}</td><td colspan="2"></td><td style="text-align:right">รวมเงินหัก</td><td></td><td class="n">\${fmt(totalDed)}</td></tr>
-      <tr class="net"><td colspan="6">เงินเดือนสุทธิ/บาท</td><td colspan="2" class="r">\${fmt(netPay)}</td></tr>
+      <tr><td>วันทำงานปกติ</td><td class="c">${fmtN(d.workDays)}</td><td class="n">${fmt(d.basePay)}</td><td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td><td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td></tr>
+      <tr><td>ทำงานวันหยุด</td><td class="c">${fmtN(d.holidayD)}</td><td class="n">${zero(d.holidayPay)}</td><td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td><td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td></tr>
+      <tr><td>ทำงานล่วงเวลา</td><td class="c">${fmtN(d.otH)}</td><td class="n">${zero(d.otPay)}</td><td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td><td>หัก ณ ที่จ่าย</td><td class="c">${n(d.tax)>0?'1':''}</td><td class="n">${zero(d.tax)}</td></tr>
+      <tr><td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td><td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay)}</td><td>หักขาดงาน</td><td class="c">${n(d.absentDed)>0?'1':''}</td><td class="n">${zero(d.absentDed)}</td></tr>
+      <tr><td>เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td><td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat)}</td><td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${n(d.kot)>0?fmt(d.kot):'-'}</td></tr>
+      <tr><td>อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td><td>ลาวันเกิด</td><td class="c">${fmtN(d.leaveBday)}</td><td>อื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td></tr>
+      <tr class="tot"><td colspan="2" style="text-align:right">รวมรายได้</td><td class="n">${fmt(totalInc)}</td><td colspan="2"></td><td style="text-align:right">รวมเงินหัก</td><td></td><td class="n">${fmt(totalDed)}</td></tr>
+      <tr class="net"><td colspan="6">เงินเดือนสุทธิ/บาท</td><td colspan="2" class="r">${fmt(netPay)}</td></tr>
     </tbody>
   </table>
 </div>
-<div style="margin-top:5px;font-size:9px;color:#aaa;text-align:right">สร้างโดยระบบ HR อัตโนมัติ | \${new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok'})}</div>
+<div style="margin-top:5px;font-size:9px;color:#aaa;text-align:right">สร้างโดยระบบ HR อัตโนมัติ | ${now}</div>
 </body></html>`;
 
   return await htmlToPdfBuffer(html);
 }
 
 async function htmlToPdfBuffer(html) {
-  const chromium = require('@sparticuz/chromium');
+  const chromium  = require('@sparticuz/chromium');
   const puppeteer = require('puppeteer-core');
 
   const browser = await puppeteer.launch({
@@ -111,57 +112,27 @@ async function sendPdfToLine(userId, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
   const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
 
-  // เก็บ PDF ใน memory พร้อม token สุ่ม
-  const token   = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
   pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
 
   const pdfUrl = RENDER_URL + '/pdf/' + token;
   console.log('sendPdf: serving at', pdfUrl);
 
-  // ส่ง flex message พร้อม link ดาวน์โหลด
   await axios.post(
     'https://api.line.me/v2/bot/message/push',
     {
       to: userId,
       messages: [{
-        type: 'flex',
-        altText: filename + ' พร้อมแล้ว',
-        contents: {
-          type: 'bubble',
-          header: {
-            type: 'box', layout: 'vertical',
-            backgroundColor: '#1E3A5F', paddingAll: '14px',
-            contents: [
-              { type: 'text', text: 'เอกสารพร้อมแล้วครับ', color: '#ffffff', weight: 'bold' },
-              { type: 'text', text: filename, color: '#B8D4F0', size: 'xs', margin: 'xs', wrap: true },
-            ]
-          },
-          body: {
-            type: 'box', layout: 'vertical', paddingAll: '14px',
-            contents: [
-              { type: 'text', text: 'กดปุ่มด้านล่างเพื่อเปิดและดาวน์โหลด PDF ได้เลยครับ', size: 'sm', color: '#555', wrap: true },
-              { type: 'text', text: 'ลิงก์ใช้ได้ 1 ชั่วโมงครับ', size: 'xs', color: '#aaa', margin: 'sm' },
-            ]
-          },
-          footer: {
-            type: 'box', layout: 'vertical', paddingAll: '10px',
-            contents: [
-              { type: 'button', style: 'primary', color: '#1E3A5F', height: 'sm',
-                action: { type: 'uri', label: 'เปิด / ดาวน์โหลด PDF', uri: pdfUrl } },
-            ]
-          }
-        }
+        type: 'text',
+        text: 'PDF พร้อมแล้วครับ กดลิงก์เพื่อเปิด/ดาวน์โหลด (ลิงก์ใช้ได้ 1 ชั่วโมง)\n\n' + pdfUrl,
       }]
     },
     { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
   );
 
-  // ลบหลัง 1 ชั่วโมง
   setTimeout(() => { delete pdfStore[token]; }, 60 * 60 * 1000);
 }
 
-
-// ใช้โดย certificate.js
 async function htmlToDriveUrl(html, filename) {
   return await htmlToPdfBuffer(html);
 }
