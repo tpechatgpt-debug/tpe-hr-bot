@@ -207,7 +207,7 @@ async function getEmployeePayroll(empName, month) {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: "'" + sheetName + "'!A:R",
+      range: "'" + sheetName + "'!A:AB",
     });
     const rows = res.data.values || [];
 
