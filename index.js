@@ -109,7 +109,9 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
     await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ');
     return;
   }
-  const empName = payroll.normName(emp['ชื่อ - นามสกุล'] || 'พนักงาน');
+  // ใช้เฉพาะชื่อจริง ตัด "(ตำแหน่ง)" ออก
+  const rawName  = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || 'พนักงาน';
+  const empName  = payroll.normName(rawName.split('(')[0].split('（')[0]);
   const requestId = (docType === 'payslip' ? 'PAY' : 'CERT') + '_' + userId + '_' + Date.now();
 
   // บันทึก pending request
