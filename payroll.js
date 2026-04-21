@@ -135,14 +135,16 @@ async function saveToGoogleDrive(fileBuffer, filename, mimeType) {
 }
 
 // ── บันทึกลง Google Sheets ────────────────────────────────
-async function savePayrollToSheet(month, rows) {
+async function savePayrollToSheet(month, rows, payType) {
+  // payType: 'monthly' | 'daily' (default: monthly)
   const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = process.env.LOG_SHEET_ID;
-  const sheetName = 'เงินเดือน_' + month;
+  const prefix = (payType === 'daily') ? 'เงินเดือนรายวัน_' : 'เงินเดือน_';
+  const sheetName = prefix + month;
 
   // ตรวจว่า sheet มีอยู่แล้วไหม
   let sheetExists = false;
@@ -195,14 +197,15 @@ async function savePayrollToSheet(month, rows) {
 }
 
 // ── ดึงข้อมูลเงินเดือนของพนักงาน 1 คน จาก Sheet ──────────
-async function getEmployeePayroll(empName, month) {
+async function getEmployeePayroll(empName, month, payType) {
   const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = process.env.LOG_SHEET_ID;
-  const sheetName = 'เงินเดือน_' + month;
+  const prefix = (payType === 'daily') ? 'เงินเดือนรายวัน_' : 'เงินเดือน_';
+  const sheetName = prefix + month;
 
   try {
     const res = await sheets.spreadsheets.values.get({
