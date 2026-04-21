@@ -95,7 +95,7 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 
 <div class="doc-no">${docNo}</div>
 
-<div class="doc-title">หนังสือรับรองค่าจ้าง</div>
+<div class="doc-title">หนังสือรับรองเงินเดือน</div>
 
 <p class="body-para">
   หนังสือฉบับนี้ให้ไว้เพื่อรับรองว่า <span class="hl">${d.name}</span>
@@ -116,7 +116,7 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 <div class="sign-area">
   <div class="sign-box">
     <div class="sign-dots">ลงชื่อ............................................รับรอง</div>
-    <div class="sign-name">(นางสาวปภัสนันท์ เรืองฤทธิ์วรรณ)</div>
+    <div class="sign-name">(ปภัสสนันท์ เรืองฤทธิวรรณ)</div>
     <div class="sign-pos">ตำแหน่ง เจ้าหน้าที่ทรัพยากรมนุษย์</div>
   </div>
 </div>
