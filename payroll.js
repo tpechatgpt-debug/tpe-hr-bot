@@ -60,70 +60,48 @@ async function parseExcel(filePath) {
 }
 
 function parseXls(filePath) {
-  // ใช้ xlrd ผ่าน child_process
   return new Promise((resolve, reject) => {
-    const { execSync } = require('child_process');
-    const script = `
-import xlrd, json, sys
-wb = xlrd.open_workbook('${filePath}')
-sh = wb.sheet_by_name('ค่าแรง')
-month = str(sh.cell_value(1, 1))
-rows = []
-for r in range(3, sh.nrows):
-    name = str(sh.cell_value(r, 1)).strip()
-    if not name or name == '': continue
-    rows.append({
-        'name': name,
-        'position': str(sh.cell_value(r, 2)).strip(),
-        'workDays':   sh.cell_value(r, 3),
-        'holidayD':   sh.cell_value(r, 4),
-        'otH':        sh.cell_value(r, 5),
-        'leaveP':     sh.cell_value(r, 6),
-        'leaveSick':  sh.cell_value(r, 7),
-        'absent':     sh.cell_value(r, 8),
-        'leaveVac':   sh.cell_value(r, 9),
-        'leaveNoPay': sh.cell_value(r, 10),
-        'leaveMat':   sh.cell_value(r, 11),
-        'leaveBday':  sh.cell_value(r, 12),
-        'late':       sh.cell_value(r, 13),
-        'baseWage':   sh.cell_value(r, 14),
-        'basePay':    sh.cell_value(r, 15),
-        'holidayPay': sh.cell_value(r, 16),
-        'otPay':      sh.cell_value(r, 17),
-        'allowance':  sh.cell_value(r, 18),
-        'bonus':      sh.cell_value(r, 19)+sh.cell_value(r, 20)+sh.cell_value(r, 21)+sh.cell_value(r, 22)+sh.cell_value(r, 23),
-        'otherInc':   sh.cell_value(r, 24),
-        'totalInc':   sh.cell_value(r, 25),
-        'advance':    sh.cell_value(r, 26),
-        'kot':        sh.cell_value(r, 27),
-        'soc':        sh.cell_value(r, 28),
-        'tax':        sh.cell_value(r, 29),
-        'absentDed':  sh.cell_value(r, 30),
-        'noPayDed':   sh.cell_value(r, 31),
-        'otherDed':   sh.cell_value(r, 32),
-        'totalDed':   sh.cell_value(r, 33),
-        'netPay':     sh.cell_value(r, 34),
-    })
-print(json.dumps({'month': month, 'rows': rows}, ensure_ascii=False))
-`;
+    const lines = [
+      "import xlrd, json",
+      "wb = xlrd.open_workbook('" + filePath + "')",
+      "sh = wb.sheet_by_name('\u0e04\u0e48\u0e32\u0e41\u0e23\u0e07')",
+      "month = str(sh.cell_value(1, 1))",
+      "rows = []",
+      "for r in range(3, sh.nrows):",
+      "    name = str(sh.cell_value(r, 1)).strip()",
+      "    if not name: continue",
+      "    rows.append({'name':name,'position':str(sh.cell_value(r,2)).strip(),",
+      "        'workDays':sh.cell_value(r,3),'holidayD':sh.cell_value(r,4),",
+      "        'otH':sh.cell_value(r,5),'leaveP':sh.cell_value(r,6),",
+      "        'leaveSick':sh.cell_value(r,7),'absent':sh.cell_value(r,8),",
+      "        'leaveVac':sh.cell_value(r,9),'leaveNoPay':sh.cell_value(r,10),",
+      "        'leaveMat':sh.cell_value(r,11),'leaveBday':sh.cell_value(r,12),",
+      "        'late':sh.cell_value(r,13),'baseWage':sh.cell_value(r,14),",
+      "        'basePay':sh.cell_value(r,15),'holidayPay':sh.cell_value(r,16),",
+      "        'otPay':sh.cell_value(r,17),'allowance':sh.cell_value(r,18),",
+      "        'bonus':sh.cell_value(r,19)+sh.cell_value(r,20)+sh.cell_value(r,21)+sh.cell_value(r,22)+sh.cell_value(r,23),",
+      "        'otherInc':sh.cell_value(r,24),'totalInc':sh.cell_value(r,25),",
+      "        'advance':sh.cell_value(r,26),'kot':sh.cell_value(r,27),",
+      "        'soc':sh.cell_value(r,28),'tax':sh.cell_value(r,29),",
+      "        'absentDed':sh.cell_value(r,30),'noPayDed':sh.cell_value(r,31),",
+      "        'otherDed':sh.cell_value(r,32),'totalDed':sh.cell_value(r,33),",
+      "        'netPay':sh.cell_value(r,34)})",
+      "print(json.dumps({'month':month,'rows':rows},ensure_ascii=False))",
+    ];
+    const pyCode = lines.join("\n");
+    const tmpFile = '/tmp/pxls_' + Date.now() + '.py';
+    fs.writeFileSync(tmpFile, pyCode, 'utf8');
     try {
-      const out = execSync(`python3 -c "${script.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
-      const data = JSON.parse(out.toString());
-      resolve(data);
+      const out = execSync('python3 ' + tmpFile, { maxBuffer: 10*1024*1024 });
+      try { fs.unlinkSync(tmpFile); } catch(_) {}
+      resolve(JSON.parse(out.toString('utf8')));
     } catch(e) {
-      // ใช้ temp file แทน
-      const tmp = '/tmp/parse_xls.py';
-      fs.writeFileSync(tmp, script);
-      try {
-        const out2 = execSync(`python3 ${tmp}`);
-        const data = JSON.parse(out2.toString());
-        resolve(data);
-      } catch(e2) {
-        reject(e2);
-      }
+      try { fs.unlinkSync(tmpFile); } catch(_) {}
+      reject(new Error('parseXls error: ' + e.stderr?.toString() || e.message));
     }
   });
 }
+
 
 // ── บันทึกไฟล์ Excel ลง Google Drive ─────────────────────
 async function saveToGoogleDrive(fileBuffer, filename, mimeType) {
