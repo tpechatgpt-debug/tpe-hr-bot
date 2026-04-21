@@ -136,7 +136,8 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 
   const yr = today.getFullYear();
   const mo = String(today.getMonth()+1).padStart(2,'0');
-  return await htmlToDriveUrl(html, `Certificate_${d.name}_${yr}${mo}`);
+  const { htmlToPdfBuffer } = require('./payslip');
+  return await htmlToPdfBuffer(html);
 }
 
 function thaiMoney(n) {
