@@ -68,11 +68,13 @@ app.post('/webhook', async (req, res) => {
     }
 
     // ── พนักงานเลือกเดือน (Quick Reply response) ─────
-    // format: "เลือกเดือน:เมษายน 2569:PAY_Uxxxx_123"
-    if (msg.startsWith('เลือกเดือน:')) {
-      const parts   = msg.split(':');
-      const month   = parts[1];
-      const reqId   = parts[2];
+    if (msg.includes('เลือกเดือน:')) {
+      const clean = msg.trim();
+      const firstColon  = clean.indexOf(':');
+      const secondColon = clean.indexOf(':', firstColon + 1);
+      const month  = clean.substring(firstColon + 1, secondColon).trim();
+      const reqId  = clean.substring(secondColon + 1).trim();
+      console.log('month selected:', month, 'reqId:', reqId);
       await handleMonthSelected(userId, month, reqId);
       return;
     }
@@ -83,14 +85,14 @@ app.post('/webhook', async (req, res) => {
     const employee = await lark.findByLineId(larkToken, userId);
 
     if (employee) {
-      await reply(replyToken, createLeaveCard(employee, imgUrl));
+      await push(userId, createLeaveCard(employee, imgUrl));
     } else {
       if (msg.length < 2) {
-        await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ');
+        await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ');
         return;
       }
       const result = await lark.register(larkToken, msg, userId);
-      await reply(replyToken, result);
+      await push(userId, result);
     }
 
   } catch (err) {
@@ -104,7 +106,7 @@ app.post('/webhook', async (req, res) => {
 async function handleDocRequest(replyToken, userId, larkToken, docType) {
   const emp = await lark.findByLineId(larkToken, userId);
   if (!emp) {
-    await reply(replyToken, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ');
+    await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ');
     return;
   }
   const empName = payroll.normName(emp['ชื่อ - นามสกุล'] || 'พนักงาน');
@@ -116,33 +118,26 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
 
   // ดึงเดือนที่มีข้อมูล
   const months = await payroll.getAvailableMonths();
+  const validMonths = months.filter(m => m && m.trim().length > 0).slice(0, 13);
+  const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
 
-  if (months.length === 0) {
-    await reply(replyToken, '⚠️ ยังไม่มีข้อมูลเงินเดือนในระบบ กรุณาติดต่อ HR ครับ');
+  if (validMonths.length === 0) {
+    await push(userId, '⚠️ ยังไม่มีข้อมูลเงินเดือนในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ');
     return;
   }
 
-  // ส่ง Quick Reply ให้เลือกเดือน
-  const validMonths = months.filter(m => m && m.trim().length > 0).slice(0, 13);
   const quickItems = validMonths.map(m => ({
     type: 'action',
     action: {
       type: 'message',
       label: m.length > 20 ? m.slice(0, 20) : m,
-      text: `เลือกเดือน:${m}:${requestId}`,
+      text: 'เลือกเดือน:' + m + ':' + requestId,
     }
   }));
 
-  const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-
-  if (quickItems.length === 0) {
-    await reply(replyToken, `⚠️ ยังไม่มีข้อมูลเงินเดือนในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ`);
-    return;
-  }
-
-  await reply(replyToken, {
+  await push(userId, {
     type: 'text',
-    text: `📅 ต้องการ${docLabel}เดือนไหนครับ?`,
+    text: '📅 ต้องการ' + docLabel + 'เดือนไหนครับ?',
     quickReply: { items: quickItems },
   });
 }
