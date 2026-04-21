@@ -115,7 +115,7 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
   const requestId = (docType === 'payslip' ? 'PAY' : 'CERT') + '_' + userId + '_' + Date.now();
 
   // บันทึก pending request
-  pending[requestId] = { empName, empLineId: userId, docType, larkToken };
+  pending[requestId] = { empName, empLineId: userId, docType, larkToken, payType: 'monthly' };
   requestLog[requestId] = { empName, empLineId: userId, docType, status: 'pending', time: Date.now() };
 
   // ดึงเดือนที่มีข้อมูล
@@ -267,7 +267,7 @@ async function handlePostback(event) {
 
     try {
       // ดึงข้อมูลเงินเดือนจาก Google Sheets
-      const data = await payroll.getEmployeePayroll(req.empName, req.month);
+      const data = await payroll.getEmployeePayroll(req.empName, req.month, req.payType || 'monthly');
       if (!data) {
         await push(hrUserId, `❌ ไม่พบข้อมูลเงินเดือนของ ${req.empName} เดือน ${req.month}\nกรุณาตรวจสอบว่าอัปโหลดไฟล์ Excel เดือนนั้นแล้ว`);
         return;
@@ -323,12 +323,13 @@ app.post('/upload-payroll', upload.single('file'), async (req, res) => {
     // อ่านไฟล์ Excel
     const data = await payroll.parseXls(file.path);
     const { month, rows } = data;
+    const payType = req.body.payType || 'monthly'; // 'monthly' | 'daily'
 
-    console.log(`อ่านข้อมูลเดือน ${month} จำนวน ${rows.length} คน`);
+    console.log(`อ่านข้อมูลเดือน ${month} จำนวน ${rows.length} คน ประเภท: ${payType}`);
 
     // บันทึกลง Google Sheets
     console.log('saving to sheets...');
-    await payroll.savePayrollToSheet(month, rows);
+    await payroll.savePayrollToSheet(month, rows, payType);
     console.log('sheets OK');
 
     // ไม่เก็บใน Drive (Service Account ไม่รองรับ My Drive)
