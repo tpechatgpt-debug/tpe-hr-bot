@@ -179,6 +179,10 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
               <div class="upload-icon">📁</div>
               <div class="upload-label">ลากไฟล์มาวาง หรือเลือกไฟล์</div>
               <div class="upload-sub">รองรับ .xls และ .xlsx</div>
+              <select id="payType2" onclick="event.stopPropagation()" style="margin-top:10px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:13px;outline:none">
+                <option value="monthly">พนักงานรายเดือน</option>
+                <option value="daily">พนักงานรายวัน</option>
+              </select>
               <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput2').click()">เลือกไฟล์</button>
             </div>
             <input type="file" id="fileInput2" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'2')">
@@ -241,7 +245,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
             ข้อมูลเงินเดือนในระบบ
             <button class="btn btn-primary btn-sm" onclick="loadMonths()">รีโหลด</button>
           </div>
-          <div class="notice">อัพโหลดไฟล์ทีละเดือน</div>
+          <div class="notice">แต่ละเดือนที่อัปโหลดจะเก็บในแท็บแยกของ Google Sheets</div>
           <div id="monthList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
         </div>
       </div>
@@ -463,6 +467,8 @@ async function doUpload(file, suffix) {
     const form = new FormData();
     form.append('file', file);
     form.append('notifyUserId', 'Ud983ff5538b43bb594f479c007cf609c');
+    const ptEl = document.getElementById('payType' + suffix);
+    form.append('payType', ptEl ? ptEl.value : 'monthly');
 
     const r = await fetch(API + '/upload-payroll', { method: 'POST', body: form });
     const d = await r.json();
