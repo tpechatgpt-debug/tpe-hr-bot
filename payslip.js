@@ -108,45 +108,91 @@ async function htmlToPdfBuffer(html) {
 
 async function sendPdfToLine(userId, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
-  const FormData   = require('form-data');
 
-  // สร้าง form-data
-  const form = new FormData();
-  form.append('file', pdfBuffer, {
-    filename:    filename,
-    contentType: 'application/pdf',
-    knownLength: pdfBuffer.length,
+  // LINE ไม่รองรับ push file โดยตรง
+  // ใช้ Google Drive เพื่อสร้าง temporary link แทน
+  const { google } = require('googleapis');
+  const { Readable } = require('stream');
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+    scopes: ['https://www.googleapis.com/auth/drive'],
   });
-  form.append('type', 'file');
+  const drive = google.drive({ version: 'v3', auth });
 
-  // อัปโหลดขึ้น LINE
-  const uploadRes = await axios.post(
-    'https://api-data.line.me/v2/bot/message/upload/multipart',
-    form,
-    {
-      headers: {
-        'Authorization': 'Bearer ' + LINE_TOKEN,
-        ...form.getHeaders(),
-      }
-    }
-  );
+  // อัปโหลด PDF ลง Drive ของ Service Account
+  console.log('sendPdf: uploading to Drive, buffer size:', pdfBuffer.length);
+  let file;
+  try {
+    file = await drive.files.create({
+    requestBody: { name: filename, mimeType: 'application/pdf' },
+    media: { mimeType: 'application/pdf', body: Readable.from([pdfBuffer]) },
+    });
+  } catch(e) {
+    throw new Error('Drive upload failed: ' + e.message);
+  }
+  const fileId = file.data.id;
+  console.log('sendPdf: uploaded fileId:', fileId);
 
-  const msgId = uploadRes.data.messageId;
+  // ให้สิทธิ์อ่านชั่วคราว
+  try {
+  await drive.permissions.create({
+    fileId,
+    requestBody: { role: 'reader', type: 'anyone' },
+  });
+  } catch(e) {
+    throw new Error('Drive permission failed: ' + e.message);
+  }
 
-  // ส่งให้พนักงาน
+  const pdfUrl = 'https://drive.google.com/file/d/' + fileId + '/view';
+
+  console.log('sendPdf: pdfUrl:', pdfUrl);
+  // ส่ง flex message พร้อม link
+  try {
   await axios.post(
     'https://api.line.me/v2/bot/message/push',
     {
       to: userId,
       messages: [{
-        type:     'file',
-        fileSize: pdfBuffer.length,
-        fileName: filename,
-        originalContentUrl: 'https://api-data.line.me/v2/bot/message/' + msgId + '/content',
+        type: 'flex',
+        altText: filename + ' พร้อมแล้ว',
+        contents: {
+          type: 'bubble',
+          header: {
+            type: 'box', layout: 'vertical',
+            backgroundColor: '#1E3A5F', paddingAll: '14px',
+            contents: [
+              { type: 'text', text: 'เอกสารพร้อมแล้วครับ', color: '#ffffff', weight: 'bold', size: 'md' },
+              { type: 'text', text: filename, color: '#B8D4F0', size: 'xs', margin: 'xs', wrap: true },
+            ]
+          },
+          body: {
+            type: 'box', layout: 'vertical', paddingAll: '14px',
+            contents: [
+              { type: 'text', text: 'กดปุ่มด้านล่างเพื่อเปิดและดาวน์โหลด PDF ครับ', size: 'sm', color: '#555555', wrap: true },
+            ]
+          },
+          footer: {
+            type: 'box', layout: 'vertical', paddingAll: '10px',
+            contents: [
+              { type: 'button', style: 'primary', color: '#1E3A5F', height: 'sm',
+                action: { type: 'uri', label: 'เปิด / ดาวน์โหลด PDF', uri: pdfUrl } },
+            ]
+          }
+        }
       }]
     },
     { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
   );
+  } catch(e) {
+    throw new Error('LINE push failed: ' + e.response?.data?.message + ' | ' + e.message);
+  }
+  console.log('sendPdf: LINE push OK');
+
+  // ลบไฟล์หลังส่งแล้ว 24 ชม. (optional - ใช้ setTimeout)
+  setTimeout(async () => {
+    try { await drive.files.delete({ fileId }); } catch(e) {}
+  }, 24 * 60 * 60 * 1000);
 }
 
 // ใช้โดย certificate.js
