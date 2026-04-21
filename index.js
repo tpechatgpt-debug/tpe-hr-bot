@@ -350,15 +350,19 @@ app.post('/upload-payroll', upload.single('file'), async (req, res) => {
     console.log(`อ่านข้อมูลเดือน ${month} จำนวน ${rows.length} คน`);
 
     // บันทึกลง Google Sheets
+    console.log('saving to sheets...');
     await payroll.savePayrollToSheet(month, rows);
+    console.log('sheets OK');
 
     // บันทึกไฟล์ต้นฉบับลง Drive
+    console.log('saving to drive...');
     const fileBuffer = fs.readFileSync(file.path);
     await payroll.saveToGoogleDrive(
       fileBuffer,
-      `เงินเดือน_${month}_${file.originalname}`,
+      'เงินเดือน_' + month + '_' + file.originalname,
       file.mimetype
     );
+    console.log('drive OK');
 
     // ลบไฟล์ temp
     fs.unlinkSync(file.path);
