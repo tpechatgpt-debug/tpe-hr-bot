@@ -354,15 +354,8 @@ app.post('/upload-payroll', upload.single('file'), async (req, res) => {
     await payroll.savePayrollToSheet(month, rows);
     console.log('sheets OK');
 
-    // บันทึกไฟล์ต้นฉบับลง Drive
-    console.log('saving to drive...');
-    const fileBuffer = fs.readFileSync(file.path);
-    await payroll.saveToGoogleDrive(
-      fileBuffer,
-      'เงินเดือน_' + month + '_' + file.originalname,
-      file.mimetype
-    );
-    console.log('drive OK');
+    // ไม่เก็บใน Drive (Service Account ไม่รองรับ My Drive)
+    // ข้อมูลครบอยู่ใน Google Sheets แล้ว
 
     // ลบไฟล์ temp
     fs.unlinkSync(file.path);
