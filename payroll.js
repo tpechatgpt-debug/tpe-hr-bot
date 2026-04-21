@@ -129,10 +129,19 @@ async function savePayrollToSheet(month, rows) {
   });
   const sheets = google.sheets({ version: 'v4', auth });
   const sheetId = process.env.LOG_SHEET_ID;
+  const sheetName = 'เงินเดือน_' + month;
 
-  // สร้าง sheet ชื่อ "เงินเดือน_เมษายน 2569" ถ้ายังไม่มี
-  const sheetName = `เงินเดือน_${month}`;
+  // ตรวจว่า sheet มีอยู่แล้วไหม
+  let sheetExists = false;
   try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+    sheetExists = (meta.data.sheets || []).some(s => s.properties.title === sheetName);
+  } catch(e) {
+    console.log('get sheets error:', e.message);
+  }
+
+  if (!sheetExists) {
+    // สร้าง sheet ใหม่
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: sheetId,
       resource: { requests: [{ addSheet: { properties: { title: sheetName } } }] },
@@ -140,11 +149,17 @@ async function savePayrollToSheet(month, rows) {
     // ใส่ header
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `${sheetName}!A1`,
+      range: "'" + sheetName + "'!A1",
       valueInputOption: 'USER_ENTERED',
       resource: { values: [['ชื่อ','ตำแหน่ง','วันทำงาน','OT','ลากิจ','ลาป่วย','พักร้อน','ค่าแรง','ค่าปกติ','OT Pay','เบี้ยเลี้ยง','เบี้ยขยัน','รวมรายได้','หักล่วงหน้า','ปกส.','ภาษี','รวมหัก','เงินสุทธิ']] },
     });
-  } catch(e) {} // sheet อาจมีอยู่แล้ว
+  } else {
+    // ลบข้อมูลเดิมออกก่อน (เว้น header) แล้วเขียนใหม่
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: sheetId,
+      range: "'" + sheetName + "'!A2:Z",
+    });
+  }
 
   // เพิ่มข้อมูล
   const values = rows.map(r => [
@@ -153,13 +168,15 @@ async function savePayrollToSheet(month, rows) {
     r.baseWage, r.basePay, r.otPay, r.allowance, r.bonus,
     r.totalInc, r.advance, r.soc, r.tax, r.totalDed, r.netPay,
   ]);
+
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
-    range: `${sheetName}!A2`,
+    range: "'" + sheetName + "'!A2",
     valueInputOption: 'USER_ENTERED',
     resource: { values },
   });
 
+  console.log('savePayrollToSheet OK:', sheetName, rows.length, 'rows');
   return sheetName;
 }
 
