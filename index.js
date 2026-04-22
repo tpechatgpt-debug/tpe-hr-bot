@@ -16,12 +16,9 @@ app.use(express.json());
 
 const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const HR_USER_ID = process.env.HR_LINE_USER_ID;
-const FORM_URL   = process.env.FORM_URL;
 
-// pending requests: { requestId -> { empName, empLineId, docType, month, token } }
-const pending = {};
-const requestLog = {};  // เก็บประวัติคำขอทั้งหมด
-
+const pending    = {};
+const requestLog = {};
 
 app.get('/', (req, res) => res.send('TPE HR Bot v2 OK'));
 
@@ -35,51 +32,32 @@ app.post('/webhook', async (req, res) => {
     if (!events.length) return;
     const event = events[0];
 
-    // postback: HR กดอนุมัติ/ปฏิเสธ
-    if (event.type === 'postback') {
-      await handlePostback(event);
-      return;
-    }
-
+    if (event.type === 'postback') { await handlePostback(event); return; }
     if (event.type !== 'message' || event.message.type !== 'text') return;
 
     const userId     = event.source.userId;
-    const replyToken = event.replyToken;
     const msg        = event.message.text.trim();
 
-    // ── utility: ดู User ID ───────────────────────────
-    if (msg === 'id') {
-      await push(userId, 'User ID: ' + userId);
-      return;
-    }
+    if (msg === 'id') { await push(userId, 'User ID: ' + userId); return; }
 
     const larkToken = await lark.getToken();
 
-    // ── ขอสลิปเงินเดือน ──────────────────────────────
     if (msg === 'ขอสลิปเงินเดือน' || msg === 'ขอสลีปเงินเดือน') {
-      await handleDocRequest(replyToken, userId, larkToken, 'payslip');
-      return;
+      await handleDocRequest(userId, larkToken, 'payslip'); return;
     }
-
-    // ── ขอใบรับรองเงินเดือน ──────────────────────────
     if (msg === 'ขอใบรับรองเงินเดือน') {
-      await handleDocRequest(replyToken, userId, larkToken, 'certificate');
-      return;
+      await handleDocRequest(userId, larkToken, 'certificate'); return;
     }
 
-    // ── พนักงานเลือกเดือน (Quick Reply response) ─────
     if (msg.includes('เลือกเดือน:')) {
-      const clean = msg.trim();
+      const clean       = msg.trim();
       const firstColon  = clean.indexOf(':');
       const secondColon = clean.indexOf(':', firstColon + 1);
-      const month  = clean.substring(firstColon + 1, secondColon).trim();
-      const reqId  = clean.substring(secondColon + 1).trim();
-      console.log('month selected:', month, 'reqId:', reqId);
-      await handleMonthSelected(userId, month, reqId);
-      return;
+      const month = clean.substring(firstColon + 1, secondColon).trim();
+      const reqId = clean.substring(secondColon + 1).trim();
+      await handleMonthSelected(userId, month, reqId); return;
     }
 
-    // ── ระบบลาเดิม ───────────────────────────────────
     const profile  = await getProfile(userId);
     const imgUrl   = profile?.pictureUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
     const employee = await lark.findByLineId(larkToken, userId);
@@ -87,78 +65,71 @@ app.post('/webhook', async (req, res) => {
     if (employee) {
       await push(userId, createLeaveCard(employee, imgUrl));
     } else {
-      if (msg.length < 2) {
-        await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ');
-        return;
-      }
-      const result = await lark.register(larkToken, msg, userId);
-      await push(userId, result);
+      if (msg.length < 2) { await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
+      await push(userId, await lark.register(larkToken, msg, userId));
     }
 
-  } catch (err) {
-    console.error('webhook error:', err.message);
-  }
+  } catch (err) { console.error('webhook error:', err.message); }
 });
 
 // ════════════════════════════════════════════════════════
 // พนักงานขอเอกสาร → ถามเดือน
 // ════════════════════════════════════════════════════════
-async function handleDocRequest(replyToken, userId, larkToken, docType) {
+async function handleDocRequest(userId, larkToken, docType) {
   const emp = await lark.findByLineId(larkToken, userId);
-  if (!emp) {
-    await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ');
-    return;
-  }
-  // ใช้เฉพาะชื่อจริง ตัด "(ตำแหน่ง)" ออก
-  const rawName  = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || 'พนักงาน';
-  const empName  = payroll.normName(rawName.split('(')[0].split('（')[0]);
+  if (!emp) { await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ'); return; }
+
+  const rawName   = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || 'พนักงาน';
+  const empName   = payroll.normName(rawName.split('(')[0].split('（')[0]);
   const requestId = (docType === 'payslip' ? 'PAY' : 'CERT') + '_' + userId + '_' + Date.now();
 
-  // บันทึก pending request
-  pending[requestId] = { empName, empLineId: userId, docType, larkToken, payType: 'monthly' };
+  // ── อ่าน field 'ประเภท' จาก Lark ─────────────────────────
+  const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+  const payType = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+  console.log(`${empName} → ประเภท: "${rawType}" → payType: ${payType}`);
+
+  pending[requestId]    = { empName, empLineId: userId, docType, larkToken, payType };
   requestLog[requestId] = { empName, empLineId: userId, docType, status: 'pending', time: Date.now() };
 
-  // ดึงเดือนที่มีข้อมูล
-  const months = await payroll.getAvailableMonths();
-  const validMonths = months.filter(m => m && m.trim().length > 0).slice(0, 13);
-  const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+  // ── ดึงเดือน กรองเฉพาะประเภทของพนักงานคนนี้ ──────────────
+  const allMonths   = await payroll.getAvailableMonths();
+  const validMonths = allMonths
+    .filter(m => m.payType === payType)
+    .map(m => m.month)
+    .filter(m => m && m.trim().length > 0)
+    .slice(0, 13);
+
+  const docLabel  = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+  const typeLabel = rawType === 'รายวัน' ? 'รายวัน' : 'รายเดือน';
 
   if (validMonths.length === 0) {
-    await push(userId, '⚠️ ยังไม่มีข้อมูลเงินเดือนในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ');
+    await push(userId, `⚠️ ยังไม่มีข้อมูล${typeLabel}ในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ`);
     return;
   }
-
-  const quickItems = validMonths.map(m => ({
-    type: 'action',
-    action: {
-      type: 'message',
-      label: m.length > 20 ? m.slice(0, 20) : m,
-      text: 'เลือกเดือน:' + m + ':' + requestId,
-    }
-  }));
 
   await push(userId, {
     type: 'text',
-    text: '📅 ต้องการ' + docLabel + 'เดือนไหนครับ?',
-    quickReply: { items: quickItems },
+    text: `📅 ต้องการ${docLabel} (${typeLabel}) เดือนไหนครับ?`,
+    quickReply: {
+      items: validMonths.map(m => ({
+        type: 'action',
+        action: { type: 'message', label: m.length > 20 ? m.slice(0, 20) : m, text: 'เลือกเดือน:' + m + ':' + requestId }
+      }))
+    }
   });
 }
 
 // ════════════════════════════════════════════════════════
-// พนักงานเลือกเดือนแล้ว → แจ้ง HR
+// พนักงานเลือกเดือน → แจ้ง HR
 // ════════════════════════════════════════════════════════
 async function handleMonthSelected(userId, month, requestId) {
   const req = pending[requestId];
-  if (!req) {
-    await push(userId, '⚠️ คำขอหมดอายุ กรุณาขอใหม่อีกครั้งครับ');
-    return;
-  }
+  if (!req) { await push(userId, '⚠️ คำขอหมดอายุ กรุณาขอใหม่อีกครั้งครับ'); return; }
 
   req.month = month;
-  if (requestLog[requestId]) { requestLog[requestId].month = month; }
+  if (requestLog[requestId]) requestLog[requestId].month = month;
   const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
 
-  // ยืนยันกับพนักงาน
   await push(userId, {
     type: 'flex', altText: 'ส่งคำขอแล้ว',
     contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
@@ -171,7 +142,6 @@ async function handleMonthSelected(userId, month, requestId) {
     }}
   });
 
-  // แจ้ง HR พร้อมปุ่มอนุมัติ
   await notifyHR(requestId, req.empName, docLabel, month, userId);
 }
 
@@ -179,56 +149,28 @@ async function handleMonthSelected(userId, month, requestId) {
 // แจ้ง HR
 // ════════════════════════════════════════════════════════
 async function notifyHR(requestId, empName, docType, month, empUserId) {
-  const now = new Date().toLocaleString('th-TH', {
-    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit',
-    day: '2-digit', month: '2-digit'
-  });
-
+  const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
   await push(HR_USER_ID, {
-    type: 'flex',
-    altText: `คำขอ${docType} จาก ${empName}`,
+    type: 'flex', altText: `คำขอ${docType} จาก ${empName}`,
     contents: {
       type: 'bubble',
-      header: {
-        type: 'box', layout: 'vertical',
-        backgroundColor: '#1E3A5F', paddingAll: '16px',
+      header: { type: 'box', layout: 'vertical', backgroundColor: '#1E3A5F', paddingAll: '16px',
         contents: [
           { type: 'text', text: 'คำขอเอกสาร HR', color: '#ffffff', weight: 'bold', size: 'md' },
           { type: 'text', text: docType, color: '#B8D4F0', size: 'sm', margin: 'xs' },
-        ]
-      },
-      body: {
-        type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+        ]},
+      body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
         contents: [
-          { type: 'box', layout: 'horizontal', contents: [
-            { type: 'text', text: 'พนักงาน', size: 'sm', color: '#888888', flex: 3 },
-            { type: 'text', text: empName, size: 'sm', weight: 'bold', flex: 5, wrap: true },
-          ]},
-          { type: 'box', layout: 'horizontal', contents: [
-            { type: 'text', text: 'เดือน', size: 'sm', color: '#888888', flex: 3 },
-            { type: 'text', text: month, size: 'sm', flex: 5 },
-          ]},
-          { type: 'box', layout: 'horizontal', contents: [
-            { type: 'text', text: 'ประเภท', size: 'sm', color: '#888888', flex: 3 },
-            { type: 'text', text: docType, size: 'sm', flex: 5 },
-          ]},
-          { type: 'box', layout: 'horizontal', contents: [
-            { type: 'text', text: 'เวลาขอ', size: 'sm', color: '#888888', flex: 3 },
-            { type: 'text', text: now, size: 'sm', flex: 5 },
-          ]},
-        ]
-      },
-      footer: {
-        type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px',
+          { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'พนักงาน', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: empName, size: 'sm', weight: 'bold', flex: 5, wrap: true }]},
+          { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'เดือน', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: month, size: 'sm', flex: 5 }]},
+          { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'ประเภทเอกสาร', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: docType, size: 'sm', flex: 5 }]},
+          { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'เวลาขอ', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: now, size: 'sm', flex: 5 }]},
+        ]},
+      footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px',
         contents: [
-          { type: 'button', style: 'primary', color: '#1B7F4E', height: 'sm',
-            action: { type: 'postback', label: 'อนุมัติ และส่ง PDF',
-              data: 'A|' + requestId } },
-          { type: 'button', style: 'secondary', height: 'sm',
-            action: { type: 'postback', label: 'ปฏิเสธ',
-              data: 'R|' + requestId } },
-        ]
-      }
+          { type: 'button', style: 'primary', color: '#1B7F4E', height: 'sm', action: { type: 'postback', label: 'อนุมัติ และส่ง PDF', data: 'A|' + requestId }},
+          { type: 'button', style: 'secondary', height: 'sm', action: { type: 'postback', label: 'ปฏิเสธ', data: 'R|' + requestId }},
+        ]}
     }
   });
 }
@@ -238,19 +180,14 @@ async function notifyHR(requestId, empName, docType, month, empUserId) {
 // ════════════════════════════════════════════════════════
 async function handlePostback(event) {
   const hrUserId = event.source.userId;
-  const data = event.postback.data;
-
-  // format ใหม่: 'A|requestId' หรือ 'R|requestId'
-  const action = data.startsWith('A|') ? 'approve' : data.startsWith('R|') ? 'reject' : null;
-  const rid    = action ? data.slice(2) : null;
+  const data     = event.postback.data;
+  const action   = data.startsWith('A|') ? 'approve' : data.startsWith('R|') ? 'reject' : null;
+  const rid      = action ? data.slice(2) : null;
 
   if (action === 'reject') {
     const req = pending[rid] || {};
-    const empId = req.empLineId || '';
-    const name  = req.empName  || 'พนักงาน';
-    const doc   = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-    if (empId) await push(empId, '❌ คำขอ' + doc + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ');
-    await push(hrUserId, '✅ ปฏิเสธคำขอของ ' + name + ' แล้ว');
+    if (req.empLineId) await push(req.empLineId, '❌ คำขอ' + (req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ');
+    await push(hrUserId, '✅ ปฏิเสธคำขอของ ' + (req.empName || 'พนักงาน') + ' แล้ว');
     delete pending[rid];
     if (requestLog[rid]) requestLog[rid].status = 'rejected';
     return;
@@ -258,48 +195,31 @@ async function handlePostback(event) {
 
   if (action === 'approve') {
     const req = pending[rid];
-    if (!req) {
-      await push(hrUserId, '⚠️ ไม่พบคำขอนี้ อาจดำเนินการไปแล้ว');
-      return;
-    }
+    if (!req) { await push(hrUserId, '⚠️ ไม่พบคำขอนี้ อาจดำเนินการไปแล้ว'); return; }
 
     await push(hrUserId, `⏳ กำลังสร้าง PDF สำหรับ ${req.empName} เดือน ${req.month}...`);
-
     try {
-      // ดึงข้อมูลเงินเดือนจาก Google Sheets
-      const data = await payroll.getEmployeePayroll(req.empName, req.month, req.payType || 'monthly');
-      if (!data) {
-        await push(hrUserId, `❌ ไม่พบข้อมูลเงินเดือนของ ${req.empName} เดือน ${req.month}\nกรุณาตรวจสอบว่าอัปโหลดไฟล์ Excel เดือนนั้นแล้ว`);
+      const empData = await payroll.getEmployeePayroll(req.empName, req.month, req.payType || 'monthly');
+      if (!empData) {
+        await push(hrUserId, `❌ ไม่พบข้อมูลเงินเดือนของ ${req.empName} เดือน ${req.month}`);
         return;
       }
 
-      // สร้าง PDF
       const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
       const safeName = req.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
       const filename  = docLabel + '_' + safeName + '_' + req.month + '.pdf';
 
-      let pdfBuffer;
-      if (req.docType === 'payslip') {
-        pdfBuffer = await payslip.createFromPayroll(data);
-      } else {
-        pdfBuffer = await cert.createFromPayroll(data);
-      }
+      const pdfBuffer = req.docType === 'payslip'
+        ? await payslip.createFromPayroll(empData)
+        : await cert.createFromPayroll(empData);
 
-      // แจ้งก่อนว่ากำลังส่งไฟล์
       await push(req.empLineId, '📄 ' + docLabel + ' เดือน ' + req.month + ' พร้อมแล้วครับ กำลังส่งไฟล์...');
-
-      // ส่ง PDF
-      console.log('step1: creating PDF buffer, size:', pdfBuffer.length);
-      console.log('step2: sending to LINE userId:', req.empLineId);
       await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
-      console.log('step3: sent OK');
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
       delete pending[rid];
       if (requestLog[rid]) requestLog[rid].status = 'sent';
-
-      // log ลง sheet
-      await sheet.log({ ...data, docType: req.docType });
+      await sheet.log({ ...empData, docType: req.docType });
 
     } catch(err) {
       console.error('approve error:', err.message);
@@ -309,236 +229,87 @@ async function handlePostback(event) {
 }
 
 // ════════════════════════════════════════════════════════
-// HR อัปโหลด Excel รายเดือน
+// HR อัปโหลด Excel
 // ════════════════════════════════════════════════════════
 app.post('/upload-payroll', upload.single('file'), async (req, res) => {
   res.json({ ok: true, message: 'กำลังประมวลผล...' });
-
   try {
     const file = req.file;
     if (!file) return;
-
-    console.log('upload-payroll:', file.originalname);
-
-    // อ่านไฟล์ Excel
-    const data = await payroll.parseXls(file.path);
-    const { month, rows } = data;
-    const payType = req.body.payType || 'monthly'; // 'monthly' | 'daily'
-
-    console.log(`อ่านข้อมูลเดือน ${month} จำนวน ${rows.length} คน ประเภท: ${payType}`);
-
-    // บันทึกลง Google Sheets
-    console.log('saving to sheets...');
+    const data    = await payroll.parseXls(file.path);
+    const { month, rows, type } = data;
+    const payType = type || req.body.payType || 'monthly';
+    console.log(`เดือน ${month} จำนวน ${rows.length} คน ประเภท: ${payType}`);
     await payroll.savePayrollToSheet(month, rows, payType);
-    console.log('sheets OK');
-
-    // ไม่เก็บใน Drive (Service Account ไม่รองรับ My Drive)
-    // ข้อมูลครบอยู่ใน Google Sheets แล้ว
-
-    // ลบไฟล์ temp
     fs.unlinkSync(file.path);
-
-    // แจ้ง HR
     if (req.body.notifyUserId) {
-      await push(req.body.notifyUserId,
-        `✅ อัปโหลดข้อมูลเงินเดือนเดือน ${month} สำเร็จ\nจำนวนพนักงาน: ${rows.length} คน`
-      );
+      await push(req.body.notifyUserId, `✅ อัปโหลดข้อมูล${payType === 'daily' ? 'รายวัน' : 'รายเดือน'} เดือน ${month} สำเร็จ\nจำนวนพนักงาน: ${rows.length} คน`);
     }
-
-  } catch(err) {
-    console.error('upload-payroll error:', err.message);
-  }
+  } catch(err) { console.error('upload-payroll error:', err.message); }
 });
 
 // ════════════════════════════════════════════════════════
-// Flex Card วันลา (คงเดิม)
+// Flex Card วันลา
 // ════════════════════════════════════════════════════════
 function createLeaveCard(emp, imgUrl) {
-  const d = {
-    name:           emp['ชื่อ - นามสกุล'] || 'พนักงาน',
-    vacationTotal:  emp['สิทธิ์พักร้อน']    || '0',
-    vacationLeft:   emp['คงเหลือพักร้อน']   || '0',
-    personalTotal:  emp['สิทธิ์ลากิจ']      || '0',
-    personalLeft:   emp['คงเหลือลากิจ']     || '0',
-    sickTotal:      emp['สิทธิ์ลาป่วย']     || '0',
-    sickLeft:       emp['คงเหลือลาป่วย']    || '0',
-    birthdayTotal:  emp['สิทธิ์วันเกิด']    || '0',
-    birthdayLeft:   emp['คงเหลือลาวันเกิด'] || '0',
-    maternityTotal: emp['สิทธิ์ลาคลอด']     || '0',
-    maternityLeft:  emp['คงเหลือลาคลอด']    || '0',
-  };
-  return {
-    type: 'flex', altText: `สรุปวันลาของ ${d.name}`,
-    contents: {
-      type: 'bubble', size: 'giga',
-      body: {
-        type: 'box', layout: 'vertical', paddingAll: '0px',
-        contents: [
-          { type: 'box', layout: 'horizontal', backgroundColor: '#06C755', paddingAll: '20px',
-            contents: [
-              { type: 'box', layout: 'vertical', flex: 0, width: '70px', height: '70px',
-                cornerRadius: '100px', borderColor: '#ffffff', borderWidth: '2px',
-                contents: [{ type: 'image', url: imgUrl, aspectMode: 'cover', size: 'full' }] },
-              { type: 'box', layout: 'vertical', flex: 1, paddingStart: '15px', justifyContent: 'center',
-                contents: [
-                  { type: 'text', text: d.name, color: '#ffffff', weight: 'bold', size: 'lg', wrap: true },
-                  { type: 'text', text: 'พนักงาน', color: '#E5E5E5', size: 'sm' },
-                ]}
-            ]},
-          { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'md',
-            contents: [
-              { type: 'text', text: 'วันลาคงเหลือ', weight: 'bold', color: '#888888', size: 'xs' },
-              leaveRow('🏖','ลาพักร้อน',  d.vacationTotal,  d.vacationLeft,  '#F39C12'),
-              { type: 'separator', color: '#F0F0F0' },
-              leaveRow('🚗','ลากิจ',       d.personalTotal,  d.personalLeft,  '#3498DB'),
-              { type: 'separator', color: '#F0F0F0' },
-              leaveRow('😷','ลาป่วย',      d.sickTotal,      d.sickLeft,      '#E74C3C'),
-              { type: 'separator', color: '#F0F0F0' },
-              leaveRow('🎂','ลาวันเกิด',   d.birthdayTotal,  d.birthdayLeft,  '#9B59B6'),
-              { type: 'separator', color: '#F0F0F0' },
-              leaveRow('👶','ลาคลอด',      d.maternityTotal, d.maternityLeft, '#FF69B4'),
-            ]},
-          { type: 'box', layout: 'vertical', backgroundColor: '#F9F9F9', paddingAll: '10px',
-            contents: [{ type: 'text', text: 'อัปเดตข้อมูลล่าสุดจากระบบ HR', color: '#AAAAAA', size: 'xxs', align: 'center' }] }
-        ]
-      }
-    }
-  };
+  const d = { name: emp['ชื่อ - นามสกุล'] || 'พนักงาน', vacationTotal: emp['สิทธิ์พักร้อน']||'0', vacationLeft: emp['คงเหลือพักร้อน']||'0', personalTotal: emp['สิทธิ์ลากิจ']||'0', personalLeft: emp['คงเหลือลากิจ']||'0', sickTotal: emp['สิทธิ์ลาป่วย']||'0', sickLeft: emp['คงเหลือลาป่วย']||'0', birthdayTotal: emp['สิทธิ์วันเกิด']||'0', birthdayLeft: emp['คงเหลือลาวันเกิด']||'0', maternityTotal: emp['สิทธิ์ลาคลอด']||'0', maternityLeft: emp['คงเหลือลาคลอด']||'0' };
+  return { type: 'flex', altText: `สรุปวันลาของ ${d.name}`, contents: { type: 'bubble', size: 'giga', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: [ { type: 'box', layout: 'horizontal', backgroundColor: '#06C755', paddingAll: '20px', contents: [ { type: 'box', layout: 'vertical', flex: 0, width: '70px', height: '70px', cornerRadius: '100px', borderColor: '#ffffff', borderWidth: '2px', contents: [{ type: 'image', url: imgUrl, aspectMode: 'cover', size: 'full' }] }, { type: 'box', layout: 'vertical', flex: 1, paddingStart: '15px', justifyContent: 'center', contents: [ { type: 'text', text: d.name, color: '#ffffff', weight: 'bold', size: 'lg', wrap: true }, { type: 'text', text: 'พนักงาน', color: '#E5E5E5', size: 'sm' } ]} ] }, { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'md', contents: [ { type: 'text', text: 'วันลาคงเหลือ', weight: 'bold', color: '#888888', size: 'xs' }, leaveRow('🏖','ลาพักร้อน',d.vacationTotal,d.vacationLeft,'#F39C12'), { type: 'separator', color: '#F0F0F0' }, leaveRow('🚗','ลากิจ',d.personalTotal,d.personalLeft,'#3498DB'), { type: 'separator', color: '#F0F0F0' }, leaveRow('😷','ลาป่วย',d.sickTotal,d.sickLeft,'#E74C3C'), { type: 'separator', color: '#F0F0F0' }, leaveRow('🎂','ลาวันเกิด',d.birthdayTotal,d.birthdayLeft,'#9B59B6'), { type: 'separator', color: '#F0F0F0' }, leaveRow('👶','ลาคลอด',d.maternityTotal,d.maternityLeft,'#FF69B4') ] }, { type: 'box', layout: 'vertical', backgroundColor: '#F9F9F9', paddingAll: '10px', contents: [{ type: 'text', text: 'อัปเดตข้อมูลล่าสุดจากระบบ HR', color: '#AAAAAA', size: 'xxs', align: 'center' }] } ] } } };
 }
-
 function leaveRow(icon, label, total, left, color) {
-  return {
-    type: 'box', layout: 'horizontal', alignItems: 'center',
-    contents: [
-      { type: 'box', layout: 'horizontal', flex: 7, contents: [
-        { type: 'text', text: icon, size: 'xl', flex: 0, margin: 'sm' },
-        { type: 'box', layout: 'vertical', paddingStart: '10px', contents: [
-          { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#333333' },
-          { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' },
-        ]},
-      ]},
-      { type: 'box', layout: 'vertical', flex: 3, alignItems: 'flex-end', contents: [
-        { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color },
-        { type: 'text', text: 'วัน', size: 'xxs', color },
-      ]},
-    ]
-  };
-}
-
-async function reply(replyToken, msg) {
-  const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  await axios.post('https://api.line.me/v2/bot/message/reply',
-    { replyToken, messages },
-    { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
-  );
+  return { type: 'box', layout: 'horizontal', alignItems: 'center', contents: [ { type: 'box', layout: 'horizontal', flex: 7, contents: [ { type: 'text', text: icon, size: 'xl', flex: 0, margin: 'sm' }, { type: 'box', layout: 'vertical', paddingStart: '10px', contents: [ { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#333333' }, { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' } ] } ] }, { type: 'box', layout: 'vertical', flex: 3, alignItems: 'flex-end', contents: [ { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color }, { type: 'text', text: 'วัน', size: 'xxs', color } ] } ] };
 }
 
 async function push(userId, msg) {
   const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  await axios.post('https://api.line.me/v2/bot/message/push',
-    { to: userId, messages },
-    { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
-  );
+  await axios.post('https://api.line.me/v2/bot/message/push', { to: userId, messages }, { headers: { Authorization: `Bearer ${LINE_TOKEN}` } });
 }
-
 async function getProfile(userId) {
-  try {
-    const r = await axios.get(`https://api.line.me/v2/bot/profile/${userId}`,
-      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } });
-    return r.data;
-  } catch { return null; }
+  try { const r = await axios.get(`https://api.line.me/v2/bot/profile/${userId}`, { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }); return r.data; } catch { return null; }
 }
-
 
 // ════════════════════════════════════════════════════════
-// PDF download endpoint
+// PDF / Portal endpoints
 // ════════════════════════════════════════════════════════
 app.get('/pdf/:token', (req, res) => {
-  const store = payslip.pdfStore;
-  const entry = store[req.params.token];
-  if (!entry) {
-    return res.status(404).send('ไฟล์หมดอายุหรือไม่พบ');
-  }
+  const entry = payslip.pdfStore[req.params.token];
+  if (!entry) return res.status(404).send('ไฟล์หมดอายุหรือไม่พบ');
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="' + encodeURIComponent(entry.filename) + '"');
   res.setHeader('Content-Length', entry.buffer.length);
   res.send(entry.buffer);
 });
-
-// ════════════════════════════════════════════════════════
-// Portal endpoints
-// ════════════════════════════════════════════════════════
-app.get('/portal', (req, res) => {
-  res.sendFile(path.join(__dirname, 'portal.html'));
-});
-
+app.get('/portal', (req, res) => res.sendFile(path.join(__dirname, 'portal.html')));
 app.get('/portal/stats', async (req, res) => {
   try {
-    const larkToken = await lark.getToken();
-    const employees = await lark.getAllEmployees(larkToken);
-    const months    = await payroll.getAvailableMonths();
-    const pendCount = Object.keys(pending).length;
-    res.json({
-      employees:   employees.length,
-      pending:     pendCount,
-      latestMonth: months.length ? months[months.length-1] : '—',
-    });
-  } catch(e) {
-    res.json({ employees: 0, pending: 0, latestMonth: '—' });
-  }
+    const [emps, allMonths] = await Promise.all([lark.getAllEmployees(await lark.getToken()), payroll.getAvailableMonths()]);
+    res.json({ employees: emps.length, pending: Object.keys(pending).length, latestMonth: allMonths.length ? allMonths[allMonths.length-1].month : '—' });
+  } catch(e) { res.json({ employees: 0, pending: 0, latestMonth: '—' }); }
 });
-
 app.get('/portal/employees', async (req, res) => {
   try {
-    const token = await lark.getToken();
-    const emps  = await lark.getAllEmployees(token);
-    res.json(emps.map(e => ({
-      name:     e['ชื่อ - นามสกุล'] || '',
-      position: e['ตำแหน่ง'] || '',
-      lineId:   e['Line ID'] || '',
-    })));
-  } catch(e) {
-    res.json([]);
-  }
+    const emps = await lark.getAllEmployees(await lark.getToken());
+    res.json(emps.map(e => ({ name: e['ชื่อ - นามสกุล']||'', position: e['ตำแหน่ง']||'', type: e['ประเภท']||'—', lineId: e['Line ID']||'' })));
+  } catch(e) { res.json([]); }
 });
-
 app.get('/portal/requests', (req, res) => {
-  const list = Object.entries(requestLog)
-    .sort((a,b) => b[1].time - a[1].time)
-    .slice(0, parseInt(req.query.limit) || 50)
-    .map(([id, r]) => ({
-      name:    r.empName,
-      docType: r.docType,
-      month:   r.month || '—',
-      status:  r.status || 'pending',
-      time:    new Date(r.time).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
-    }));
-  res.json(list);
+  res.json(Object.entries(requestLog).sort((a,b)=>b[1].time-a[1].time).slice(0,parseInt(req.query.limit)||50).map(([,r])=>({ name:r.empName, docType:r.docType, month:r.month||'—', status:r.status||'pending', time:new Date(r.time).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) })));
 });
-
 app.get('/portal/months', async (req, res) => {
   try {
-    const months = await payroll.getAvailableMonths();
-    res.json(months);
-  } catch(e) {
-    res.json([]);
-  }
+    const all = await payroll.getAvailableMonths();
+    res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
+  } catch(e) { res.json([]); }
 });
 
+// ════════════════════════════════════════════════════════
+// Start server
+// ════════════════════════════════════════════════════════
 const PORT = parseInt(process.env.PORT) || 3000;
-
 function startServer(port) {
-  const srv = app.listen(port, '0.0.0.0', () => {
-    console.log(`TPE HR Bot v2 on port ${port}`);
-  });
-  srv.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} busy, trying ${port + 1}`);
-      srv.close(() => startServer(port + 1));
-    } else {
-      console.error('Server error:', err);
-      process.exit(1);
-    }
+  const srv = app.listen(port, '0.0.0.0', () => console.log(`TPE HR Bot v2 on port ${port}`));
+  srv.on('error', err => {
+    if (err.code === 'EADDRINUSE') { console.log(`Port ${port} busy, trying ${port+1}`); srv.close(() => startServer(port+1)); }
+    else { console.error('Server error:', err); process.exit(1); }
   });
 }
 startServer(PORT);
