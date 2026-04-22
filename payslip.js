@@ -1,5 +1,4 @@
 const axios    = require('axios');
-const { Readable } = require('stream');
 const pdfStore = {};
 
 async function createFromPayroll(d) {
@@ -11,6 +10,77 @@ async function createFromPayroll(d) {
   const totalDed = n(d.totalDed);
   const netPay   = n(d.netPay);
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
+  const isDaily = d.payType === 'daily';
+
+  // ── rows ฝั่งรายได้ ──
+  // รายวัน: แสดง ค่าแรง/วัน×วัน, OT, หยุดสัปดาห์, ประเพณี, เบี้ยเลี้ยง, เบี้ยขยัน, อื่นๆ
+  // รายเดือน: แสดง เงินเดือน, โบนัส, เบี้ยเลี้ยง, เบี้ยขยัน, อื่นๆ
+  const incRows = isDaily ? `
+      <tr>
+        <td>${isDaily ? `ค่าแรง/วัน (${fmt(d.baseWage)} × ${fmtN(d.workDays)} วัน)` : 'วันทำงานปกติ'}</td>
+        <td class="c">${fmtN(d.workDays)}</td>
+        <td class="n">${fmt(d.basePay)}</td>
+        <td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td>
+        <td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานวันหยุดสัปดาห์</td><td class="c">${fmtN(d.holidayD)}</td><td class="n">${zero(d.holidayPay)}</td>
+        <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
+        <td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานล่วงเวลา (OT)</td><td class="c">${fmtN(d.otH)} ชม.</td><td class="n">${zero(d.otPay)}</td>
+        <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
+        <td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${zero(d.kot)}</td>
+      </tr>
+      <tr>
+        <td>วันหยุดประเพณี</td><td class="c">${fmtN(d.festivalD)}</td><td class="n">${zero(d.festivalPay)}</td>
+        <td>ขาดงาน</td><td class="c">${fmtN(d.absent)}</td>
+        <td>สาย</td><td class="c">${n(d.late)>0?'1':''}</td><td class="n">${zero(d.late)}</td>
+      </tr>
+      <tr>
+        <td>เพิ่มเติมประเพณี</td><td class="c"></td><td class="n">${zero(d.festivalExtra)}</td>
+        <td></td><td></td>
+        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>` : `
+      <tr>
+        <td>เงินเดือน</td><td class="c">1</td><td class="n">${fmt(d.basePay||d.baseWage)}</td>
+        <td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td>
+        <td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td>
+      </tr>
+      <tr>
+        <td>โบนัส</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
+        <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
+        <td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
+        <td>หัก ณ ที่จ่าย</td><td class="c">${n(d.tax)>0?'1':''}</td><td class="n">${zero(d.tax)}</td>
+      </tr>
+      <tr>
+        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
+        <td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay||0)}</td>
+        <td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${zero(d.kot)}</td>
+      </tr>
+      <tr>
+        <td></td><td></td><td></td>
+        <td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat||0)}</td>
+        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
+      </tr>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
@@ -26,6 +96,7 @@ body{font-family:'Sarabun',sans-serif;font-size:11.5px;color:#1a1a1a;background:
 .header-right{width:115px;flex-shrink:0;background:#FDF5E8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;border-left:1px solid #E8D9C0}
 .period-label{font-size:9px;color:#888;margin-bottom:3px}
 .period-value{font-size:13px;font-weight:700;color:#7A4F00;text-align:center;line-height:1.3}
+.type-badge{font-size:9px;background:${isDaily?'#1E3A5F':'#1B7F4E'};color:#fff;border-radius:4px;padding:2px 6px;margin-top:4px}
 .emp-row{display:flex;gap:30px;background:#FDF5E8;border:1.5px solid #C9952A;border-top:none;padding:6px 14px}
 .emp-item{font-size:11px}.emp-item span{color:#888}
 .table-wrap{border:1.5px solid #C9952A;border-top:none}
@@ -50,29 +121,33 @@ tr:nth-child(even) td{background:#FDFAF4}
   <div class="header-right">
     <div class="period-label">รอบเงินเดือน</div>
     <div class="period-value">${d.month || ''}</div>
+    <div class="type-badge">${isDaily ? 'รายวัน' : 'รายเดือน'}</div>
   </div>
 </div>
 <div class="emp-row">
   <div class="emp-item"><span>ชื่อ - นามสกุล : </span><b>${d.name}</b></div>
   <div class="emp-item"><span>ตำแหน่ง : </span><b>${d.position || '—'}</b></div>
+  ${isDaily ? `<div class="emp-item"><span>ค่าแรง/วัน : </span><b>${fmt(d.baseWage)} บาท</b></div>` : ''}
 </div>
 <div class="table-wrap">
   <div class="sec-hdr"><div class="sl">รายการเงินได้</div><div>รายการเงินหัก</div></div>
   <table>
     <thead><tr>
-      <th style="width:21%">รายละเอียด</th><th style="width:7%">จำนวน</th><th style="width:11%">จำนวนเงิน</th>
-      <th style="width:15%">รายละเอียดวันลา</th><th style="width:7%">จำนวน</th>
-      <th style="width:17%">รายการเงินหัก</th><th style="width:7%">จำนวน</th><th style="width:15%">จำนวนเงิน</th>
+      <th style="width:22%">รายละเอียด</th><th style="width:6%">จำนวน</th><th style="width:11%">จำนวนเงิน</th>
+      <th style="width:12%">รายละเอียดวันลา</th><th style="width:5%">วัน</th>
+      <th style="width:18%">รายการเงินหัก</th><th style="width:6%">รายการ</th><th style="width:12%">จำนวนเงิน</th>
     </tr></thead>
     <tbody>
-      <tr><td>วันทำงานปกติ</td><td class="c">${fmtN(d.workDays)}</td><td class="n">${fmt(d.basePay)}</td><td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td><td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td></tr>
-      <tr><td>ทำงานวันหยุด</td><td class="c">${fmtN(d.holidayD)}</td><td class="n">${zero(d.holidayPay)}</td><td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td><td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td></tr>
-      <tr><td>ทำงานล่วงเวลา</td><td class="c">${fmtN(d.otH)}</td><td class="n">${zero(d.otPay)}</td><td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td><td>หัก ณ ที่จ่าย</td><td class="c">${n(d.tax)>0?'1':''}</td><td class="n">${zero(d.tax)}</td></tr>
-      <tr><td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td><td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay)}</td><td>หักขาดงาน</td><td class="c">${n(d.absentDed)>0?'1':''}</td><td class="n">${zero(d.absentDed)}</td></tr>
-      <tr><td>เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td><td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat)}</td><td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${n(d.kot)>0?fmt(n(d.kot)):'-'}</td></tr>
-      <tr><td>อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td><td>ลาวันเกิด</td><td class="c">${fmtN(d.leaveBday)}</td><td>อื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td></tr>
-      <tr class="tot"><td colspan="2" style="text-align:right">รวมรายได้</td><td class="n">${fmt(totalInc)}</td><td colspan="2"></td><td style="text-align:right">รวมเงินหัก</td><td></td><td class="n">${fmt(totalDed)}</td></tr>
-      <tr class="net"><td colspan="6">เงินเดือนสุทธิ/บาท</td><td colspan="2" class="r">${fmt(netPay)}</td></tr>
+      ${incRows}
+      <tr class="tot">
+        <td colspan="2" style="text-align:right">รวมรายได้</td><td class="n">${fmt(totalInc)}</td>
+        <td colspan="2"></td>
+        <td style="text-align:right">รวมเงินหัก</td><td></td><td class="n">${fmt(totalDed)}</td>
+      </tr>
+      <tr class="net">
+        <td colspan="6">เงินได้สุทธิ/บาท</td>
+        <td colspan="2" class="r">${fmt(netPay)}</td>
+      </tr>
     </tbody>
   </table>
 </div>
