@@ -79,7 +79,7 @@ function parseXls(filePath) {
       "        'late':sh.cell_value(r,13),'baseWage':sh.cell_value(r,14),",
       "        'basePay':sh.cell_value(r,15),'holidayPay':sh.cell_value(r,16),",
       "        'otPay':sh.cell_value(r,17),'allowance':sh.cell_value(r,18),",
-      "        'bonus':sh.cell_value(r,19)+sh.cell_value(r,20)+sh.cell_value(r,21)+sh.cell_value(r,22)+sh.cell_value(r,23),",
+      "        'bonus':float(sh.cell_value(r,19) or 0)+float(sh.cell_value(r,20) or 0)+float(sh.cell_value(r,21) or 0)+float(sh.cell_value(r,22) or 0)+float(sh.cell_value(r,23) or 0),",
       "        'otherInc':sh.cell_value(r,24),'totalInc':sh.cell_value(r,25),",
       "        'advance':sh.cell_value(r,26),'kot':sh.cell_value(r,27),",
       "        'soc':sh.cell_value(r,28),'tax':sh.cell_value(r,29),",
