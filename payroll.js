@@ -289,13 +289,19 @@ async function getEmployeePayroll(empName, month, payType) {
 }
 
 // ─── getAvailableMonths ──────────────────────────────────────
+// คืน array of { month: string, payType: 'daily'|'monthly' }
 async function getAvailableMonths() {
   const sheets = getSheetsClient();
   const meta   = await sheets.spreadsheets.get({ spreadsheetId: process.env.LOG_SHEET_ID });
   return (meta.data.sheets || [])
     .map(s => s.properties.title)
     .filter(t => t.startsWith('เงินเดือน_') || t.startsWith('เงินเดือนรายวัน_'))
-    .map(t => t.replace('เงินเดือนรายวัน_','').replace('เงินเดือน_',''));
+    .map(t => {
+      if (t.startsWith('เงินเดือนรายวัน_')) {
+        return { month: t.replace('เงินเดือนรายวัน_', ''), payType: 'daily' };
+      }
+      return { month: t.replace('เงินเดือน_', ''), payType: 'monthly' };
+    });
 }
 
 module.exports = { parseXls, savePayrollToSheet, getEmployeePayroll, getAvailableMonths, normName };
