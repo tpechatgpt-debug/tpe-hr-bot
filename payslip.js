@@ -62,19 +62,28 @@ async function createFromPayroll(d) {
         <td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td>
       </tr>
       <tr>
-        <td>โบนัส</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
+        <td>ทำงานล่วงเวลา (OT)</td><td class="c">${n(d.otH)>0?fmtN(d.otH)+' ชม.':''}</td><td class="n">${zero(d.otPay)}</td>
         <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
         <td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td>
       </tr>
       <tr>
-        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td>ทำงานวันหยุด</td><td class="c">${n(d.holidayD)>0?fmtN(d.holidayD)+' วัน':''}</td><td class="n">${zero(d.holidayPay)}</td>
         <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
         <td>หัก ณ ที่จ่าย</td><td class="c">${n(d.tax)>0?'1':''}</td><td class="n">${zero(d.tax)}</td>
       </tr>
       <tr>
-        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
+        <td>โบนัส/เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
         <td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay||0)}</td>
         <td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${zero(d.kot)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat||0)}</td>
+        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
+      </tr>
+      <tr>
+        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
       </tr>
       <tr>
         <td></td><td></td><td></td>
