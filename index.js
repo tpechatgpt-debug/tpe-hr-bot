@@ -36,6 +36,7 @@ app.post('/webhook', async (req, res) => {
     if (event.type !== 'message' || event.message.type !== 'text') return;
 
     const userId     = event.source.userId;
+    const replyToken = event.replyToken;
     const msg        = event.message.text.trim();
 
     if (msg === 'id') { await reply(replyToken, 'User ID: ' + userId); return; }
