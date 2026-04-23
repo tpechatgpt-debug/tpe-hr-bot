@@ -35,8 +35,8 @@ app.post('/webhook', async (req, res) => {
     if (event.type === 'postback') { await handlePostback(event); return; }
     if (event.type !== 'message' || event.message.type !== 'text') return;
 
-    const userId = event.source.userId;
-    const msg    = event.message.text.trim();
+    const userId     = event.source.userId;
+    const msg        = event.message.text.trim();
 
     if (msg === 'id') { await push(userId, 'User ID: ' + userId); return; }
 
@@ -50,32 +50,23 @@ app.post('/webhook', async (req, res) => {
     }
 
     if (msg.includes('เลือกเดือน:')) {
-      const clean      = msg.trim();
-      const firstColon = clean.indexOf(':');
-      const secondColon= clean.indexOf(':', firstColon + 1);
+      const clean       = msg.trim();
+      const firstColon  = clean.indexOf(':');
+      const secondColon = clean.indexOf(':', firstColon + 1);
       const month = clean.substring(firstColon + 1, secondColon).trim();
       const reqId = clean.substring(secondColon + 1).trim();
       await handleMonthSelected(userId, month, reqId); return;
     }
 
-    // ── ตรวจสั้นก่อน เพื่อไม่ยิง API เปล่า ──────────────
-    if (msg.length < 2) {
-      await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ');
-      return;
-    }
-
-    // ── ดึง records ครั้งเดียว ใช้ร่วมกัน ────────────────
-    const [profile, items] = await Promise.all([
-      getProfile(userId),
-      lark.getRecords(larkToken),
-    ]);
+    const profile  = await getProfile(userId);
     const imgUrl   = profile?.pictureUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-    const employee = await lark.findByLineId(larkToken, userId, items);
+    const employee = await lark.findByLineId(larkToken, userId);
 
     if (employee) {
       await push(userId, createLeaveCard(employee, imgUrl));
     } else {
-      await push(userId, await lark.register(larkToken, msg, userId, items));
+      if (msg.length < 2) { await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
+      await push(userId, await lark.register(larkToken, msg, userId));
     }
 
   } catch (err) { console.error('webhook error:', err.message); }
@@ -85,14 +76,14 @@ app.post('/webhook', async (req, res) => {
 // พนักงานขอเอกสาร → ถามเดือน
 // ════════════════════════════════════════════════════════
 async function handleDocRequest(userId, larkToken, docType) {
-  const items = await lark.getRecords(larkToken);
-  const emp   = await lark.findByLineId(larkToken, userId, items);
+  const emp = await lark.findByLineId(larkToken, userId);
   if (!emp) { await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ'); return; }
 
   const rawName   = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || 'พนักงาน';
   const empName   = payroll.normName(rawName.split('(')[0].split('（')[0]);
   const requestId = (docType === 'payslip' ? 'PAY' : 'CERT') + '_' + userId + '_' + Date.now();
 
+  // ── อ่าน field 'ประเภท' จาก Lark ─────────────────────────
   const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
   const payType = rawType.includes('รายวัน') ? 'daily' : 'monthly';
   console.log(`${empName} → ประเภท: "${rawType}" → payType: ${payType}`);
@@ -100,6 +91,7 @@ async function handleDocRequest(userId, larkToken, docType) {
   pending[requestId]    = { empName, empLineId: userId, docType, larkToken, payType };
   requestLog[requestId] = { empName, empLineId: userId, docType, status: 'pending', time: Date.now() };
 
+  // ── ดึงเดือน กรองเฉพาะประเภทของพนักงานคนนี้ ──────────────
   const allMonths   = await payroll.getAvailableMonths();
   const validMonths = allMonths
     .filter(m => m.payType === payType)
@@ -213,8 +205,8 @@ async function handlePostback(event) {
         return;
       }
 
-      const docLabel  = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-      const safeName  = req.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
+      const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+      const safeName = req.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
       const filename  = docLabel + '_' + safeName + '_' + req.month + '.pdf';
 
       const pdfBuffer = req.docType === 'payslip'
@@ -321,17 +313,3 @@ function startServer(port) {
   });
 }
 startServer(PORT);
-
-async function push(userId, msg) {
-  const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  try {
-    await axios.post('https://api.line.me/v2/bot/message/push',
-      { to: userId, messages },
-      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
-    );
-  } catch (err) {
-    // log ละเอียดขึ้น
-    console.error('push error:', err.response?.status, JSON.stringify(err.response?.data));
-    throw err;
-  }
-}
