@@ -1,5 +1,4 @@
 const { google } = require('googleapis');
-
 async function log(d) {
   try {
     const auth = new google.auth.GoogleAuth({
@@ -10,7 +9,6 @@ async function log(d) {
     const sheetId   = process.env.LOG_SHEET_ID;
     const sheetName = d.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
     const now       = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-
     const values = d.docType === 'payslip'
       ? [[now, d.month, d.employeeName,
           d.workDays||0, d.baseSalary||0, d.hDays||0, d.hPay||0,
@@ -24,10 +22,9 @@ async function log(d) {
           -(d.dAdv||0)-(d.dSoc||0)-(d.dTax||0)-(d.dAbs||0)-(d.dNpL||0)-(d.dKt||0)-(d.dOth||0)
         ]]
       : [[now, d.employeeName, d.baseSalary||0, d.month||'']];
-
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `'${sheetName}'!A1`,
+      range: `${sheetName}!A1`,
       valueInputOption: 'USER_ENTERED',
       resource: { values },
     });
@@ -35,5 +32,4 @@ async function log(d) {
     console.error('sheet.log error:', err.message);
   }
 }
-
 module.exports = { log };
