@@ -27,7 +27,7 @@ async function log(d) {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `${sheetName}!A1`,
+      range: `'${sheetName}'!A1`,
       valueInputOption: 'USER_ENTERED',
       resource: { values },
     });
