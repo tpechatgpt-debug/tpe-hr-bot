@@ -321,3 +321,17 @@ function startServer(port) {
   });
 }
 startServer(PORT);
+
+async function push(userId, msg) {
+  const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
+  try {
+    await axios.post('https://api.line.me/v2/bot/message/push',
+      { to: userId, messages },
+      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
+    );
+  } catch (err) {
+    // log ละเอียดขึ้น
+    console.error('push error:', err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
+}
