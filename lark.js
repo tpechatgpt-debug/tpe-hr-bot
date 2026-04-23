@@ -16,14 +16,9 @@ async function getToken() {
     { app_id: APP_ID, app_secret: SECRET }
   );
   _tokenCache = r.data.tenant_access_token;
-  _tokenExpiry = now + (r.data.expire - 60) * 1000; // หมดก่อน 1 นาที
+  _tokenExpiry = now + (r.data.expire - 60) * 1000;
   return _tokenCache;
 }
-
-// ─── Records Cache ────────────────────────────────────────────
-let _recordsCache = null;
-let _recordsExpiry = 0;
-const CACHE_TTL = 60 * 1000; // cache 60 วินาที
 
 // ─── Retry helper ─────────────────────────────────────────────
 async function axiosWithRetry(fn, retries = 3) {
@@ -33,7 +28,7 @@ async function axiosWithRetry(fn, retries = 3) {
     } catch (err) {
       const status = err?.response?.status;
       if (status === 429 && i < retries - 1) {
-        const wait = (i + 1) * 2000; // 2s, 4s, 6s
+        const wait = (i + 1) * 2000;
         console.warn(`Lark 429 — รอ ${wait}ms แล้ว retry (${i + 1}/${retries})`);
         await new Promise(r => setTimeout(r, wait));
       } else {
@@ -43,28 +38,19 @@ async function axiosWithRetry(fn, retries = 3) {
   }
 }
 
+// ─── getRecords (ไม่มี cache — ลด call แทน) ──────────────────
 async function getRecords(token) {
-  const now = Date.now();
-  if (_recordsCache && now < _recordsExpiry) return _recordsCache;
-
   const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records?page_size=100`;
   const r = await axiosWithRetry(() =>
     axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
   );
-  _recordsCache = r.data.data.items || [];
-  _recordsExpiry = now + CACHE_TTL;
-  return _recordsCache;
+  return r.data.data.items || [];
 }
 
-// ─── invalidate cache (เรียกหลัง write) ──────────────────────
-function invalidateCache() {
-  _recordsCache = null;
-  _recordsExpiry = 0;
-}
-
-async function findByLineId(token, lineId) {
-  const items = await getRecords(token);
-  for (const item of items) {
+// ─── findByLineId (รับ items จากภายนอกได้) ───────────────────
+async function findByLineId(token, lineId, items = null) {
+  const records = items || await getRecords(token);
+  for (const item of records) {
     const f   = item.fields;
     const lid = f['Line ID'] || f['LineID'] || f['Line_ID'];
     if (lid && lid.toString().trim() === lineId) return f;
@@ -72,9 +58,10 @@ async function findByLineId(token, lineId) {
   return null;
 }
 
-async function register(token, nameToFind, lineId) {
-  const items = await getRecords(token);
-  for (const item of items) {
+// ─── register (รับ items จากภายนอกได้) ───────────────────────
+async function register(token, nameToFind, lineId, items = null) {
+  const records = items || await getRecords(token);
+  for (const item of records) {
     const dbName = item.fields['ชื่อ - นามสกุล'];
     if (dbName && dbName.includes(nameToFind)) {
       await axiosWithRetry(() =>
@@ -84,7 +71,6 @@ async function register(token, nameToFind, lineId) {
           { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
         )
       );
-      invalidateCache(); // clear cache หลัง write
       return `✅ ลงทะเบียนสำเร็จ!\nยินดีต้อนรับคุณ "${dbName}" ครับ 🎉`;
     }
   }
@@ -96,4 +82,4 @@ async function getAllEmployees(token) {
   return items.map(item => item.fields || item);
 }
 
-module.exports = { getToken, findByLineId, register, getAllEmployees };
+module.exports = { getToken, getRecords, findByLineId, register, getAllEmployees };
