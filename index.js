@@ -213,7 +213,6 @@ async function handlePostback(event) {
         ? await payslip.createFromPayroll(empData)
         : await cert.createFromPayroll(empData);
 
-      await push(req.empLineId, '📄 ' + docLabel + ' เดือน ' + req.month + ' พร้อมแล้วครับ กำลังส่งไฟล์...');
       await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
 
       await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
@@ -263,21 +262,22 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function push(userId, msg) {
   const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  try {
-    await axios.post('https://api.line.me/v2/bot/message/push',
-      { to: userId, messages },
-      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
-    );
-  } catch (err) {
-    if (err.response?.status === 429) {
-      console.log('LINE 429 rate limit — retry after 2s');
-      await sleep(2000);
+  await sleep(300); // ป้องกัน rate limit
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
       await axios.post('https://api.line.me/v2/bot/message/push',
         { to: userId, messages },
         { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
       );
-    } else {
-      throw err;
+      return;
+    } catch (err) {
+      if (err.response?.status === 429 && attempt < 2) {
+        const wait = (attempt + 1) * 3000;
+        console.log(`LINE 429 — retry ${attempt+1} after ${wait/1000}s`);
+        await sleep(wait);
+      } else {
+        throw err;
+      }
     }
   }
 }
