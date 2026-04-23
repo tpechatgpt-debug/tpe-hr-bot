@@ -1,35 +1,57 @@
 const { google } = require('googleapis');
+
 async function log(d) {
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
-    const sheets    = google.sheets({ version: 'v4', auth });
-    const sheetId   = process.env.LOG_SHEET_ID;
-    const sheetName = d.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-    const now       = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+    const sheets  = google.sheets({ version: 'v4', auth });
+    const sheetId = process.env.LOG_SHEET_ID;
+
+    // ชื่อ tab ตาม docType
+    const tabName = d.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+    const now     = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
+    // ตรวจว่า tab มีอยู่ไหม ถ้าไม่มีให้สร้าง
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+    const exists = (meta.data.sheets || []).some(s => s.properties.title === tabName);
+
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: {
+          requests: [{ addSheet: { properties: { title: tabName } } }],
+        },
+      });
+      // ใส่ header
+      const headers = d.docType === 'payslip'
+        ? [['วันที่', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'เดือน', 'ประเภท', 'เงินเดือน', 'รายได้รวม', 'รายจ่ายรวม', 'เงินได้สุทธิ']]
+        : [['วันที่', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'เดือน', 'เงินเดือน']];
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: `'${tabName}'!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: headers },
+      });
+    }
+
+    // append ข้อมูล
     const values = d.docType === 'payslip'
-      ? [[now, d.month, d.employeeName,
-          d.workDays||0, d.baseSalary||0, d.hDays||0, d.hPay||0,
-          d.otH||0, d.otPay||0, d.al||0, d.dilPay||0,
-          d.trad||0, d.tradPay||0, d.otInc||0,
-          (d.baseSalary||0)+(d.hPay||0)+(d.otPay||0)+(d.dilPay||0)+(d.tradPay||0)+(d.otInc||0),
-          d.lv||0, d.lp||0, d.ls||0, d.lnp||0, d.lm||0, d.lb||0,
-          d.dAdv||0, d.dSoc||0, d.dTax||0, d.dAbs||0, d.dNpL||0, d.dKt||0, d.dOth||0,
-          (d.dAdv||0)+(d.dSoc||0)+(d.dTax||0)+(d.dAbs||0)+(d.dNpL||0)+(d.dKt||0)+(d.dOth||0),
-          (d.baseSalary||0)+(d.hPay||0)+(d.otPay||0)+(d.dilPay||0)+(d.tradPay||0)+(d.otInc||0)
-          -(d.dAdv||0)-(d.dSoc||0)-(d.dTax||0)-(d.dAbs||0)-(d.dNpL||0)-(d.dKt||0)-(d.dOth||0)
-        ]]
-      : [[now, d.employeeName, d.baseSalary||0, d.month||'']];
+      ? [[now, d.name||'', d.position||'', d.month||'', d.payType||'monthly',
+          d.baseWage||d.basePay||0, d.totalInc||0, d.totalDed||0, d.netPay||0]]
+      : [[now, d.name||'', d.position||'', d.month||'', d.baseWage||d.basePay||0]];
+
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: `${sheetName}!A1`,
+      range: `'${tabName}'!A1`,
       valueInputOption: 'USER_ENTERED',
-      resource: { values },
+      requestBody: { values },
     });
+
   } catch (err) {
     console.error('sheet.log error:', err.message);
   }
 }
+
 module.exports = { log };
