@@ -57,38 +57,65 @@ async function createFromPayroll(d) {
         <td></td><td></td><td></td><td></td><td></td>
       </tr>` : `
       <tr>
-        <td>เงินเดือน</td><td class="c">1</td><td class="n">${fmt(d.basePay||d.baseWage)}</td>
+        <td>วันทำงานปกติ</td>
+        <td class="c">${fmtN(d.workDays)}</td>
+        <td class="n">${fmt(d.basePay||d.baseWage)}</td>
         <td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td>
-        <td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td>
+        <td>หักเบิกเงินล่วงหน้า</td>
+        <td class="c">${n(d.advance)>0?'1':''}</td>
+        <td class="n">${zero(d.advance)}</td>
       </tr>
       <tr>
-        <td>ทำงานล่วงเวลา (OT)</td><td class="c">${n(d.otH)>0?fmtN(d.otH)+' ชม.':''}</td><td class="n">${zero(d.otPay)}</td>
+        <td>ทำงานวันหยุด</td>
+        <td class="c">${fmtN(d.holidayD)}</td>
+        <td class="n">${zero(d.holidayPay)}</td>
         <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
-        <td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td>
+        <td>หักประกันสังคม</td>
+        <td class="c">${n(d.soc)>0?'1':''}</td>
+        <td class="n">${fmt(d.soc)}</td>
       </tr>
       <tr>
-        <td>ทำงานวันหยุด</td><td class="c">${n(d.holidayD)>0?fmtN(d.holidayD)+' วัน':''}</td><td class="n">${zero(d.holidayPay)}</td>
+        <td>ทำงานล่วงเวลา</td>
+        <td class="c">${n(d.otH)>0?fmtN(d.otH)+' ชม.':0}</td>
+        <td class="n">${zero(d.otPay)}</td>
         <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
-        <td>หัก ณ ที่จ่าย</td><td class="c">${n(d.tax)>0?'1':''}</td><td class="n">${zero(d.tax)}</td>
+        <td>หัก ณ ที่จ่าย</td>
+        <td class="c">${n(d.tax)>0?'1':''}</td>
+        <td class="n">${zero(d.tax)}</td>
       </tr>
       <tr>
-        <td>โบนัส/เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
+        <td>เบี้ยเลี้ยง</td>
+        <td class="c">${n(d.allowance)>0?'1':''}</td>
+        <td class="n">${zero(d.allowance)}</td>
         <td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay||0)}</td>
-        <td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${zero(d.kot)}</td>
+        <td>หักขาดงาน</td>
+        <td class="c">${n(d.absentDed)>0?'1':''}</td>
+        <td class="n">${zero(d.absentDed)}</td>
       </tr>
       <tr>
-        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td>เบี้ยขยัน</td>
+        <td class="c">${n(d.bonus)>0?'1':''}</td>
+        <td class="n">${zero(d.bonus)}</td>
         <td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat||0)}</td>
-        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
+        <td>หักขอลาโดยไม่ขอรับ</td>
+        <td class="c">${n(d.noPayDed)>0?'1':''}</td>
+        <td class="n">${zero(d.noPayDed)}</td>
       </tr>
       <tr>
-        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
-        <td></td><td></td><td></td><td></td><td></td>
+        <td>วันหยุดตามประเพณี</td>
+        <td class="c">${fmtN(d.festivalD||0)}</td>
+        <td class="n">${zero(d.festivalPay||0)}</td>
+        <td>ลาหยุดวันเกิด</td><td class="c">${fmtN(d.leaveBday||0)}</td>
+        <td>หักกยศ.</td>
+        <td class="c">${n(d.kot)>0?'1':''}</td>
+        <td class="n">${n(d.kot)>0?fmt(d.kot):'-'}</td>
       </tr>
       <tr>
+        <td>อื่นๆ</td>
+        <td></td>
+        <td class="n">${zero(d.otherInc)}</td>
+        <td></td><td></td>
         <td></td><td></td><td></td>
-        <td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat||0)}</td>
-        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
       </tr>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -143,8 +170,8 @@ tr:nth-child(even) td{background:#FDFAF4}
   <table>
     <thead><tr>
       <th style="width:22%">รายละเอียด</th><th style="width:6%">จำนวน</th><th style="width:11%">จำนวนเงิน</th>
-      <th style="width:12%">รายละเอียดวันลา</th><th style="width:5%">วัน</th>
-      <th style="width:18%">รายการเงินหัก</th><th style="width:6%">รายการ</th><th style="width:12%">จำนวนเงิน</th>
+      <th style="width:13%">รายละเอียดวันลา</th><th style="width:5%">จำนวน</th>
+      <th style="width:19%">รายการเงินหัก</th><th style="width:6%">จำนวน</th><th style="width:11%">จำนวนเงิน</th>
     </tr></thead>
     <tbody>
       ${incRows}
