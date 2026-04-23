@@ -259,9 +259,27 @@ function leaveRow(icon, label, total, left, color) {
   return { type: 'box', layout: 'horizontal', alignItems: 'center', contents: [ { type: 'box', layout: 'horizontal', flex: 7, contents: [ { type: 'text', text: icon, size: 'xl', flex: 0, margin: 'sm' }, { type: 'box', layout: 'vertical', paddingStart: '10px', contents: [ { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#333333' }, { type: 'text', text: `สิทธิ์ทั้งหมด ${total} วัน`, size: 'xxs', color: '#AAAAAA' } ] } ] }, { type: 'box', layout: 'vertical', flex: 3, alignItems: 'flex-end', contents: [ { type: 'text', text: String(left), size: 'xxl', weight: 'bold', color }, { type: 'text', text: 'วัน', size: 'xxs', color } ] } ] };
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function push(userId, msg) {
   const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  await axios.post('https://api.line.me/v2/bot/message/push', { to: userId, messages }, { headers: { Authorization: `Bearer ${LINE_TOKEN}` } });
+  try {
+    await axios.post('https://api.line.me/v2/bot/message/push',
+      { to: userId, messages },
+      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
+    );
+  } catch (err) {
+    if (err.response?.status === 429) {
+      console.log('LINE 429 rate limit — retry after 2s');
+      await sleep(2000);
+      await axios.post('https://api.line.me/v2/bot/message/push',
+        { to: userId, messages },
+        { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
+      );
+    } else {
+      throw err;
+    }
+  }
 }
 async function getProfile(userId) {
   try { const r = await axios.get(`https://api.line.me/v2/bot/profile/${userId}`, { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }); return r.data; } catch { return null; }
