@@ -125,29 +125,45 @@ else:
                 break
     rows = []
     for r in range(header_row + 1, sh.nrows):
-        name_val = str(sh.cell_value(r, 2)).strip()
-        if not name_val or name_val in ['0.0','ชื่อ','ชื่อ-นามสกุล','']:
+        # col 1 = ชื่อ, col 2 = ตำแหน่ง (รายเดือนไม่มีคำนำหน้าแยก)
+        name_val = str(sh.cell_value(r, 1)).strip()
+        if not name_val or name_val in ['0.0','ชื่อ','ชี่อ/นามสกุล','ชื่อ-นามสกุล','']:
             continue
-        prefix = str(sh.cell_value(r, 1)).strip()
-        if prefix in ['0.0','']: prefix = ''
-        full_name = (prefix + ' ' + name_val).strip()
         rows.append({
-            'name':     full_name,
-            'position': str(sh.cell_value(r, 3)).strip(),
-            'baseWage': n(sh,r,col('เงินเดือน',4)),
-            'basePay':  n(sh,r,col('เงินเดือน',4)),
-            'bonus':    n(sh,r,col('โบนัส',5)),
-            'allowance':n(sh,r,col('ค่าเดินทาง',7)),
-            'otherInc': n(sh,r,col('รายได้อื่นๆ',9)),
-            'totalInc': n(sh,r,col('รายได้รวม',10)),
-            'soc':      n(sh,r,col('ประกันสังคม',11)),
-            'advance':  n(sh,r,col('เงินล่วงหน้า',12)),
-            'otherDed': n(sh,r,col('รายจ่ายอื่นๆ',13)),
-            'totalDed': n(sh,r,col('รายจ่ายรวม',14)),
-            'netPay':   n(sh,r,col('เงินได้สุทธิ',15)),
-            'workDays':0,'holidayD':0,'otH':0,'otPay':0,'holidayPay':0,
-            'leaveP':0,'leaveSick':0,'absent':0,'leaveVac':0,
-            'leaveMat':0,'leaveBday':0,'late':0,'kot':0,'tax':0,
+            'name':     name_val,
+            'position': str(sh.cell_value(r, 2)).strip(),
+            # สถิติการทำงาน
+            # สถิติการทำงาน (ตรงกับ Sheet col 2-11)
+            'workDays':   n(sh,r,3),   # จน.วัน
+            'holidayD':   n(sh,r,4),   # วันหยุด
+            'otH':        n(sh,r,5),   # O.T
+            'leaveP':     n(sh,r,6),   # ลากิจ
+            'leaveSick':  n(sh,r,7),   # ลาป่วย
+            'absent':     n(sh,r,8),   # ขาดงาน
+            'leaveVac':   n(sh,r,9),   # พักร้อน
+            'leaveNoPay': n(sh,r,10),  # ไม่รับเงิน
+            'leaveMat':   n(sh,r,11),  # ลาคลอด
+            'leaveBday':  n(sh,r,12),  # วันเกิด
+            'late':       n(sh,r,13),  # สาย
+            # รายรับ (col 14-25)
+            'baseWage':   n(sh,r,14),  # ค่าแรง (ฐาน)
+            'basePay':    n(sh,r,15),  # ค่าปกติ
+            'holidayPay': n(sh,r,16),  # วันหยุด Pay
+            'otPay':      n(sh,r,17),  # ค่า OT
+            'allowance':  n(sh,r,18),  # เบี้ยเลี้ยง
+            'bonus':      n(sh,r,19)+n(sh,r,20)+n(sh,r,21)+n(sh,r,22)+n(sh,r,23),  # เบี้ยขยัน 1-5
+            'otherInc':   n(sh,r,24),  # อื่นๆ
+            'totalInc':   n(sh,r,25),  # รวม
+            # รายจ่าย (col 26-34)
+            'advance':    n(sh,r,26),  # ล่วงหน้า
+            'kot':        n(sh,r,27),  # กยศ.
+            'soc':        n(sh,r,28),  # ปกส.(ล/จ)
+            'tax':        n(sh,r,29),  # ณที่จ่าย
+            'absentDed':  n(sh,r,30),  # วันขาด
+            'noPayDed':   n(sh,r,31),  # ไม่รับเงิน
+            'otherDed':   n(sh,r,32),  # อื่น ๆ
+            'totalDed':   n(sh,r,33),  # รวม
+            'netPay':     n(sh,r,34),  # เงินได้สุทธิ
         })
     print(json.dumps({'type':'monthly','month':month,'rows':rows}, ensure_ascii=False))
 `;
@@ -186,8 +202,11 @@ async function savePayrollToSheet(month, rows, payType) {
          'ลากิจ','ลาป่วย','ขาดงาน','พักร้อน','ค่าปกติ','ค่าOT','ค่าหยุดสัปดาห์','ค่าประเพณี',
          'เพิ่มประเพณี','เบี้ยเลี้ยง','เบี้ยขยัน','รายได้อื่นๆ','รายได้รวม',
          'ปกส.','ปกส(น/จ)','ล่วงหน้า','กยศ','สาย','รายจ่ายอื่นๆ','รายจ่ายรวม','เงินได้สุทธิ','type']
-      : ['ชื่อ-นามสกุล','ตำแหน่ง','เงินเดือน','โบนัส','เบี้ยเลี้ยง','รายได้อื่นๆ','รายได้รวม',
-         'ประกันสังคม','เงินล่วงหน้า','รายจ่ายอื่นๆ','รายจ่ายรวม','เงินได้สุทธิ','type'];
+      : ['ชื่อ-นามสกุล','ตำแหน่ง','วันทำงาน','วันหยุด','OT',
+         'ลากิจ','ลาป่วย','ขาดงาน','พักร้อน','ไม่รับเงิน','ลาคลอด','วันเกิด',
+         'ค่าแรง','ค่าปกติ','ค่าหยุดPay','OTPay','เบี้ยเลี้ยง','เบี้ยขยัน','รวมรายได้',
+         'หักล่วงหน้า','กยศ','ปกส.','ภาษี','วันขาด','ไม่รับเงิน(หัก)','รายจ่ายอื่นๆ','รวมหัก',
+         'เงินได้สุทธิ','type'];
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId, range: `'${sheetName}'!A1`,
       valueInputOption: 'RAW', requestBody: { values: [hdrs] },
@@ -209,9 +228,14 @@ async function savePayrollToSheet(month, rows, payType) {
         r.otherDed||0, r.totalDed||0, r.netPay||0, 'daily',
       ])
     : rows.map(r => [
-        r.name, r.position, r.baseWage||r.basePay||0, r.bonus||0, r.allowance||0,
-        r.otherInc||0, r.totalInc||0,
-        r.soc||0, r.advance||0, r.otherDed||0, r.totalDed||0,
+        r.name, r.position,
+        r.workDays||0, r.holidayD||0, r.otH||0,
+        r.leaveP||0, r.leaveSick||0, r.absent||0, r.leaveVac||0,
+        r.leaveNoPay||0, r.leaveMat||0, r.leaveBday||0,
+        r.baseWage||r.basePay||0, r.basePay||0, r.holidayPay||0, r.otPay||0,
+        r.allowance||0, r.bonus||0, r.totalInc||0,
+        r.advance||0, r.kot||0, r.soc||0, r.tax||0,
+        r.absentDed||0, r.noPayDed||0, r.otherDed||0, r.totalDed||0,
         r.netPay||0, 'monthly',
       ]);
 
@@ -266,18 +290,34 @@ async function getEmployeePayroll(empName, month, payType) {
           tax: 0, absentDed: 0, noPayDed: 0,
         };
       } else {
+        // monthly col order (ตรงกับ Sheet จริง):
+        // 0=ชื่อ, 1=ตำแหน่ง, 2=วันทำงาน, 3=วันหยุด, 4=OT
+        // 5=ลากิจ, 6=ลาป่วย, 7=ขาดงาน, 8=พักร้อน
+        // 9=ไม่รับเงิน, 10=ลาคลอด, 11=วันเกิด
+        // 12=ค่าแรง, 13=ค่าปกติ, 14=ค่าหยุดPay, 15=OTPay
+        // 16=เบี้ยเลี้ยง, 17=เบี้ยขยัน, 18=รวมรายได้
+        // 19=หักล่วงหน้า, 20=กยศ, 21=ปกส., 22=ภาษี
+        // 23=วันขาด, 24=ไม่รับเงิน(หัก), 25=รายจ่ายอื่นๆ, 26=รวมหัก
+        // 27=เงินได้สุทธิ, 28=type
         return {
           name: r[0], position: r[1],
-          baseWage: toN(r[2]), basePay: toN(r[2]),
-          bonus: toN(r[3]), allowance: toN(r[4]),
-          otherInc: toN(r[5]), totalInc: toN(r[6]),
-          soc: toN(r[7]), advance: toN(r[8]),
-          otherDed: toN(r[9]), totalDed: toN(r[10]), netPay: toN(r[11]),
+          workDays: toN(r[2]), holidayD: toN(r[3]), otH: toN(r[4]),
+          leaveP: toN(r[5]), leaveSick: toN(r[6]), absent: toN(r[7]),
+          leaveVac: toN(r[8]), leaveNoPay: toN(r[9]),
+          leaveMat: toN(r[10]), leaveBday: toN(r[11]),
+          baseWage: toN(r[12]), basePay: toN(r[13]),
+          holidayPay: toN(r[14]), otPay: toN(r[15]),
+          allowance: toN(r[16]), bonus: toN(r[17]),
+          totalInc: toN(r[18]),
+          advance: toN(r[19]), kot: toN(r[20]),
+          soc: toN(r[21]), tax: toN(r[22]),
+          absentDed: toN(r[23]), noPayDed: toN(r[24]),
+          otherDed: toN(r[25]), totalDed: toN(r[26]),
+          netPay: toN(r[27]),
           month, payType: 'monthly',
-          workDays:0, holidayD:0, otH:0, otPay:0, holidayPay:0,
-          leaveP:0, leaveSick:0, absent:0, leaveVac:0, leaveMat:0, leaveBday:0,
+          // ไม่มีใน monthly
+          otherInc: 0, late: 0,
           festivalD:0, festivalPay:0, festivalExtra:0,
-          kot:0, tax:0, absentDed:0, noPayDed:0, late:0,
         };
       }
     }
