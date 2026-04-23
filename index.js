@@ -38,15 +38,15 @@ app.post('/webhook', async (req, res) => {
     const userId     = event.source.userId;
     const msg        = event.message.text.trim();
 
-    if (msg === 'id') { await push(userId, 'User ID: ' + userId); return; }
+    if (msg === 'id') { await reply(replyToken, 'User ID: ' + userId); return; }
 
     const larkToken = await lark.getToken();
 
     if (msg === 'ขอสลิปเงินเดือน' || msg === 'ขอสลีปเงินเดือน') {
-      await handleDocRequest(userId, larkToken, 'payslip'); return;
+      await handleDocRequest(replyToken, userId, larkToken, 'payslip'); return;
     }
     if (msg === 'ขอใบรับรองเงินเดือน') {
-      await handleDocRequest(userId, larkToken, 'certificate'); return;
+      await handleDocRequest(replyToken, userId, larkToken, 'certificate'); return;
     }
 
     if (msg.includes('เลือกเดือน:')) {
@@ -55,7 +55,7 @@ app.post('/webhook', async (req, res) => {
       const secondColon = clean.indexOf(':', firstColon + 1);
       const month = clean.substring(firstColon + 1, secondColon).trim();
       const reqId = clean.substring(secondColon + 1).trim();
-      await handleMonthSelected(userId, month, reqId); return;
+      await handleMonthSelected(replyToken, userId, month, reqId); return;
     }
 
     const profile  = await getProfile(userId);
@@ -63,10 +63,10 @@ app.post('/webhook', async (req, res) => {
     const employee = await lark.findByLineId(larkToken, userId);
 
     if (employee) {
-      await push(userId, createLeaveCard(employee, imgUrl));
+      await reply(replyToken, createLeaveCard(employee, imgUrl));
     } else {
-      if (msg.length < 2) { await push(userId, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
-      await push(userId, await lark.register(larkToken, msg, userId));
+      if (msg.length < 2) { await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
+      await reply(replyToken, await lark.register(larkToken, msg, userId));
     }
 
   } catch (err) { console.error('webhook error:', err.message); }
@@ -75,9 +75,9 @@ app.post('/webhook', async (req, res) => {
 // ════════════════════════════════════════════════════════
 // พนักงานขอเอกสาร → ถามเดือน
 // ════════════════════════════════════════════════════════
-async function handleDocRequest(userId, larkToken, docType) {
+async function handleDocRequest(replyToken, userId, larkToken, docType) {
   const emp = await lark.findByLineId(larkToken, userId);
-  if (!emp) { await push(userId, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ'); return; }
+  if (!emp) { await reply(replyToken, '❌ ไม่พบข้อมูลของคุณ กรุณาลงทะเบียนก่อนนะครับ'); return; }
 
   const rawName   = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || 'พนักงาน';
   const empName   = payroll.normName(rawName.split('(')[0].split('（')[0]);
@@ -103,11 +103,11 @@ async function handleDocRequest(userId, larkToken, docType) {
   const typeLabel = rawType === 'รายวัน' ? 'รายวัน' : 'รายเดือน';
 
   if (validMonths.length === 0) {
-    await push(userId, `⚠️ ยังไม่มีข้อมูล${typeLabel}ในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ`);
+    await reply(replyToken, `⚠️ ยังไม่มีข้อมูล${typeLabel}ในระบบ กรุณาให้ HR อัปโหลดไฟล์ Excel ก่อนนะครับ`);
     return;
   }
 
-  await push(userId, {
+  await reply(replyToken, {
     type: 'text',
     text: `📅 ต้องการ${docLabel} (${typeLabel}) เดือนไหนครับ?`,
     quickReply: {
@@ -122,15 +122,15 @@ async function handleDocRequest(userId, larkToken, docType) {
 // ════════════════════════════════════════════════════════
 // พนักงานเลือกเดือน → แจ้ง HR
 // ════════════════════════════════════════════════════════
-async function handleMonthSelected(userId, month, requestId) {
+async function handleMonthSelected(replyToken, userId, month, requestId) {
   const req = pending[requestId];
-  if (!req) { await push(userId, '⚠️ คำขอหมดอายุ กรุณาขอใหม่อีกครั้งครับ'); return; }
+  if (!req) { await reply(replyToken, '⚠️ คำขอหมดอายุ กรุณาขอใหม่อีกครั้งครับ'); return; }
 
   req.month = month;
   if (requestLog[requestId]) requestLog[requestId].month = month;
   const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
 
-  await push(userId, {
+  await reply(replyToken, {
     type: 'flex', altText: 'ส่งคำขอแล้ว',
     contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
       contents: [
@@ -259,6 +259,19 @@ function leaveRow(icon, label, total, left, color) {
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function reply(replyToken, msg) {
+  if (!replyToken) return; // replyToken หมดอายุ ข้ามได้
+  const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
+  try {
+    await axios.post('https://api.line.me/v2/bot/message/reply',
+      { replyToken, messages },
+      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
+    );
+  } catch (err) {
+    console.error('reply error:', err.response?.data || err.message);
+  }
+}
 
 async function push(userId, msg) {
   const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
