@@ -20,6 +20,7 @@ const HR_USER_ID = process.env.HR_LINE_USER_ID;
 const pending        = {};
 const requestLog     = {};
 const pendingNotify  = {}; // คำขอที่ push ไม่ได้ (quota หมด) รอ HR ดูใน Portal
+const readyDocs      = {}; // PDF พร้อมส่ง รอพนักงาน reply มารับ { [userId]: { url, filename, label, readyAt } }
 
 app.get('/', (req, res) => res.send('TPE HR Bot v2 OK'));
 
@@ -220,9 +221,40 @@ async function handlePostback(event) {
         ? await payslip.createFromPayroll(empData)
         : await cert.createFromPayroll(empData);
 
-      await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
+      const sendResult = await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename);
 
-      await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
+      // ถ้า push ไม่ได้ (quota หมด) → เก็บ link ไว้รอพนักงาน reply มารับ
+      if (sendResult?.fallback) {
+        // push ไม่ได้ตอนนี้ — ตั้ง timer 2 นาที แล้ว push อัตโนมัติ ไม่ต้องรอพนักงานพิมพ์
+        const token = require('crypto').randomBytes(8).toString('hex');
+        payslip.pdfStore[token] = { buffer: pdfBuffer, filename };
+        const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${token}`;
+        readyDocs[req.empLineId] = { url: pdfUrl, filename, label: docLabel, empName: req.empName };
+        console.log(`readyDocs saved for ${req.empName} — auto-push in 2min`);
+        await push(hrUserId, `✅ PDF พร้อมแล้ว — ระบบจะส่งให้ ${req.empName} อัตโนมัติใน 2 นาทีครับ`);
+        setTimeout(async () => {
+          const doc = readyDocs[req.empLineId];
+          if (!doc) return;
+          console.log(`auto-push PDF to ${doc.empName} after 2min`);
+          const r = await push(req.empLineId, {
+            type: 'flex', altText: `${doc.label} พร้อมแล้ว`,
+            contents: { type: 'bubble',
+              body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
+                { type: 'text', text: `📄 ${doc.label} พร้อมแล้วครับ`, weight: 'bold', size: 'md', color: '#1B7F4E' },
+                { type: 'text', text: 'กดปุ่มด้านล่างเพื่อดาวน์โหลด', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
+              ]},
+              footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+                { type: 'button', style: 'primary', color: '#1E3A5F',
+                  action: { type: 'uri', label: `ดาวน์โหลด ${doc.label}`, uri: doc.url } }
+              ]}
+            }
+          });
+          if (!r?.fallback) { delete readyDocs[req.empLineId]; console.log(`auto-push OK for ${doc.empName}`); }
+          else { console.log(`auto-push still 429 for ${doc.empName} — readyDocs kept for manual reply`); }
+        }, 2 * 60 * 1000);
+      } else {
+        await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
+      }
       delete pending[rid];
       if (requestLog[rid]) requestLog[rid].status = 'sent';
       await sheet.log({ ...empData, docType: req.docType });
@@ -378,6 +410,33 @@ app.post('/portal/approve', express.json(), async (req, res) => {
         : await cert.createFromPayroll(empData);
 
       const pushResult = await payslip.sendPdfToLine(req2.empLineId, pdfBuffer, filename).catch(e => ({ fallback: true, error: e.message }));
+
+      if (pushResult?.fallback) {
+        const token = require('crypto').randomBytes(8).toString('hex');
+        payslip.pdfStore[token] = { buffer: pdfBuffer, filename };
+        const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${token}`;
+        readyDocs[req2.empLineId] = { url: pdfUrl, filename, label: docLabel, empName: req2.empName };
+        console.log(`readyDocs (portal) saved for ${req2.empName} — auto-push in 2min`);
+        setTimeout(async () => {
+          const doc = readyDocs[req2.empLineId];
+          if (!doc) return;
+          console.log(`auto-push PDF (portal) to ${req2.empName}`);
+          const r = await push(req2.empLineId, {
+            type: 'flex', altText: `${doc.label} พร้อมแล้ว`,
+            contents: { type: 'bubble',
+              body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
+                { type: 'text', text: `📄 ${doc.label} พร้อมแล้วครับ`, weight: 'bold', size: 'md', color: '#1B7F4E' },
+                { type: 'text', text: 'กดปุ่มด้านล่างเพื่อดาวน์โหลด', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
+              ]},
+              footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+                { type: 'button', style: 'primary', color: '#1E3A5F',
+                  action: { type: 'uri', label: `ดาวน์โหลด ${doc.label}`, uri: doc.url } }
+              ]}
+            }
+          });
+          if (!r?.fallback) { delete readyDocs[req2.empLineId]; console.log(`auto-push (portal) OK for ${doc.empName}`); }
+        }, 2 * 60 * 1000);
+      }
 
       delete pending[requestId];
       if (requestLog[requestId]) requestLog[requestId].status = 'sent';
