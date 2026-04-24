@@ -231,27 +231,8 @@ async function handlePostback(event) {
         const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${token}`;
         readyDocs[req.empLineId] = { url: pdfUrl, filename, label: docLabel, empName: req.empName };
         console.log(`readyDocs saved for ${req.empName} — auto-push in 2min`);
-        await push(hrUserId, `✅ PDF พร้อมแล้ว — ระบบจะส่งให้ ${req.empName} อัตโนมัติใน 2 นาทีครับ`);
-        setTimeout(async () => {
-          const doc = readyDocs[req.empLineId];
-          if (!doc) return;
-          console.log(`auto-push PDF to ${doc.empName} after 2min`);
-          const r = await push(req.empLineId, {
-            type: 'flex', altText: `${doc.label} พร้อมแล้ว`,
-            contents: { type: 'bubble',
-              body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
-                { type: 'text', text: `📄 ${doc.label} พร้อมแล้วครับ`, weight: 'bold', size: 'md', color: '#1B7F4E' },
-                { type: 'text', text: 'กดปุ่มด้านล่างเพื่อดาวน์โหลด', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
-              ]},
-              footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
-                { type: 'button', style: 'primary', color: '#1E3A5F',
-                  action: { type: 'uri', label: `ดาวน์โหลด ${doc.label}`, uri: doc.url } }
-              ]}
-            }
-          });
-          if (!r?.fallback) { delete readyDocs[req.empLineId]; console.log(`auto-push OK for ${doc.empName}`); }
-          else { console.log(`auto-push still 429 for ${doc.empName} — readyDocs kept for manual reply`); }
-        }, 2 * 60 * 1000);
+        await push(hrUserId, `✅ PDF พร้อมแล้ว — ${req.empName} จะได้รับลิงก์ทันทีเมื่อส่งข้อความมาครั้งถัดไปครับ`);
+        // readyDocs saved — จะส่งเมื่อพนักงาน reply ข้อความถัดไป
       } else {
         await push(hrUserId, `✅ ส่ง PDF ${docLabel} ให้ ${req.empName} แล้วครับ`);
       }
@@ -417,25 +398,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
         const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${token}`;
         readyDocs[req2.empLineId] = { url: pdfUrl, filename, label: docLabel, empName: req2.empName };
         console.log(`readyDocs (portal) saved for ${req2.empName} — auto-push in 2min`);
-        setTimeout(async () => {
-          const doc = readyDocs[req2.empLineId];
-          if (!doc) return;
-          console.log(`auto-push PDF (portal) to ${req2.empName}`);
-          const r = await push(req2.empLineId, {
-            type: 'flex', altText: `${doc.label} พร้อมแล้ว`,
-            contents: { type: 'bubble',
-              body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
-                { type: 'text', text: `📄 ${doc.label} พร้อมแล้วครับ`, weight: 'bold', size: 'md', color: '#1B7F4E' },
-                { type: 'text', text: 'กดปุ่มด้านล่างเพื่อดาวน์โหลด', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
-              ]},
-              footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
-                { type: 'button', style: 'primary', color: '#1E3A5F',
-                  action: { type: 'uri', label: `ดาวน์โหลด ${doc.label}`, uri: doc.url } }
-              ]}
-            }
-          });
-          if (!r?.fallback) { delete readyDocs[req2.empLineId]; console.log(`auto-push (portal) OK for ${doc.empName}`); }
-        }, 2 * 60 * 1000);
+        // readyDocs saved — จะส่งเมื่อพนักงาน reply ข้อความถัดไป
       }
 
       delete pending[requestId];
@@ -450,6 +413,37 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 
   res.status(400).json({ error: 'invalid action' });
 });
+
+// ════════════════════════════════════════════════════════
+// readyDocs worker — ตรวจทุก 30 วินาที ถ้ามี PDF รอ → push LINE
+// ทำงานได้แม้ Render idle เพราะ loop นี้ keep server ตื่นอยู่
+// ════════════════════════════════════════════════════════
+setInterval(async () => {
+  const entries = Object.entries(readyDocs);
+  if (!entries.length) return;
+  for (const [userId, doc] of entries) {
+    console.log(`readyDocs worker: pushing PDF to ${doc.empName}`);
+    const r = await push(userId, {
+      type: 'flex', altText: `${doc.label} พร้อมแล้ว`,
+      contents: { type: 'bubble',
+        body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
+          { type: 'text', text: `📄 ${doc.label} พร้อมแล้วครับ`, weight: 'bold', size: 'md', color: '#1B7F4E' },
+          { type: 'text', text: 'กดปุ่มด้านล่างเพื่อดาวน์โหลด', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
+        ]},
+        footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          { type: 'button', style: 'primary', color: '#1E3A5F',
+            action: { type: 'uri', label: `ดาวน์โหลด ${doc.label}`, uri: doc.url } }
+        ]}
+      }
+    });
+    if (!r?.fallback) {
+      delete readyDocs[userId];
+      console.log(`readyDocs worker: sent OK for ${doc.empName}`);
+    } else {
+      console.log(`readyDocs worker: still 429 — will retry in 30s`);
+    }
+  }
+}, 30 * 1000); // ทุก 30 วินาที
 
 // ════════════════════════════════════════════════════════
 // Start server
