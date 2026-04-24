@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+# portal_patcher.py — รันในโฟลเดอร์ tpe-hr-bot เพื่อ patch portal.html
+# Usage: python3 portal_patcher.py
+
+import sys, os
+
+fn = "portal.html"
+if not os.path.exists(fn):
+    print("ERROR: ไม่พบ portal.html ในโฟลเดอร์นี้")
+    sys.exit(1)
+
+src = open(fn, encoding="utf-8").read()
+
+# ── 1. CSS ──────────────────────────────────────────────
+css_add = """
+/* PENDING NOTIFY */
+.alert-bar{background:#FDEEEC;border:1px solid rgba(192,57,43,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:none}
+.alert-bar.show{display:block}
+.alert-bar-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.approve-btn{background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-family:Sarabun,sans-serif;font-size:12px;cursor:pointer;margin-right:4px}
+.reject-btn{background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-family:Sarabun,sans-serif;font-size:12px;cursor:pointer}"""
+
+marker1 = "/* NOTICE */"
+if marker1 in src and ".alert-bar" not in src:
+    src = src.replace(marker1, css_add + "\n" + marker1)
+    print("✅ 1. CSS added")
+else:
+    print("⏭  1. CSS already patched or marker not found")
+
+# ── 2. Nav item ──────────────────────────────────────────
+nav_add = """      <button class="nav-item" id="nav-pending" onclick="gotoPage('pending',this)">
+        <span class="ni">🔔</span> คำขอรอ HR
+        <span id="pending-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:20px;padding:1px 6px;font-size:11px;margin-left:auto"></span>
+      </button>"""
+
+marker2 = '<div class="nav-sep">จัดการ</div>'
+if marker2 in src and "nav-pending" not in src:
+    src = src.replace(marker2, nav_add + "\n      " + marker2)
+    print("✅ 2. Nav item added")
+else:
+    print("⏭  2. Nav already patched or marker not found")
+
+# ── 3. Alert bar ─────────────────────────────────────────
+alert_bar = """        <!-- Alert bar quota หมด -->
+        <div class="alert-bar" id="alertBar">
+          <div class="alert-bar-title">
+            <span>⚠️ มีคำขอรอ HR — LINE quota หมด
+              <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:6px" id="alert-count">0</span>
+            </span>
+            <button class="btn btn-sm" style="border:1px solid var(--red);color:var(--red);background:transparent" onclick="showPendingPage()">ดูคำขอ →</button>
+          </div>
+          <div style="font-size:12px;color:#888">กรุณาอนุมัติผ่านหน้าเว็บนี้แทน LINE</div>
+        </div>"""
+
+marker3 = '<div class="two-col">'
+if marker3 in src and "alertBar" not in src:
+    src = src.replace(marker3, alert_bar + "\n        " + marker3, 1)
+    print("✅ 3. Alert bar added")
+else:
+    print("⏭  3. Alert bar already patched")
+
+# ── 4. Page pending ──────────────────────────────────────
+page_pending = """
+      <!-- PAGE: PENDING NOTIFY -->
+      <div class="page" id="page-pending">
+        <div class="card">
+          <div class="card-title">
+            คำขอรอการอนุมัติ <span id="pending-count-title" style="color:var(--red);font-size:13px"></span>
+            <button class="btn btn-primary btn-sm" onclick="loadPendingNotify()">รีโหลด</button>
+          </div>
+          <div class="notice" id="pending-empty" style="display:none">✅ ไม่มีคำขอค้างอยู่</div>
+          <div id="pending-table-wrap"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+        </div>
+      </div>"""
+
+marker4 = "      <!-- PAGE: MONTHS -->"
+if marker4 in src and "page-pending" not in src:
+    src = src.replace(marker4, page_pending + "\n\n" + marker4)
+    print("✅ 4. Page pending added")
+else:
+    print("⏭  4. Page pending already patched")
+
+# ── 5. JavaScript ────────────────────────────────────────
+addon_js_placeholder = open('portal_addon.js').read()
+
+marker5 = "</script>"
+if "loadPendingNotify" not in src:
+    addon = open("portal_addon.js", encoding="utf-8").read()
+    src = src.replace(marker5, addon + "\n\n" + marker5, 1)
+    print("✅ 5. JavaScript added")
+else:
+    print("⏭  5. JavaScript already patched")
+
+# ── Save ─────────────────────────────────────────────────
+open(fn, "w", encoding="utf-8").write(src)
+print("\n✅ portal.html patched successfully!")
+print("อัปโหลด portal.html ขึ้น GitHub ได้เลย")
