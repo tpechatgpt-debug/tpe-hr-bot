@@ -17,8 +17,9 @@ app.use(express.json());
 const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const HR_USER_ID = process.env.HR_LINE_USER_ID;
 
-const pending    = {};
-const requestLog = {};
+const pending        = {};
+const requestLog     = {};
+const pendingNotify  = {}; // คำขอที่ push ไม่ได้ (quota หมด) รอ HR ดูใน Portal
 
 app.get('/', (req, res) => res.send('TPE HR Bot v2 OK'));
 
@@ -151,7 +152,7 @@ async function handleMonthSelected(replyToken, userId, month, requestId) {
 // ════════════════════════════════════════════════════════
 async function notifyHR(requestId, empName, docType, month, empUserId) {
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-  await push(HR_USER_ID, {
+  const result = await push(HR_USER_ID, {
     type: 'flex', altText: `คำขอ${docType} จาก ${empName}`,
     contents: {
       type: 'bubble',
@@ -174,6 +175,11 @@ async function notifyHR(requestId, empName, docType, month, empUserId) {
         ]}
     }
   });
+  // ถ้า LINE quota หมด บันทึกใน pendingNotify เพื่อให้ Portal แสดง
+  if (result?.fallback) {
+    pendingNotify[requestId] = { requestId, empName, docType, month, empUserId, time: Date.now() };
+    console.log('pendingNotify saved:', requestId);
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -276,23 +282,19 @@ async function reply(replyToken, msg) {
 
 async function push(userId, msg) {
   const messages = typeof msg === 'string' ? [{ type: 'text', text: msg }] : [msg];
-  await sleep(300); // ป้องกัน rate limit
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await axios.post('https://api.line.me/v2/bot/message/push',
-        { to: userId, messages },
-        { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
-      );
-      return;
-    } catch (err) {
-      if (err.response?.status === 429 && attempt < 2) {
-        const wait = (attempt + 1) * 3000;
-        console.log(`LINE 429 — retry ${attempt+1} after ${wait/1000}s`);
-        await sleep(wait);
-      } else {
-        throw err;
-      }
+  await sleep(300);
+  try {
+    await axios.post('https://api.line.me/v2/bot/message/push',
+      { to: userId, messages },
+      { headers: { Authorization: `Bearer ${LINE_TOKEN}` } }
+    );
+    return { ok: true };
+  } catch (err) {
+    if (err.response?.status === 429) {
+      console.log('LINE push quota exhausted (429) — using portal fallback');
+      return { fallback: true };
     }
+    throw err;
   }
 }
 async function getProfile(userId) {
@@ -331,6 +333,63 @@ app.get('/portal/months', async (req, res) => {
     const all = await payroll.getAvailableMonths();
     res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
   } catch(e) { res.json([]); }
+});
+
+// ── Portal: คำขอที่ยังไม่ได้แจ้ง HR (quota หมด) ──────────
+app.get('/portal/pending-notify', (req, res) => {
+  res.json(Object.values(pendingNotify).map(n => ({
+    requestId: n.requestId,
+    empName:   n.empName,
+    docType:   n.docType,
+    month:     n.month,
+    time:      new Date(n.time).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }),
+  })));
+});
+
+// ── Portal: HR approve/reject ผ่าน Portal (ไม่ผ่าน LINE) ─
+app.post('/portal/approve', express.json(), async (req, res) => {
+  const { requestId, action } = req.body;
+  if (!requestId || !action) return res.status(400).json({ error: 'missing params' });
+
+  const req2 = pending[requestId];
+  if (!req2) return res.status(404).json({ error: 'request not found or expired' });
+
+  delete pendingNotify[requestId];
+
+  if (action === 'reject') {
+    delete pending[requestId];
+    if (requestLog[requestId]) requestLog[requestId].status = 'rejected';
+    // พยายาม push พนักงาน
+    await push(req2.empLineId, '❌ คำขอ' + (req2.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ').catch(() => {});
+    return res.json({ ok: true, action: 'rejected' });
+  }
+
+  if (action === 'approve') {
+    try {
+      const empData = await payroll.getEmployeePayroll(req2.empName, req2.month, req2.payType || 'monthly');
+      if (!empData) return res.status(404).json({ error: 'payroll data not found' });
+
+      const docLabel = req2.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+      const safeName = req2.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
+      const filename  = docLabel + '_' + safeName + '_' + req2.month + '.pdf';
+
+      const pdfBuffer = req2.docType === 'payslip'
+        ? await payslip.createFromPayroll(empData)
+        : await cert.createFromPayroll(empData);
+
+      const pushResult = await payslip.sendPdfToLine(req2.empLineId, pdfBuffer, filename).catch(e => ({ fallback: true, error: e.message }));
+
+      delete pending[requestId];
+      if (requestLog[requestId]) requestLog[requestId].status = 'sent';
+      await sheet.log({ ...empData, docType: req2.docType });
+
+      return res.json({ ok: true, action: 'approved', pushOk: !pushResult?.fallback });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  res.status(400).json({ error: 'invalid action' });
 });
 
 // ════════════════════════════════════════════════════════
