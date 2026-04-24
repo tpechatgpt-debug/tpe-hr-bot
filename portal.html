@@ -276,6 +276,20 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="notice" style="background:var(--red-l);color:#7B1A12;border-color:rgba(192,57,43,.2)">
             ⚠️ คำขอเหล่านี้เกิดขึ้นเมื่อ LINE push message quota หมด — HR สามารถอนุมัติได้จากที่นี่แทน
           </div>
+
+          <!-- PDF รอ HR download และส่งให้พนักงานเอง -->
+          <div id="pdfReadySection" style="display:none;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">
+              📥 PDF ที่รอ HR นำส่งให้พนักงาน (quota หมด — ดาวน์โหลดแล้วส่งให้พนักงานด้วยตนเอง)
+            </div>
+            <table class="tbl" id="pdfReadyTable">
+              <thead><tr>
+                <th>พนักงาน</th><th>ประเภทเอกสาร</th><th>เดือน</th><th>เวลา</th>
+                <th style="text-align:right">ดำเนินการ</th>
+              </tr></thead>
+              <tbody id="pdfReadyTbody"></tbody>
+            </table>
+          </div>
           <div class="notice" id="pending-empty" style="display:none;background:var(--green-l);color:var(--green);border-color:rgba(27,127,78,.2)">
             ✅ ไม่มีคำขอค้างอยู่ในขณะนี้
           </div>
@@ -332,6 +346,7 @@ function initApp() {
   loadStats();
   loadRecent();
   loadPendingNotify(); // ตรวจ quota ทันทีตอนเปิด
+  loadPdfReady();
 }
 
 // ── PAGE NAV ──────────────────────────────────────
@@ -343,7 +358,7 @@ function gotoPage(id, btn) {
   if (id === 'employees') loadEmployees();
   if (id === 'requests')  loadRequests();
   if (id === 'months')    loadMonths();
-  if (id === 'pending')   loadPendingNotify();
+  if (id === 'pending')   { loadPendingNotify(); loadPdfReady(); }
 }
 function showPendingPage() {
   const btn = document.getElementById('nav-pending');
@@ -446,6 +461,39 @@ async function doUpload(file, suffix) {
 // ════════════════════════════════════════════════════════
 // ── PENDING NOTIFY (fallback เมื่อ LINE quota หมด) ──────
 // ════════════════════════════════════════════════════════
+async function loadPdfReady() {
+  try {
+    const r    = await fetch(API + '/portal/pdf-ready');
+    const list = await r.json();
+    const sec  = document.getElementById('pdfReadySection');
+    const tbody = document.getElementById('pdfReadyTbody');
+    if (!sec || !tbody) return;
+    sec.style.display = list.length ? 'block' : 'none';
+    tbody.innerHTML = list.map(p => `<tr>
+      <td><b>${p.empName}</b></td>
+      <td>${p.label}</td>
+      <td>${p.month}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.time}</td>
+      <td style="text-align:right">
+        <a href="${p.url}" target="_blank" download="${p.empName}_${p.month}.pdf"
+           style="background:var(--navy);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px">
+          📥 ดาวน์โหลด
+        </a>
+        <button onclick="markPdfSent('${p.token}')"
+          style="background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer">
+          ✅ ส่งแล้ว
+        </button>
+      </td>
+    </tr>`).join('');
+  } catch(e) { console.error('loadPdfReady:', e); }
+}
+
+async function markPdfSent(token) {
+  if (!confirm('ยืนยันว่าส่งไฟล์ให้พนักงานแล้ว?')) return;
+  await fetch(API + '/portal/pdf-ready/' + token, { method: 'DELETE' });
+  loadPdfReady();
+}
+
 async function loadPendingNotify() {
   try {
     const r    = await fetch(API + '/portal/pending-notify');
@@ -515,6 +563,7 @@ async function portalApprove(requestId, action) {
 
 // poll ทุก 30 วินาที
 setInterval(loadPendingNotify, 30000);
+setInterval(loadPdfReady, 30000);
 </script>
 </body>
 </html>
