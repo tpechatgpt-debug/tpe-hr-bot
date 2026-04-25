@@ -396,6 +396,8 @@ function renderRecent(list) {
         <div class="req-meta">${r.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรอง'} · ${r.month||''}</div>
       </div>
       <div class="badge ${r.status==='sent'?'badge-ok':r.status==='rejected'?'badge-rej':'badge-pend'}">${r.status==='sent'?'ส่งแล้ว':r.status==='rejected'?'ปฏิเสธ':'รออนุมัติ'}</div>
+      ${r.status==='pending'?`<button onclick="retryApprove('${r.requestId}')" style="background:#1B7F4E;color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🔄 ลองใหม่</button>`:''}
+      <button onclick="deleteRequest('${r.requestId}')" style="background:#C0392B;color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑 ลบ</button>
     </div>`
   ).join('');
 }
@@ -562,6 +564,36 @@ async function portalApprove(requestId, action) {
 }
 
 // poll ทุก 30 วินาที
+// ── deleteRequest ────────────────────────────────────────
+async function deleteRequest(requestId) {
+  if (!confirm('ลบรายการคำขอนี้ออกจากประวัติ?')) return;
+  try {
+    const r = await fetch(API + '/portal/request/' + requestId, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.ok) { loadRequests(); loadStats(); }
+    else alert('ลบไม่สำเร็จ: ' + (d.error || 'unknown'));
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── retryApprove ─────────────────────────────────────────
+async function retryApprove(requestId) {
+  if (!confirm('อนุมัติและสร้าง PDF อีกครั้ง?')) return;
+  try {
+    const r = await fetch(API + '/portal/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId, action: 'approve' }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      alert('อนุมัติสำเร็จ' + (d.pushOk === false ? '\n⚠️ ส่ง LINE ไม่ได้ — ดาวน์โหลดได้ที่ Portal' : ''));
+      loadRequests(); loadPendingNotify(); loadPdfReady();
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (d.error || 'unknown'));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
 setInterval(loadPendingNotify, 30000);
 setInterval(loadPdfReady, 30000);
 </script>
