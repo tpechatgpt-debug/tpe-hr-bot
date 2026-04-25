@@ -114,7 +114,9 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 </div>
 </body></html>`;
 
-  return await htmlToPdfBuffer(html);
+  const pdfBuf = await htmlToPdfBuffer(html);
+  pdfBuf._html = html;
+  return pdfBuf;
 }
 
 function thaiMoney(n) {
