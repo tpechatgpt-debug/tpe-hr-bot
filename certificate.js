@@ -41,9 +41,9 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 .doc-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:28px;color:#1a1a1a;letter-spacing:.02em}
 .body-para{line-height:2.8;font-size:14px;text-align:justify;text-indent:3em;margin-bottom:10px}
 .hl{font-weight:700;color:#1a1a1a}
-.salary-block{display:inline-block;text-align:center;margin:0 6px}
-.salary-ul{font-weight:700;border-bottom:2px solid #1a1a1a;padding:0 20px;font-size:15px;display:inline-block;min-width:180px;text-align:center}
-.salary-words{display:block;font-size:12px;color:#555;margin-top:2px;text-align:center}
+.salary-line{display:block;text-align:center;margin:16px 0 4px}
+.salary-num{font-weight:700;font-size:18px;border-bottom:2px solid #1a1a1a;padding:2px 32px;display:inline-block;min-width:200px;text-align:center}
+.salary-words{display:block;font-size:13px;color:#444;margin-top:4px;text-align:center}
 .issue-date{text-align:center;margin:28px 0 20px;font-size:14px;line-height:1.8;color:#333}
 .sign-area{display:flex;justify-content:flex-end;margin-bottom:32px}
 .sign-box{text-align:center;width:240px}
@@ -82,13 +82,12 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
   ${workDuration ? `รวมระยะเวลาในการทำงานคือ <span class="hl">${workDuration}</span>` : ''}
   ซึ่งดำรงตำแหน่งงาน ณ ปัจจุบัน คือ
   <span class="hl">"${d.position||'—'}"</span>
-  โดยได้รับอัตราเงินเดือน
-  <span class="salary-block">
-    <span class="salary-ul">${fmt(salary)}</span>
+  โดยได้รับอัตราเงินเดือน ดังนี้
+  <span class="salary-line">
+    <span class="salary-num">${fmt(salary)}</span>
     <span class="salary-words">(${thaiMoney(salary)} บาทถ้วน)</span>
   </span>
-  บาท/เดือน
-  โดยยังไม่รวมค่าจ้างอื่น ๆ เมื่อพนักงานทำงานล่วงเวลา หรือเบี้ยเลี้ยงการออกหน้างาน
+  บาท/เดือน โดยยังไม่รวมค่าจ้างอื่น ๆ เมื่อพนักงานทำงานล่วงเวลา หรือเบี้ยเลี้ยงการออกหน้างาน
 </p>
 
 <div class="issue-date">ออกให้ ณ. วันที่ ${dateStr}</div>
