@@ -94,7 +94,7 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
   console.log(`${empName} → ประเภท: "${rawType}" → payType: ${payType}`);
 
   pending[requestId]    = { empName, empLineId: userId, docType, larkToken, payType };
-  requestLog[requestId] = { empName, empLineId: userId, docType, status: 'pending', time: Date.now() };
+  requestLog[requestId] = { empName, empLineId: userId, docType, payType, status: 'pending', time: Date.now() };
 
   // ── ดึงเดือน กรองเฉพาะประเภทของพนักงานคนนี้ ──────────────
   const allMonths   = await payroll.getAvailableMonths();
@@ -337,13 +337,58 @@ app.get('/portal/employees', async (req, res) => {
   } catch(e) { res.json([]); }
 });
 app.get('/portal/requests', (req, res) => {
-  res.json(Object.entries(requestLog).sort((a,b)=>b[1].time-a[1].time).slice(0,parseInt(req.query.limit)||50).map(([,r])=>({ name:r.empName, docType:r.docType, month:r.month||'—', status:r.status||'pending', time:new Date(r.time).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) })));
+  res.json(Object.entries(requestLog).sort((a,b)=>b[1].time-a[1].time).slice(0,parseInt(req.query.limit)||50).map(([id,r])=>({ requestId:id, name:r.empName, docType:r.docType, month:r.month||'—', status:r.status||'pending', time:new Date(r.time).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) })));
 });
 app.get('/portal/months', async (req, res) => {
   try {
     const all = await payroll.getAvailableMonths();
     res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
   } catch(e) { res.json([]); }
+});
+
+// ── Portal: retry สร้าง PDF ใหม่จาก requestLog ─────────
+app.post('/portal/retry', express.json(), async (req, res) => {
+  const { requestId } = req.body;
+  if (!requestId) return res.status(400).json({ error: 'missing requestId' });
+
+  const log = requestLog[requestId];
+  if (!log) return res.status(404).json({ error: 'request not found or expired' });
+
+  try {
+    const empData = await payroll.getEmployeePayroll(
+      log.empName, log.month,
+      log.payType || (log.docType === 'payslip' ? 'monthly' : 'monthly')
+    );
+    if (!empData) return res.status(404).json({ error: 'payroll data not found' });
+
+    const docLabel = log.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+    const safeName = log.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
+    const filename  = docLabel + '_' + safeName + '_' + log.month + '.pdf';
+
+    const pdfBuffer = log.docType === 'payslip'
+      ? await payslip.createFromPayroll(empData)
+      : await cert.createFromPayroll(empData);
+
+    const pushResult = await sendDocToLine(log.empLineId, pdfBuffer._html || '', pdfBuffer, filename)
+      .catch(e => ({ fallback: true, error: e.message }));
+
+    if (pushResult?.fallback) {
+      // เก็บใน portalPdfs
+      const pdfToken = require('crypto').randomBytes(8).toString('hex');
+      payslip.pdfStore[pdfToken] = { buffer: pdfBuffer, filename };
+      const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${pdfToken}`;
+      portalPdfs[pdfToken] = {
+        token: pdfToken, url: pdfUrl, filename,
+        empName: log.empName, empLineId: log.empLineId,
+        label: docLabel, month: log.month, time: Date.now(),
+      };
+    }
+
+    requestLog[requestId].status = 'sent';
+    return res.json({ ok: true, pushOk: !pushResult?.fallback });
+  } catch(err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Portal: ลบรายการคำขอออกจากประวัติ ───────────────────
@@ -555,13 +600,58 @@ app.get('/portal/employees', async (req, res) => {
   } catch(e) { res.json([]); }
 });
 app.get('/portal/requests', (req, res) => {
-  res.json(Object.entries(requestLog).sort((a,b)=>b[1].time-a[1].time).slice(0,parseInt(req.query.limit)||50).map(([,r])=>({ name:r.empName, docType:r.docType, month:r.month||'—', status:r.status||'pending', time:new Date(r.time).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) })));
+  res.json(Object.entries(requestLog).sort((a,b)=>b[1].time-a[1].time).slice(0,parseInt(req.query.limit)||50).map(([id,r])=>({ requestId:id, name:r.empName, docType:r.docType, month:r.month||'—', status:r.status||'pending', time:new Date(r.time).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) })));
 });
 app.get('/portal/months', async (req, res) => {
   try {
     const all = await payroll.getAvailableMonths();
     res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
   } catch(e) { res.json([]); }
+});
+
+// ── Portal: retry สร้าง PDF ใหม่จาก requestLog ─────────
+app.post('/portal/retry', express.json(), async (req, res) => {
+  const { requestId } = req.body;
+  if (!requestId) return res.status(400).json({ error: 'missing requestId' });
+
+  const log = requestLog[requestId];
+  if (!log) return res.status(404).json({ error: 'request not found or expired' });
+
+  try {
+    const empData = await payroll.getEmployeePayroll(
+      log.empName, log.month,
+      log.payType || (log.docType === 'payslip' ? 'monthly' : 'monthly')
+    );
+    if (!empData) return res.status(404).json({ error: 'payroll data not found' });
+
+    const docLabel = log.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+    const safeName = log.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
+    const filename  = docLabel + '_' + safeName + '_' + log.month + '.pdf';
+
+    const pdfBuffer = log.docType === 'payslip'
+      ? await payslip.createFromPayroll(empData)
+      : await cert.createFromPayroll(empData);
+
+    const pushResult = await sendDocToLine(log.empLineId, pdfBuffer._html || '', pdfBuffer, filename)
+      .catch(e => ({ fallback: true, error: e.message }));
+
+    if (pushResult?.fallback) {
+      // เก็บใน portalPdfs
+      const pdfToken = require('crypto').randomBytes(8).toString('hex');
+      payslip.pdfStore[pdfToken] = { buffer: pdfBuffer, filename };
+      const pdfUrl = `${process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com'}/pdf/${pdfToken}`;
+      portalPdfs[pdfToken] = {
+        token: pdfToken, url: pdfUrl, filename,
+        empName: log.empName, empLineId: log.empLineId,
+        label: docLabel, month: log.month, time: Date.now(),
+      };
+    }
+
+    requestLog[requestId].status = 'sent';
+    return res.json({ ok: true, pushOk: !pushResult?.fallback });
+  } catch(err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Portal: ลบรายการคำขอออกจากประวัติ ───────────────────
