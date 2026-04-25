@@ -6,7 +6,10 @@ async function createFromPayroll(d) {
   const thM   = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const dateStr  = `${today.getDate()} เดือน${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
   const docNo    = `FM-HR-09-${today.getFullYear()+543}/${String(Math.floor(Math.random()*89+10)).padStart(2,'0')}`;
-  const salary   = parseFloat(d.baseWage) || parseFloat(d.basePay) || 0;
+  // รายวัน: ใช้ totalInc (รายได้รวมทั้งเดือน) แทน baseWage (ค่าแรง/วัน)
+  const salary = d.payType === 'daily'
+    ? (parseFloat(d.totalInc) || 0)
+    : (parseFloat(d.baseWage) || parseFloat(d.basePay) || 0);
 
   // คำนวณอายุงาน
   let workDuration = '';
