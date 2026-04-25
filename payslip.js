@@ -1,5 +1,6 @@
 const axios    = require('axios');
-const pdfStore = {};
+const pdfStore   = {};
+const imageStore = {}; // เก็บ JPG buffer สำหรับส่งเป็นรูปใน LINE
 
 async function createFromPayroll(d) {
   const fmt  = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
@@ -190,7 +191,10 @@ tr:nth-child(even) td{background:#FDFAF4}
 <div style="margin-top:5px;font-size:9px;color:#aaa;text-align:right">สร้างโดยระบบ HR อัตโนมัติ | ${now}</div>
 </body></html>`;
 
-  return await htmlToPdfBuffer(html);
+  const pdfBuf = await htmlToPdfBuffer(html);
+  // เก็บ html ไว้ใน pdfBuffer object เพื่อใช้ screenshot ภายหลัง
+  pdfBuf._html = html;
+  return pdfBuf;
 }
 
 async function htmlToPdfBuffer(html) {
@@ -217,33 +221,131 @@ async function htmlToPdfBuffer(html) {
   return Buffer.from(pdfBuffer);
 }
 
+// ── แปลง HTML → JPG buffer (สำหรับส่งเป็นรูปใน LINE) ──────
+async function htmlToImageBuffer(html) {
+  const chromium  = require('@sparticuz/chromium');
+  const puppeteer = require('puppeteer-core');
+
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: { width: 794, height: 1123, deviceScaleFactor: 2 },
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+  });
+
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+
+  // รอ font โหลด
+  await page.evaluate(() => document.fonts.ready);
+
+  const imgBuffer = await page.screenshot({
+    type: 'jpeg',
+    quality: 92,
+    fullPage: true,
+  });
+
+  await browser.close();
+  return Buffer.from(imgBuffer);
+}
+
 async function sendPdfToLine(userId, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
   const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
 
-  const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
+  const token    = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const imgToken = token + '_img';
 
+  // เก็บ PDF
+  pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
   const pdfUrl = RENDER_URL + '/pdf/' + token;
   console.log('sendPdf: serving at', pdfUrl);
 
-  await axios.post(
+  // push ลิงก์ PDF ก่อน (fallback ถ้า push image ไม่ได้)
+  const result = await axios.post(
     'https://api.line.me/v2/bot/message/push',
     {
       to: userId,
       messages: [{
         type: 'text',
-        text: 'PDF พร้อมแล้วครับ กดลิงก์เพื่อเปิด/ดาวน์โหลด (ลิงก์ใช้ได้ 1 ชั่วโมง)\n\n' + pdfUrl,
+        text: `📄 เอกสารพร้อมแล้วครับ\n🔗 กดลิงก์เพื่อดาวน์โหลด PDF (ใช้ได้ 1 ชั่วโมง)\n\n${pdfUrl}`,
       }]
     },
     { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
-  );
+  ).then(() => ({ ok: true })).catch(e => {
+    if (e.response?.status === 429) return { fallback: true };
+    throw e;
+  });
 
-  setTimeout(() => { delete pdfStore[token]; }, 60 * 60 * 1000);
+  setTimeout(() => { delete pdfStore[token]; delete imageStore[imgToken]; }, 60 * 60 * 1000);
+  return result;
 }
 
 async function htmlToDriveUrl(html, filename) {
   return await htmlToPdfBuffer(html);
 }
 
-module.exports = { createFromPayroll, htmlToPdfBuffer, htmlToDriveUrl, sendPdfToLine, pdfStore };
+// ── ส่งเอกสารเป็นรูปภาพ + ลิงก์ PDF ──────────────────────
+// html = HTML string ที่ใช้สร้าง PDF/รูป
+// pdfBuffer = Buffer ของ PDF ที่สร้างแล้ว
+async function sendDocToLine(userId, html, pdfBuffer, filename) {
+  const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
+  const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+
+  // สร้าง token
+  const token    = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const imgToken = token + '_img';
+
+  // เก็บ PDF
+  pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
+  const pdfUrl = RENDER_URL + '/pdf/' + token;
+
+  // สร้าง JPG จาก HTML
+  let imgBuffer = null;
+  try {
+    imgBuffer = await htmlToImageBuffer(html);
+    imageStore[imgToken] = { buffer: imgBuffer, createdAt: Date.now() };
+  } catch(e) {
+    console.error('htmlToImageBuffer error:', e.message);
+  }
+
+  const imgUrl = RENDER_URL + '/img/' + imgToken;
+  console.log('sendDoc: pdf=', pdfUrl, 'img=', imgUrl);
+
+  // สร้าง messages array
+  const messages = [];
+
+  // ถ้ามีรูป — ส่งรูปก่อน
+  if (imgBuffer) {
+    messages.push({
+      type: 'image',
+      originalContentUrl: imgUrl,
+      previewImageUrl:    imgUrl,
+    });
+  }
+
+  // ส่งลิงก์ PDF
+  messages.push({
+    type: 'text',
+    text: `📄 กดลิงก์เพื่อดาวน์โหลด PDF (ใช้ได้ 1 ชั่วโมง)\n${pdfUrl}`,
+  });
+
+  // push
+  try {
+    await axios.post(
+      'https://api.line.me/v2/bot/message/push',
+      { to: userId, messages },
+      { headers: { 'Authorization': 'Bearer ' + LINE_TOKEN, 'Content-Type': 'application/json' } }
+    );
+    setTimeout(() => { delete pdfStore[token]; delete imageStore[imgToken]; }, 60 * 60 * 1000);
+    return { ok: true };
+  } catch(e) {
+    if (e.response?.status === 429) {
+      console.log('sendDocToLine: 429 quota exhausted');
+      return { fallback: true };
+    }
+    throw e;
+  }
+}
+
+module.exports = { createFromPayroll, htmlToPdfBuffer, htmlToImageBuffer, htmlToDriveUrl, sendPdfToLine, sendDocToLine, pdfStore, imageStore };
