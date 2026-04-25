@@ -579,10 +579,10 @@ async function deleteRequest(requestId) {
 async function retryApprove(requestId) {
   if (!confirm('อนุมัติและสร้าง PDF อีกครั้ง?')) return;
   try {
-    const r = await fetch(API + '/portal/approve', {
+    const r = await fetch(API + '/portal/retry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestId, action: 'approve' }),
+      body: JSON.stringify({ requestId }),
     });
     const d = await r.json();
     if (d.ok) {
