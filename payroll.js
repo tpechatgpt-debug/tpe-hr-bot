@@ -9,7 +9,10 @@ const path = require('path');
 
 // ─── normalize ชื่อ ─────────────────────────────────────────
 function normName(s) {
-  return (s || '').toString().replace(/\s+/g, ' ').trim();
+  let r = (s || '').toString().replace(/\s+/g, ' ').trim();
+  // ตัด prefix คำนำหน้าชื่อ
+  r = r.replace(/^(นาย|นาง|นางสาว|นส\.?|น\.ส\.?|ด\.ร\.?|ดร\.?)\s*/u, '').trim();
+  return r;
 }
 
 // ─── Google Sheets auth ──────────────────────────────────────
@@ -262,7 +265,12 @@ async function getEmployeePayroll(empName, month, payType) {
     const rows = res.data.values || [];
     if (rows.length < 2) return null;
 
-    const cleanName = n => normName((n||'').split('(')[0].split('（')[0]);
+    // ตัด prefix คำนำหน้า (นาย/นาง/นส./นางสาว) และ bracket ออก
+    const cleanName = n => {
+      let s = normName((n||'').split('(')[0].split('（')[0]);
+      s = s.replace(/^(นาย|นาง|นางสาว|นส\.?|น\.ส\.?|ด\.ร\.?|ดร\.?)\s*/u, '').trim();
+      return s;
+    };
     const target    = cleanName(empName);
     console.log(`getEmployeePayroll: "${target}" in ${sheetName}`);
 
