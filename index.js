@@ -7,6 +7,7 @@ const fs       = require('fs');
 const lark     = require('./lark');
 const payroll  = require('./payroll');
 const payslip  = require('./payslip');
+const { sendDocToLine, imageStore } = payslip;
 const cert     = require('./certificate');
 const sheet    = require('./sheet');
 
@@ -222,7 +223,8 @@ async function handlePostback(event) {
         ? await payslip.createFromPayroll(empData)
         : await cert.createFromPayroll(empData);
 
-      const sendResult = await payslip.sendPdfToLine(req.empLineId, pdfBuffer, filename); // keep for quota-ok path (unused now)
+      // ส่งเป็นรูป + ลิงก์ PDF (_html เก็บไว้ใน pdfBuffer object)
+      const sendResult = await sendDocToLine(req.empLineId, pdfBuffer._html || '', pdfBuffer, filename); // keep for quota-ok path (unused now)
       delete pending[rid];
       if (requestLog[rid]) requestLog[rid].status = 'sent';
       await sheet.log({ ...empData, docType: req.docType });
@@ -312,6 +314,15 @@ app.get('/pdf/:token', (req, res) => {
   res.setHeader('Content-Length', entry.buffer.length);
   res.send(entry.buffer);
 });
+
+// ── รูปภาพ JPG endpoint ────────────────────────────────────
+app.get('/img/:token', (req, res) => {
+  const entry = imageStore[req.params.token];
+  if (!entry) return res.status(404).send('รูปหมดอายุหรือไม่พบ');
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.send(entry.buffer);
+});
 app.get('/portal', (req, res) => res.sendFile(path.join(__dirname, 'portal.html')));
 app.get('/portal/stats', async (req, res) => {
   try {
@@ -333,6 +344,15 @@ app.get('/portal/months', async (req, res) => {
     const all = await payroll.getAvailableMonths();
     res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
   } catch(e) { res.json([]); }
+});
+
+// ── Portal: ลบรายการคำขอออกจากประวัติ ───────────────────
+app.delete('/portal/request/:id', (req, res) => {
+  const id = req.params.id;
+  delete requestLog[id];
+  delete pending[id];
+  delete pendingNotify[id];
+  res.json({ ok: true });
 });
 
 // ── Portal: PDF ที่รอ HR download (quota หมด) ───────────
@@ -512,6 +532,15 @@ app.get('/pdf/:token', (req, res) => {
   res.setHeader('Content-Length', entry.buffer.length);
   res.send(entry.buffer);
 });
+
+// ── รูปภาพ JPG endpoint ────────────────────────────────────
+app.get('/img/:token', (req, res) => {
+  const entry = imageStore[req.params.token];
+  if (!entry) return res.status(404).send('รูปหมดอายุหรือไม่พบ');
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.send(entry.buffer);
+});
 app.get('/portal', (req, res) => res.sendFile(path.join(__dirname, 'portal.html')));
 app.get('/portal/stats', async (req, res) => {
   try {
@@ -533,6 +562,15 @@ app.get('/portal/months', async (req, res) => {
     const all = await payroll.getAvailableMonths();
     res.json(all.map(m => `${m.month}${m.payType === 'daily' ? ' (รายวัน)' : ''}`));
   } catch(e) { res.json([]); }
+});
+
+// ── Portal: ลบรายการคำขอออกจากประวัติ ───────────────────
+app.delete('/portal/request/:id', (req, res) => {
+  const id = req.params.id;
+  delete requestLog[id];
+  delete pending[id];
+  delete pendingNotify[id];
+  res.json({ ok: true });
 });
 
 // ── Portal: PDF ที่รอ HR download (quota หมด) ───────────
