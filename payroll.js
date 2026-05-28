@@ -95,12 +95,16 @@ if pay_type == 'daily':
     print(json.dumps({'type':'daily','month':month,'rows':rows}, ensure_ascii=False))
 
 else:
-    sh = None
-    for sname in sheet_names:
-        s = wb.sheet_by_name(sname)
-        if s.nrows > 3:
-            sh = s
-            break
+    # อ่านจาก sheet 'ค่าแรง' โดยตรง ถ้าไม่มีค่อยหา sheet อื่น
+    if 'ค่าแรง' in sheet_names:
+        sh = wb.sheet_by_name('ค่าแรง')
+    else:
+        sh = None
+        for sname in sheet_names:
+            s = wb.sheet_by_name(sname)
+            if s.nrows > 3:
+                sh = s
+                break
     if not sh:
         print(json.dumps({'type':'monthly','month':'','rows':[]}))
         sys.exit(0)
