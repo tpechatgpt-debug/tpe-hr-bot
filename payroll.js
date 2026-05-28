@@ -212,9 +212,12 @@ async function savePayrollToSheet(month, rows, payType) {
     });
   }
 
+  // ตัดคำนำหน้าชื่อออกก่อนบันทึก
+  const stripPrefix = s => (s||'').replace(/^(นาย|นาง|นางสาว|นส\.?|น\.ส\.?)\s*/u,'').trim();
+
   const values = payType === 'daily'
     ? rows.map(r => [
-        r.name, r.position, r.baseWage||0,
+        stripPrefix(r.name), r.position, r.baseWage||0,
         r.workDays||0, r.otH||0, r.holidayD||0, r.festivalD||0,
         r.leaveP||0, r.leaveSick||0, r.absent||0, r.leaveVac||0,
         r.basePay||0, r.otPay||0, r.holidayPay||0, r.festivalPay||0, r.festivalExtra||0,
@@ -223,7 +226,7 @@ async function savePayrollToSheet(month, rows, payType) {
         r.otherDed||0, r.totalDed||0, r.netPay||0, 'daily',
       ])
     : rows.map(r => [
-        r.name, r.position,
+        stripPrefix(r.name), r.position,
         r.workDays||0, r.holidayD||0, r.otH||0,
         r.leaveP||0, r.leaveSick||0, r.absent||0, r.leaveVac||0,
         r.leaveNoPay||0, r.leaveMat||0, r.leaveBday||0,
