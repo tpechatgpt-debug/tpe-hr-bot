@@ -10,7 +10,6 @@ const path = require('path');
 // ─── normalize ชื่อ ─────────────────────────────────────────
 function normName(s) {
   let r = (s || '').toString().replace(/\s+/g, ' ').trim();
-  // ตัด prefix คำนำหน้าชื่อ
   r = r.replace(/^(นาย|นาง|นางสาว|นส\.?|น\.ส\.?|ด\.ร\.?|ดร\.?)\s*/u, '').trim();
   return r;
 }
@@ -33,7 +32,6 @@ import xlrd, json, sys
 wb = xlrd.open_workbook(sys.argv[1])
 sheet_names = wb.sheet_names()
 
-# ทั้งสองไฟล์มี sheet 'ค่าแรง' — ต้อง detect จากเนื้อหาใน row 0
 pay_type = 'monthly'
 if 'ค่าแรง' in sheet_names:
     sh_check = wb.sheet_by_name('ค่าแรง')
@@ -106,17 +104,16 @@ else:
     if not sh:
         print(json.dumps({'type':'monthly','month':'','rows':[]}))
         sys.exit(0)
+
+    # ── FIX: ค้นหา header row จาก col 1 เท่านั้น ──────────────
+    # ไม่ใช้ any() ทั้ง row เพราะ 'ช่างเชื่อมโลหะ' มี 'ชื่อ' ในนั้น
     header_row = 0
     for r in range(min(sh.nrows, 10)):
-        vals = [str(sh.cell_value(r, c)) for c in range(min(sh.ncols, 5))]
-        if any('ชื่อ' in v for v in vals):
+        v1 = str(sh.cell_value(r, 1)).strip()
+        if 'ชื่อ' in v1 or 'ชี่อ' in v1:
             header_row = r
             break
-    headers = {}
-    for c in range(sh.ncols):
-        h = str(sh.cell_value(header_row, c)).strip()
-        if h: headers[h] = c
-    def col(nm, fb): return headers.get(nm, fb)
+
     month = ''
     months_th = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
@@ -128,45 +125,40 @@ else:
                 break
     rows = []
     for r in range(header_row + 1, sh.nrows):
-        # col 1 = ชื่อ, col 2 = ตำแหน่ง (รายเดือนไม่มีคำนำหน้าแยก)
         name_val = str(sh.cell_value(r, 1)).strip()
         if not name_val or name_val in ['0.0','ชื่อ','ชี่อ/นามสกุล','ชื่อ-นามสกุล','']:
             continue
         rows.append({
             'name':     name_val,
             'position': str(sh.cell_value(r, 2)).strip(),
-            # สถิติการทำงาน
-            # สถิติการทำงาน (ตรงกับ Sheet col 2-11)
-            'workDays':   n(sh,r,3),   # จน.วัน
-            'holidayD':   n(sh,r,4),   # วันหยุด
-            'otH':        n(sh,r,5),   # O.T
-            'leaveP':     n(sh,r,6),   # ลากิจ
-            'leaveSick':  n(sh,r,7),   # ลาป่วย
-            'absent':     n(sh,r,8),   # ขาดงาน
-            'leaveVac':   n(sh,r,9),   # พักร้อน
-            'leaveNoPay': n(sh,r,10),  # ไม่รับเงิน
-            'leaveMat':   n(sh,r,11),  # ลาคลอด
-            'leaveBday':  n(sh,r,12),  # วันเกิด
-            'late':       n(sh,r,13),  # สาย
-            # รายรับ (col 14-25)
-            'baseWage':   n(sh,r,14),  # ค่าแรง (ฐาน)
-            'basePay':    n(sh,r,15),  # ค่าปกติ
-            'holidayPay': n(sh,r,16),  # วันหยุด Pay
-            'otPay':      n(sh,r,17),  # ค่า OT
-            'allowance':  n(sh,r,18),  # เบี้ยเลี้ยง
-            'bonus':      n(sh,r,19)+n(sh,r,20)+n(sh,r,21)+n(sh,r,22)+n(sh,r,23),  # เบี้ยขยัน 1-5
-            'otherInc':   n(sh,r,24),  # อื่นๆ
-            'totalInc':   n(sh,r,25),  # รวม
-            # รายจ่าย (col 26-34)
-            'advance':    n(sh,r,26),  # ล่วงหน้า
-            'kot':        n(sh,r,27),  # กยศ.
-            'soc':        n(sh,r,28),  # ปกส.(ล/จ)
-            'tax':        n(sh,r,29),  # ณที่จ่าย
-            'absentDed':  n(sh,r,30),  # วันขาด
-            'noPayDed':   n(sh,r,31),  # ไม่รับเงิน
-            'otherDed':   n(sh,r,32),  # อื่น ๆ
-            'totalDed':   n(sh,r,33),  # รวม
-            'netPay':     n(sh,r,34),  # เงินได้สุทธิ
+            'workDays':   n(sh,r,3),
+            'holidayD':   n(sh,r,4),
+            'otH':        n(sh,r,5),
+            'leaveP':     n(sh,r,6),
+            'leaveSick':  n(sh,r,7),
+            'absent':     n(sh,r,8),
+            'leaveVac':   n(sh,r,9),
+            'leaveNoPay': n(sh,r,10),
+            'leaveMat':   n(sh,r,11),
+            'leaveBday':  n(sh,r,12),
+            'late':       n(sh,r,13),
+            'baseWage':   n(sh,r,14),
+            'basePay':    n(sh,r,15),
+            'holidayPay': n(sh,r,16),
+            'otPay':      n(sh,r,17),
+            'allowance':  n(sh,r,18),
+            'bonus':      n(sh,r,19)+n(sh,r,20)+n(sh,r,21)+n(sh,r,22)+n(sh,r,23),
+            'otherInc':   n(sh,r,24),
+            'totalInc':   n(sh,r,25),
+            'advance':    n(sh,r,26),
+            'kot':        n(sh,r,27),
+            'soc':        n(sh,r,28),
+            'tax':        n(sh,r,29),
+            'absentDed':  n(sh,r,30),
+            'noPayDed':   n(sh,r,31),
+            'otherDed':   n(sh,r,32),
+            'totalDed':   n(sh,r,33),
+            'netPay':     n(sh,r,34),
         })
     print(json.dumps({'type':'monthly','month':month,'rows':rows}, ensure_ascii=False))
 `;
@@ -265,13 +257,12 @@ async function getEmployeePayroll(empName, month, payType) {
     const rows = res.data.values || [];
     if (rows.length < 2) return null;
 
-    // ตัด prefix คำนำหน้า (นาย/นาง/นส./นางสาว) และ bracket ออก
     const cleanName = n => {
       let s = normName((n||'').split('(')[0].split('（')[0]);
       s = s.replace(/^(นาย|นาง|นางสาว|นส\.?|น\.ส\.?|ด\.ร\.?|ดร\.?)\s*/u, '').trim();
       return s;
     };
-    const target    = cleanName(empName);
+    const target = cleanName(empName);
     console.log(`getEmployeePayroll: "${target}" in ${sheetName}`);
 
     for (let i = 1; i < rows.length; i++) {
@@ -293,20 +284,10 @@ async function getEmployeePayroll(empName, month, payType) {
           advance: toN(r[22]), kot: toN(r[23]), late: toN(r[24]),
           otherDed: toN(r[25]), totalDed: toN(r[26]), netPay: toN(r[27]),
           month, payType: 'daily',
-          // alias สำหรับ payslip template เดิม
           leaveMat: 0, leaveBday: 0, leaveNoPay: 0,
           tax: 0, absentDed: 0, noPayDed: 0,
         };
       } else {
-        // monthly col order (ตรงกับ Sheet จริง):
-        // 0=ชื่อ, 1=ตำแหน่ง, 2=วันทำงาน, 3=วันหยุด, 4=OT
-        // 5=ลากิจ, 6=ลาป่วย, 7=ขาดงาน, 8=พักร้อน
-        // 9=ไม่รับเงิน, 10=ลาคลอด, 11=วันเกิด
-        // 12=ค่าแรง, 13=ค่าปกติ, 14=ค่าหยุดPay, 15=OTPay
-        // 16=เบี้ยเลี้ยง, 17=เบี้ยขยัน, 18=รวมรายได้
-        // 19=หักล่วงหน้า, 20=กยศ, 21=ปกส., 22=ภาษี
-        // 23=วันขาด, 24=ไม่รับเงิน(หัก), 25=รายจ่ายอื่นๆ, 26=รวมหัก
-        // 27=เงินได้สุทธิ, 28=type
         return {
           name: r[0], position: r[1],
           workDays: toN(r[2]), holidayD: toN(r[3]), otH: toN(r[4]),
@@ -323,7 +304,6 @@ async function getEmployeePayroll(empName, month, payType) {
           otherDed: toN(r[25]), totalDed: toN(r[26]),
           netPay: toN(r[27]),
           month, payType: 'monthly',
-          // ไม่มีใน monthly
           otherInc: 0, late: 0,
           festivalD:0, festivalPay:0, festivalExtra:0,
         };
@@ -337,7 +317,6 @@ async function getEmployeePayroll(empName, month, payType) {
 }
 
 // ─── getAvailableMonths ──────────────────────────────────────
-// คืน array of { month: string, payType: 'daily'|'monthly' }
 async function getAvailableMonths() {
   const sheets = getSheetsClient();
   const meta   = await sheets.spreadsheets.get({ spreadsheetId: process.env.LOG_SHEET_ID });
