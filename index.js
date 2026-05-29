@@ -112,27 +112,66 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
     return;
   }
 
+  // สร้าง Flex carousel ให้เลือก 1, 3, 6 เดือนย้อนหลัง
+  const makeMonthCard = (months, label, emoji) => {
+    const monthList = months.map(m => ({ type: 'box', layout: 'horizontal', contents: [
+      { type: 'text', text: '• ' + m, size: 'sm', color: '#555555', flex: 1, wrap: true }
+    ]}));
+    const postbackData = months.map(m => m + ':' + requestId).join('|') + ':COUNT:' + months.length;
+    return {
+      type: 'bubble', size: 'micro',
+      header: { type: 'box', layout: 'vertical', backgroundColor: '#1E3A5F', paddingAll: '12px',
+        contents: [{ type: 'text', text: emoji + ' ' + label, color: '#ffffff', weight: 'bold', size: 'sm', align: 'center' }]
+      },
+      body: { type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '12px',
+        contents: [
+          { type: 'text', text: docLabel, size: 'xs', color: '#888888', align: 'center', margin: 'none' },
+          { type: 'separator', margin: 'sm' },
+          ...monthList.slice(0, 6),
+          ...(monthList.length > 6 ? [{ type: 'text', text: '+ อีก ' + (monthList.length - 6) + ' เดือน', size: 'xs', color: '#aaaaaa' }] : [])
+        ]
+      },
+      footer: { type: 'box', layout: 'vertical', paddingAll: '10px',
+        contents: [{ type: 'button', style: 'primary', color: '#C9952A', height: 'sm',
+          action: { type: 'postback', label: 'เลือก ' + label, data: 'M|' + postbackData }
+        }]
+      }
+    };
+  };
+
+  // สร้าง option 1, 3, 6 เดือนล่าสุด
+  const opt1 = validMonths.slice(-1);
+  const opt3 = validMonths.slice(-3);
+  const opt6 = validMonths.slice(-6);
+
+  const bubbles = [];
+  if (opt1.length >= 1) bubbles.push(makeMonthCard(opt1, '1 เดือนล่าสุด', '📄'));
+  if (opt3.length >= 2) bubbles.push(makeMonthCard(opt3, opt3.length + ' เดือนล่าสุด', '📋'));
+  if (opt6.length >= 4) bubbles.push(makeMonthCard(opt6, opt6.length + ' เดือนล่าสุด', '📁'));
+
+  // ถ้ามีหลายเดือนให้เลือกเองด้วย QuickReply ท้าย
+  const allItems = validMonths.map(m => ({
+    type: 'action',
+    action: { type: 'message', label: m.length > 20 ? m.slice(0,20) : m, text: 'เลือกเดือน:' + m + ':' + requestId }
+  }));
+
   await reply(replyToken, {
-    type: 'text',
-    text: `📅 ต้องการ${docLabel} (${typeLabel}) เดือนไหนครับ?`,
-    quickReply: {
-      items: validMonths.map(m => ({
-        type: 'action',
-        action: { type: 'message', label: m.length > 20 ? m.slice(0, 20) : m, text: 'เลือกเดือน:' + m + ':' + requestId }
-      }))
-    }
+    type: 'flex', altText: `เลือกช่วงเวลา${docLabel}`,
+    contents: { type: 'carousel', contents: bubbles }
   });
 }
 
 // ════════════════════════════════════════════════════════
 // พนักงานเลือกเดือน → แจ้ง HR
 // ════════════════════════════════════════════════════════
-async function handleMonthSelected(replyToken, userId, month, requestId) {
+async function handleMonthSelected(replyToken, userId, month, requestId, allMonths) {
   const req = pending[requestId];
   if (!req) { await reply(replyToken, '⚠️ คำขอหมดอายุ กรุณาขอใหม่อีกครั้งครับ'); return; }
 
-  req.month = month;
-  if (requestLog[requestId]) requestLog[requestId].month = month;
+  // เก็บ allMonths ถ้ามี (กรณีเลือกหลายเดือน)
+  req.months = allMonths && allMonths.length > 1 ? allMonths : [month];
+  req.month  = req.months.join(', ');
+  if (requestLog[requestId]) requestLog[requestId].month = req.month;
   const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
 
   await reply(replyToken, {
@@ -194,6 +233,16 @@ async function handlePostback(event) {
   const action   = data.startsWith('A|') ? 'approve' : data.startsWith('R|') ? 'reject' : null;
   const rid      = action ? data.slice(2) : null;
 
+  // พนักงานเลือกหลายเดือน (Flex carousel)
+  if (data.startsWith('M|')) {
+    const parts    = data.slice(2).split('|');
+    const countIdx = parts.indexOf('COUNT');
+    const months   = parts.slice(0, countIdx).map(p => p.split(':')[0]);
+    const reqId    = parts[0].split(':')[1]; // requestId อยู่ใน part แรก
+    await handleMonthSelected(event.replyToken, event.source.userId, months[0], reqId, months);
+    return;
+  }
+
   if (action === 'reject') {
     const req = pending[rid] || {};
     if (req.empLineId) await push(req.empLineId, '❌ คำขอ' + (req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ');
@@ -209,19 +258,31 @@ async function handlePostback(event) {
 
     await push(hrUserId, `⏳ กำลังสร้าง PDF สำหรับ ${req.empName} เดือน ${req.month}...`);
     try {
-      const empData = await payroll.getEmployeePayroll(req.empName, req.month, req.payType || 'monthly');
-      if (!empData) {
-        await push(hrUserId, `❌ ไม่พบข้อมูลเงินเดือนของ ${req.empName} เดือน ${req.month}`);
-        return;
-      }
-
       const docLabel = req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
       const safeName = req.empName.replace(/[^ก-๙a-zA-Z0-9 ]/g, '').trim();
-      const filename  = docLabel + '_' + safeName + '_' + req.month + '.pdf';
+      const months   = req.months || [req.month];
+      const filename = docLabel + '_' + safeName + '_' + months.join('-') + '.pdf';
 
-      const pdfBuffer = req.docType === 'payslip'
-        ? await payslip.createFromPayroll(empData)
-        : await cert.createFromPayroll(empData);
+      // สร้าง PDF ทีละเดือน แล้วรวมเป็นไฟล์เดียว
+      const pdfBuffers = [];
+      for (const m of months) {
+        const empData = await payroll.getEmployeePayroll(req.empName, m, req.payType || 'monthly');
+        if (!empData) {
+          await push(hrUserId, `❌ ไม่พบข้อมูลเงินเดือนของ ${req.empName} เดือน ${m}`);
+          continue;
+        }
+        const buf = req.docType === 'payslip'
+          ? await payslip.createFromPayroll(empData)
+          : await cert.createFromPayroll(empData);
+        pdfBuffers.push(buf);
+      }
+
+      if (!pdfBuffers.length) return;
+
+      // รวม PDF หลายหน้า (ใช้ pdf-lib ถ้ามี หรือส่งทีละไฟล์)
+      const pdfBuffer = pdfBuffers.length === 1
+        ? pdfBuffers[0]
+        : await mergePdfs(pdfBuffers);
 
       // ส่งเป็นรูป + ลิงก์ PDF (_html เก็บไว้ใน pdfBuffer object)
       const sendResult = await sendDocToLine(req.empLineId, pdfBuffer._html || '', pdfBuffer, filename); // keep for quota-ok path (unused now)
@@ -488,6 +549,25 @@ app.post('/portal/approve', express.json(), async (req, res) => {
   res.status(400).json({ error: 'invalid action' });
 });
 
+// ── รวม PDF หลายไฟล์เป็นไฟล์เดียว ─────────────────────────
+async function mergePdfs(buffers) {
+  try {
+    const { PDFDocument } = require('pdf-lib');
+    const merged = await PDFDocument.create();
+    for (const buf of buffers) {
+      const doc   = await PDFDocument.load(buf);
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    }
+    const bytes = await merged.save();
+    return Buffer.from(bytes);
+  } catch(e) {
+    // pdf-lib ไม่มี — ส่งแค่เดือนแรก
+    console.error('mergePdfs error:', e.message);
+    return buffers[0];
+  }
+}
+
 // ════════════════════════════════════════════════════════
 // Start server
 // ════════════════════════════════════════════════════════
@@ -750,6 +830,25 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 
   res.status(400).json({ error: 'invalid action' });
 });
+
+// ── รวม PDF หลายไฟล์เป็นไฟล์เดียว ─────────────────────────
+async function mergePdfs(buffers) {
+  try {
+    const { PDFDocument } = require('pdf-lib');
+    const merged = await PDFDocument.create();
+    for (const buf of buffers) {
+      const doc   = await PDFDocument.load(buf);
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    }
+    const bytes = await merged.save();
+    return Buffer.from(bytes);
+  } catch(e) {
+    // pdf-lib ไม่มี — ส่งแค่เดือนแรก
+    console.error('mergePdfs error:', e.message);
+    return buffers[0];
+  }
+}
 
 // ════════════════════════════════════════════════════════
 // Start server
