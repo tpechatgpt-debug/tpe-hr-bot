@@ -121,51 +121,57 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
     return;
   }
 
-  // สร้าง Flex carousel ให้เลือก 1, 3, 6 เดือนย้อนหลัง
-  const makeMonthCard = (months, label, emoji) => {
-    const monthList = months.map(m => ({ type: 'box', layout: 'horizontal', contents: [
-      { type: 'text', text: '• ' + m, size: 'sm', color: '#555555', flex: 1, wrap: true }
-    ]}));
-    const postbackData = months.map(m => m + ':' + requestId).join('|') + ':COUNT:' + months.length;
+  // encode months เป็น index เพื่อหลีกเลี่ยงปัญหา | ใน Thai
+  // validMonths = ['มีนาคม 2569','เมษายน 2569','พฤษภาคม 2569']
+  // postback: MULTI|reqId|idx1,idx2,idx3
+  const makeCard = (idxArr, label, emoji) => {
+    const ms = idxArr.map(i => validMonths[i]);
+    const body_items = ms.map(m => ({
+      type: 'box', layout: 'horizontal',
+      contents: [{ type: 'text', text: '• ' + m, size: 'sm', color: '#555555', wrap: true }]
+    }));
     return {
       type: 'bubble', size: 'micro',
-      header: { type: 'box', layout: 'vertical', backgroundColor: '#1E3A5F', paddingAll: '12px',
+      header: {
+        type: 'box', layout: 'vertical',
+        backgroundColor: '#1E3A5F', paddingAll: '12px',
         contents: [{ type: 'text', text: emoji + ' ' + label, color: '#ffffff', weight: 'bold', size: 'sm', align: 'center' }]
       },
-      body: { type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '12px',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '12px',
         contents: [
-          { type: 'text', text: docLabel, size: 'xs', color: '#888888', align: 'center', margin: 'none' },
+          { type: 'text', text: docLabel, size: 'xs', color: '#888888', align: 'center' },
           { type: 'separator', margin: 'sm' },
-          ...monthList.slice(0, 6),
-          ...(monthList.length > 6 ? [{ type: 'text', text: '+ อีก ' + (monthList.length - 6) + ' เดือน', size: 'xs', color: '#aaaaaa' }] : [])
+          ...body_items
         ]
       },
-      footer: { type: 'box', layout: 'vertical', paddingAll: '10px',
-        contents: [{ type: 'button', style: 'primary', color: '#C9952A', height: 'sm',
-          action: { type: 'postback', label: 'เลือก ' + label, data: 'M|' + postbackData }
+      footer: {
+        type: 'box', layout: 'vertical', paddingAll: '10px',
+        contents: [{
+          type: 'button', style: 'primary', color: '#C9952A', height: 'sm',
+          action: { type: 'postback', label: 'เลือก ' + label, data: 'MULTI|' + requestId + '|' + idxArr.join(',') }
         }]
       }
     };
   };
 
-  // สร้าง option 1, 3, 6 เดือนล่าสุด
-  const opt1 = validMonths.slice(-1);
-  const opt3 = validMonths.slice(-3);
-  const opt6 = validMonths.slice(-6);
-
+  const n = validMonths.length;
   const bubbles = [];
-  if (opt1.length >= 1) bubbles.push(makeMonthCard(opt1, '1 เดือนล่าสุด', '📄'));
-  if (opt3.length >= 2) bubbles.push(makeMonthCard(opt3, opt3.length + ' เดือนล่าสุด', '📋'));
-  if (opt6.length >= 4) bubbles.push(makeMonthCard(opt6, opt6.length + ' เดือนล่าสุด', '📁'));
-
-  // ถ้ามีหลายเดือนให้เลือกเองด้วย QuickReply ท้าย
-  const allItems = validMonths.map(m => ({
-    type: 'action',
-    action: { type: 'message', label: m.length > 20 ? m.slice(0,20) : m, text: 'เลือกเดือน:' + m + ':' + requestId }
-  }));
+  // 1 เดือนล่าสุด
+  bubbles.push(makeCard([n-1], '1 เดือนล่าสุด', '📄'));
+  // 3 เดือนล่าสุด (ถ้ามี)
+  if (n >= 2) {
+    const idx3 = Array.from({length: Math.min(3,n)}, (_,i) => n - Math.min(3,n) + i);
+    bubbles.push(makeCard(idx3, idx3.length + ' เดือนล่าสุด', '📋'));
+  }
+  // 6 เดือนล่าสุด (ถ้ามี)
+  if (n >= 4) {
+    const idx6 = Array.from({length: Math.min(6,n)}, (_,i) => n - Math.min(6,n) + i);
+    bubbles.push(makeCard(idx6, idx6.length + ' เดือนล่าสุด', '📁'));
+  }
 
   await reply(replyToken, {
-    type: 'flex', altText: `เลือกช่วงเวลา${docLabel}`,
+    type: 'flex', altText: 'เลือกช่วงเวลา' + docLabel,
     contents: { type: 'carousel', contents: bubbles }
   });
 }
@@ -243,12 +249,23 @@ async function handlePostback(event) {
   const rid      = action ? data.slice(2) : null;
 
   // พนักงานเลือกหลายเดือน (Flex carousel)
-  if (data.startsWith('M|')) {
-    const parts    = data.slice(2).split('|');
-    const countIdx = parts.indexOf('COUNT');
-    const months   = parts.slice(0, countIdx).map(p => p.split(':')[0]);
-    const reqId    = parts[0].split(':')[1]; // requestId อยู่ใน part แรก
-    await handleMonthSelected(event.replyToken, event.source.userId, months[0], reqId, months);
+  if (data.startsWith('MULTI|')) {
+    // format: MULTI|requestId|idx1,idx2,idx3
+    const parts   = data.split('|');
+    const reqId   = parts[1];
+    const idxList = parts[2].split(',').map(Number);
+    // ดึง validMonths จาก pending
+    const req2 = pending[reqId];
+    if (!req2) { await reply(event.replyToken, '⚠️ คำขอหมดอายุ กรุณาขอใหม่ครับ'); return; }
+    const allM  = await payroll.getAvailableMonths();
+    const thMon = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const parseKey = s => { const mi = thMon.findIndex(n => s.includes(n)); const yr = parseInt((s.match(/25[0-9]{2}/) || ['0'])[0]); return yr*100+mi; };
+    const vMonths = allM.filter(m => m.payType === req2.payType).map(m => m.month)
+      .filter(m => m && m.trim()).sort((a,b) => parseKey(a)-parseKey(b));
+    const months = idxList.map(i => vMonths[i]).filter(Boolean);
+    if (!months.length) { await reply(event.replyToken, '⚠️ ไม่พบข้อมูลเดือนที่เลือก'); return; }
+    await handleMonthSelected(event.replyToken, event.source.userId, months[months.length-1], reqId, months);
     return;
   }
 
