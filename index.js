@@ -98,11 +98,20 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
 
   // ── ดึงเดือน กรองเฉพาะประเภทของพนักงานคนนี้ ──────────────
   const allMonths   = await payroll.getAvailableMonths();
+  // เรียงเดือนจากเก่าไปใหม่ตามลำดับเวลาจริง
+  const thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const parseMonthKey = s => {
+    const m = thMonths.findIndex(n => s.includes(n));
+    const y = parseInt((s.match(/25\d\d/) || ['0'])[0]) || 0;
+    return y * 100 + m;
+  };
   const validMonths = allMonths
     .filter(m => m.payType === payType)
     .map(m => m.month)
     .filter(m => m && m.trim().length > 0)
-    .slice(0, 13);
+    .sort((a, b) => parseMonthKey(a) - parseMonthKey(b))
+    .slice(-13);
 
   const docLabel  = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
   const typeLabel = rawType === 'รายวัน' ? 'รายวัน' : 'รายเดือน';
