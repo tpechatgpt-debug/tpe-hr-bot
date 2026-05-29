@@ -279,16 +279,18 @@ async function handlePostback(event) {
 
       if (!pdfBuffers.length) return;
 
-      // รวม PDF หลายหน้า (ใช้ pdf-lib ถ้ามี หรือส่งทีละไฟล์)
+      // รวม PDF หลายหน้า
+      const firstHtml = pdfBuffers[0]._html || '';
       const pdfBuffer = pdfBuffers.length === 1
         ? pdfBuffers[0]
         : await mergePdfs(pdfBuffers);
 
-      // ส่งเป็นรูป + ลิงก์ PDF (_html เก็บไว้ใน pdfBuffer object)
-      const sendResult = await sendDocToLine(req.empLineId, pdfBuffer._html || '', pdfBuffer, filename); // keep for quota-ok path (unused now)
+      // ส่งเป็นรูป (หน้าแรก) + ลิงก์ PDF ทั้งหมด
+      const sendResult = await sendDocToLine(req.empLineId, firstHtml, pdfBuffer, filename);
       delete pending[rid];
       if (requestLog[rid]) requestLog[rid].status = 'sent';
-      await sheet.log({ ...empData, docType: req.docType });
+      // log เดือนแรก (สำหรับ multi-month ใช้ข้อมูลรวม)
+      await sheet.log({ name: req.empName, month: req.month, docType: req.docType });
 
     } catch(err) {
       console.error('approve error:', err.message);
@@ -538,7 +540,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 
       delete pending[requestId];
       if (requestLog[requestId]) requestLog[requestId].status = 'sent';
-      await sheet.log({ ...empData, docType: req2.docType });
+      await sheet.log({ name: req2.empName, month: req2.month, docType: req2.docType });
 
       return res.json({ ok: true, action: 'approved', pushOk: !pushResult?.fallback });
     } catch (err) {
@@ -820,7 +822,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 
       delete pending[requestId];
       if (requestLog[requestId]) requestLog[requestId].status = 'sent';
-      await sheet.log({ ...empData, docType: req2.docType });
+      await sheet.log({ name: req2.empName, month: req2.month, docType: req2.docType });
 
       return res.json({ ok: true, action: 'approved', pushOk: !pushResult?.fallback });
     } catch (err) {
