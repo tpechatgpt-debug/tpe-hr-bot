@@ -306,13 +306,13 @@ async function handlePostback(event) {
       if (!pdfBuffers.length) return;
 
       // รวม PDF หลายหน้า
-      const firstHtml = pdfBuffers[0]._html || '';
+      const htmlArr   = pdfBuffers.map(b => b._html || '');
       const pdfBuffer = pdfBuffers.length === 1
         ? pdfBuffers[0]
         : await mergePdfs(pdfBuffers);
 
-      // ส่งเป็นรูป (หน้าแรก) + ลิงก์ PDF ทั้งหมด
-      const sendResult = await sendDocToLine(req.empLineId, firstHtml, pdfBuffer, filename);
+      // ส่งรูปทุกเดือน + ลิงก์ PDF รวม
+      const sendResult = await sendDocToLine(req.empLineId, htmlArr, pdfBuffer, filename);
       delete pending[rid];
       if (requestLog[rid]) requestLog[rid].status = 'sent';
       // log เดือนแรก (สำหรับ multi-month ใช้ข้อมูลรวม)
