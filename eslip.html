@@ -512,7 +512,41 @@ function showToast(msg) {
 }
 
 // ── START ──
-init();
+// Debug mode: เปิดในคอมโดยไม่ต้อง LIFF login
+const urlParams = new URLSearchParams(window.location.search);
+const debugLineId = urlParams.get('lineId');
+const isDebug = urlParams.get('debug') === '1' && debugLineId;
+
+if (isDebug) {
+  // bypass LIFF — ใช้ lineId จาก URL โดยตรง
+  userProfile = { userId: debugLineId, displayName: 'Debug User', pictureUrl: '' };
+  document.getElementById('loadingScreen').classList.add('hide');
+  document.getElementById('app').style.display = 'block';
+  loadEmployeeData(debugLineId);
+} else {
+  init();
+}
+
+async function loadEmployeeData(lineId) {
+  try {
+    const res = await fetch(`${API}/eslip/employee?lineId=${lineId}`);
+    const data = await res.json();
+    if (!data || data.error) {
+      document.getElementById('profileName').textContent = 'ไม่พบข้อมูล';
+      showMonthList([]);
+    } else {
+      empData = data;
+      document.getElementById('profileName').textContent = data.name;
+      document.getElementById('profilePos').textContent = data.position || '—';
+      const badge = document.getElementById('profileBadge');
+      badge.textContent = data.payType === 'daily' ? 'รายวัน' : 'รายเดือน';
+      badge.className = 'profile-badge ' + (data.payType === 'daily' ? 'badge-daily' : 'badge-monthly');
+      loadMonths('payslip');
+    }
+  } catch(e) {
+    document.getElementById('profileName').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
+  }
+}
 </script>
 </body>
 </html>
