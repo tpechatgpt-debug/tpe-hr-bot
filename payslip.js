@@ -288,47 +288,42 @@ async function htmlToDriveUrl(html, filename) {
 // ── ส่งเอกสารเป็นรูปภาพ + ลิงก์ PDF ──────────────────────
 // html = HTML string ที่ใช้สร้าง PDF/รูป
 // pdfBuffer = Buffer ของ PDF ที่สร้างแล้ว
-async function sendDocToLine(userId, html, pdfBuffer, filename) {
+// htmlList = string หรือ array of strings (1 string ต่อเดือน)
+async function sendDocToLine(userId, htmlList, pdfBuffer, filename) {
   const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
   const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
 
-  // สร้าง token
-  const token    = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const imgToken = token + '_img';
+  // normalize htmlList เป็น array
+  const htmlArr = Array.isArray(htmlList) ? htmlList : (htmlList ? [htmlList] : []);
 
   // เก็บ PDF
+  const token  = Math.random().toString(36).slice(2) + Date.now().toString(36);
   pdfStore[token] = { buffer: pdfBuffer, filename, createdAt: Date.now() };
   const pdfUrl = RENDER_URL + '/pdf/' + token;
 
-  // สร้าง JPG จาก HTML
-  let imgBuffer = null;
-  try {
-    imgBuffer = await htmlToImageBuffer(html);
-    imageStore[imgToken] = { buffer: imgBuffer, createdAt: Date.now() };
-  } catch(e) {
-    console.error('htmlToImageBuffer error:', e.message);
-  }
-
-  const imgUrl = RENDER_URL + '/img/' + imgToken;
-  console.log('sendDoc: pdf=', pdfUrl, 'img=', imgUrl);
-
-  // สร้าง messages array
+  // สร้างรูปทุกเดือน (max 4 รูป — LINE limit 5 messages ต่อ push)
   const messages = [];
-
-  // ถ้ามีรูป — ส่งรูปก่อน
-  if (imgBuffer) {
-    messages.push({
-      type: 'image',
-      originalContentUrl: imgUrl,
-      previewImageUrl:    imgUrl,
-    });
+  const imgTokens = [];
+  for (let i = 0; i < Math.min(htmlArr.length, 4); i++) {
+    try {
+      const imgBuf   = await htmlToImageBuffer(htmlArr[i]);
+      const imgToken = token + '_img' + i;
+      imageStore[imgToken] = { buffer: imgBuf, createdAt: Date.now() };
+      imgTokens.push(imgToken);
+      const imgUrl = RENDER_URL + '/img/' + imgToken;
+      messages.push({ type: 'image', originalContentUrl: imgUrl, previewImageUrl: imgUrl });
+    } catch(e) {
+      console.error('htmlToImageBuffer error:', e.message);
+    }
   }
 
-  // ส่งลิงก์ PDF
+  // ส่งลิงก์ PDF (รวมทุกเดือน)
   messages.push({
     type: 'text',
     text: `📄 กดลิงก์เพื่อดาวน์โหลด PDF (ใช้ได้ 1 ชั่วโมง)\n${pdfUrl}`,
   });
+
+  console.log('sendDoc: pdf=', pdfUrl, 'imgs=', imgTokens.length);
 
   // push
   try {
