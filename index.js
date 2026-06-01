@@ -157,17 +157,18 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
 
   const n = validMonths.length;
   const bubbles = [];
-  // 1 เดือนล่าสุด
+  // 1 เดือนล่าสุด (ทุกประเภทเอกสาร)
   bubbles.push(makeCard([n-1], '1 เดือนล่าสุด', '📄'));
-  // 3 เดือนล่าสุด (ถ้ามี)
-  if (n >= 2) {
-    const idx3 = Array.from({length: Math.min(3,n)}, (_,i) => n - Math.min(3,n) + i);
-    bubbles.push(makeCard(idx3, idx3.length + ' เดือนล่าสุด', '📋'));
-  }
-  // 6 เดือนล่าสุด (ถ้ามี)
-  if (n >= 4) {
-    const idx6 = Array.from({length: Math.min(6,n)}, (_,i) => n - Math.min(6,n) + i);
-    bubbles.push(makeCard(idx6, idx6.length + ' เดือนล่าสุด', '📁'));
+  // 3 และ 6 เดือนล่าสุด — เฉพาะสลิปเงินเดือนเท่านั้น
+  if (docType === 'payslip') {
+    if (n >= 2) {
+      const idx3 = Array.from({length: Math.min(3,n)}, (_,i) => n - Math.min(3,n) + i);
+      bubbles.push(makeCard(idx3, idx3.length + ' เดือนล่าสุด', '📋'));
+    }
+    if (n >= 4) {
+      const idx6 = Array.from({length: Math.min(6,n)}, (_,i) => n - Math.min(6,n) + i);
+      bubbles.push(makeCard(idx6, idx6.length + ' เดือนล่าสุด', '📁'));
+    }
   }
 
   await reply(replyToken, {
