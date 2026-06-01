@@ -613,4 +613,127 @@ function startServer(port) {
 // HR อัปโหลด Excel
 // ════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════
+// E-Slip LIFF Endpoints
+// ════════════════════════════════════════════════════════
+app.get('/eslip', (req, res) => res.sendFile(path.join(__dirname, 'eslip.html')));
+
+// พนักงาน: ข้อมูลตัวเอง
+app.get('/eslip/employee', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    res.json({
+      name: payroll.normName(rawName.split('(')[0]),
+      position: emp['ตำแหน่ง'] || '',
+      payType: rawType.includes('รายวัน') ? 'daily' : 'monthly',
+      lineId,
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// เดือนที่มีข้อมูล + netPay
+app.get('/eslip/months', async (req, res) => {
+  try {
+    const { lineId, payType } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const pt = (payType || 'monthly');
+    const allMonths = await payroll.getAvailableMonths();
+    const thM = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                 'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const parseKey = s => { const mi = thM.findIndex(n=>s.includes(n)); const yr = parseInt((s.match(/25[0-9]{2}/)||['0'])[0]); return yr*100+mi; };
+    const months = allMonths
+      .filter(m => m.payType === pt)
+      .map(m => m.month)
+      .filter(Boolean)
+      .sort((a,b) => parseKey(b)-parseKey(a)); // ใหม่ก่อน
+    // ดึง netPay แต่ละเดือน
+    const result = await Promise.all(months.map(async m => {
+      try {
+        const d = await payroll.getEmployeePayroll(empName, m, pt);
+        return { month: m, netPay: d?.netPay || null };
+      } catch { return { month: m, netPay: null }; }
+    }));
+    res.json(result);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// HTML ของเอกสาร (สำหรับแสดงใน LIFF)
+app.get('/eslip/doc', async (req, res) => {
+  try {
+    const { lineId, docType, month } = req.query;
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+    const empData = await payroll.getEmployeePayroll(empName, month, pt);
+    if (!empData) return res.status(404).json({ error: 'payroll not found' });
+    const pdfBuf = docType === 'payslip'
+      ? await payslip.createFromPayroll(empData)
+      : await cert.createFromPayroll(empData);
+    res.json({ html: pdfBuf._html || '' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// JPG image
+app.get('/eslip/image', async (req, res) => {
+  try {
+    const { lineId, docType, month } = req.query;
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).send('not found');
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+    const empData = await payroll.getEmployeePayroll(empName, month, pt);
+    if (!empData) return res.status(404).send('not found');
+    const pdfBuf = docType === 'payslip'
+      ? await payslip.createFromPayroll(empData)
+      : await cert.createFromPayroll(empData);
+    const imgBuf = await payslip.htmlToImageBuffer(pdfBuf._html || '');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Disposition', `attachment; filename="slip_${month}.jpg"`);
+    res.send(imgBuf);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
+// PDF download
+app.get('/eslip/pdf', async (req, res) => {
+  try {
+    const { lineId, docType, month } = req.query;
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).send('not found');
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+    const empData = await payroll.getEmployeePayroll(empName, month, pt);
+    if (!empData) return res.status(404).send('not found');
+    const pdfBuf = docType === 'payslip'
+      ? await payslip.createFromPayroll(empData)
+      : await cert.createFromPayroll(empData);
+    const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+    const filename = docLabel + '_' + empName + '_' + month + '.pdf';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(pdfBuf);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
+
 startServer(PORT);
