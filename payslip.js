@@ -121,7 +121,7 @@ async function createFromPayroll(d) {
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sarabun',sans-serif;font-size:11.5px;color:#1a1a1a;background:#fff;padding:20px 24px}
 .header{display:flex;align-items:stretch;border:1.5px solid #C9952A;border-radius:6px;overflow:hidden;margin-bottom:0}
