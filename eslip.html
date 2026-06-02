@@ -80,6 +80,32 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .skeleton{background:linear-gradient(90deg,#f0ede8 25%,#e8e4df 50%,#f0ede8 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .sk-card{height:72px;border-radius:14px;margin-bottom:8px}
+
+/* ── BEAUTIFUL DOC CARD ── */
+.doc-card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.doc-card-header{background:linear-gradient(135deg,var(--navy-dark),var(--navy-light));padding:24px 20px;position:relative;overflow:hidden}
+.doc-card-header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(201,149,42,.15);border-radius:50%}
+.doc-card-header::after{content:'';position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,.05);border-radius:50%}
+.doc-card-badge{background:rgba(201,149,42,.2);color:var(--gold-light);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:10px;border:1px solid rgba(201,149,42,.3)}
+.doc-card-name{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;position:relative}
+.doc-card-pos{color:rgba(255,255,255,.65);font-size:13px;position:relative}
+.doc-card-month{color:var(--gold-light);font-size:12px;margin-top:8px;position:relative;font-weight:500}
+
+.doc-card-net{background:linear-gradient(135deg,#f8f4ee,#fff);padding:20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ede8}
+.doc-card-net-label{font-size:12px;color:var(--muted);font-weight:500}
+.doc-card-net-val{font-size:28px;font-weight:800;color:var(--green);letter-spacing:-.5px}
+
+.doc-rows{padding:16px 20px;display:flex;flex-direction:column;gap:0}
+.doc-section-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid #f0ede8;margin-bottom:4px}
+.doc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f9f7f4}
+.doc-row:last-child{border-bottom:none}
+.doc-row-label{font-size:13px;color:var(--muted)}
+.doc-row-val{font-size:13px;font-weight:600;color:var(--text)}
+.doc-row-val.pos{color:var(--green)}
+.doc-row-val.neg{color:var(--red,#C0392B)}
+.doc-row-val.zero{color:#bbb}
+
+.doc-footer{background:#f8f6f2;padding:14px 20px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid #eee}
 </style>
 </head>
 <body>
@@ -245,18 +271,94 @@ async function openDoc(docType, month) {
   render.innerHTML = '<div style="padding:40px;text-align:center"><div class="skeleton" style="height:500px;border-radius:8px"></div></div>';
 
   try {
-    // ดึง HTML จาก server (แค่ JSON เบาๆ)
-    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${docType}&month=${encodeURIComponent(month)}`);
-    const data = await r.json();
-    if (data.html) {
-      // render HTML ใน browser โดยตรง — เร็วมาก ไม่ต้อง puppeteer
-      render.innerHTML = data.html;
-    } else {
+    const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=${docType}&month=${encodeURIComponent(month)}`);
+    const d = await r.json();
+    if (!d || d.error) {
       render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">ไม่พบข้อมูล</div>';
+      return;
     }
+    render.innerHTML = renderDocCard(d, docType, month);
   } catch(e) {
     render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">โหลดไม่สำเร็จ</div>';
   }
+}
+
+// ── RENDER BEAUTIFUL DOC CARD ─────────────────────────
+function fmt(n) { return (parseFloat(n)||0).toLocaleString('th-TH',{minimumFractionDigits:2}); }
+function row(label, val, cls='') {
+  const v = parseFloat(val)||0;
+  const c = cls || (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
+  return `<div class="doc-row"><span class="doc-row-label">${label}</span><span class="doc-row-val ${c}">${v !== 0 ? (v>0?'':'')+fmt(Math.abs(v)) : '—'}</span></div>`;
+}
+
+function renderDocCard(d, docType, month) {
+  const now = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+
+  if (docType === 'certificate') {
+    const salary = d.payType === 'daily'
+      ? (parseFloat(d.baseWage)||0) * 26
+      : (parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
+    return `<div class="doc-card">
+      <div class="doc-card-header">
+        <div class="doc-card-badge">📋 ใบรับรองเงินเดือน</div>
+        <div class="doc-card-name">${d.name||'—'}</div>
+        <div class="doc-card-pos">${d.position||'—'}</div>
+        <div class="doc-card-month">📅 ${month}</div>
+      </div>
+      <div class="doc-card-net">
+        <div><div class="doc-card-net-label">เงินเดือน (ฐาน)</div></div>
+        <div class="doc-card-net-val">฿${fmt(salary)}</div>
+      </div>
+      <div class="doc-rows">
+        <div class="doc-section-label">ข้อมูลการจ้างงาน</div>
+        <div class="doc-row"><span class="doc-row-label">ตำแหน่ง</span><span class="doc-row-val">${d.position||'—'}</span></div>
+        <div class="doc-row"><span class="doc-row-label">ประเภท</span><span class="doc-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
+        <div class="doc-row"><span class="doc-row-label">อัตราค่าจ้าง</span><span class="doc-row-val pos">฿${fmt(d.baseWage||d.basePay)}</span></div>
+      </div>
+      <div class="doc-footer">ออกให้ ณ วันที่ ${now} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+    </div>`;
+  }
+
+  // PAYSLIP
+  return `<div class="doc-card">
+    <div class="doc-card-header">
+      <div class="doc-card-badge">💰 สลิปเงินเดือน</div>
+      <div class="doc-card-name">${d.name||'—'}</div>
+      <div class="doc-card-pos">${d.position||'—'}</div>
+      <div class="doc-card-month">📅 ${month}</div>
+    </div>
+    <div class="doc-card-net">
+      <div><div class="doc-card-net-label">เงินได้สุทธิ</div></div>
+      <div class="doc-card-net-val">฿${fmt(d.netPay)}</div>
+    </div>
+    <div class="doc-rows">
+      <div class="doc-section-label">สถิติการทำงาน</div>
+      ${row('วันทำงาน', d.workDays, '')} 
+      ${row('OT (ชั่วโมง)', d.otH, '')}
+      ${row('ลากิจ', d.leaveP, '')}
+      ${row('ลาป่วย', d.leaveSick, '')}
+      ${row('พักร้อน', d.leaveVac, '')}
+      <div class="doc-section-label">รายได้</div>
+      ${row('ค่าจ้างปกติ', d.basePay||d.baseWage, 'pos')}
+      ${(parseFloat(d.otPay)||0)>0 ? row('ค่า OT', d.otPay, 'pos') : ''}
+      ${(parseFloat(d.allowance)||0)>0 ? row('เบี้ยเลี้ยง', d.allowance, 'pos') : ''}
+      ${(parseFloat(d.bonus)||0)>0 ? row('เบี้ยขยัน', d.bonus, 'pos') : ''}
+      ${(parseFloat(d.otherInc)||0)>0 ? row('รายได้อื่นๆ', d.otherInc, 'pos') : ''}
+      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมรายได้</span><span class="doc-row-val pos">฿${fmt(d.totalInc)}</span></div>
+      <div class="doc-section-label">รายการหัก</div>
+      ${(parseFloat(d.soc)||0)>0 ? row('ประกันสังคม', d.soc, 'neg') : ''}
+      ${(parseFloat(d.tax)||0)>0 ? row('ภาษี ณ ที่จ่าย', d.tax, 'neg') : ''}
+      ${(parseFloat(d.advance)||0)>0 ? row('หักล่วงหน้า', d.advance, 'neg') : ''}
+      ${(parseFloat(d.kot)||0)>0 ? row('กยศ.', d.kot, 'neg') : ''}
+      ${(parseFloat(d.otherDed)||0)>0 ? row('รายการหักอื่นๆ', d.otherDed, 'neg') : ''}
+      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมหัก</span><span class="doc-row-val neg">฿${fmt(d.totalDed)}</span></div>
+    </div>
+    <div class="doc-card-net" style="background:linear-gradient(135deg,#e8f5ee,#f0faf4)">
+      <div><div class="doc-card-net-label" style="color:var(--green)">เงินได้สุทธิ</div></div>
+      <div class="doc-card-net-val">฿${fmt(d.netPay)}</div>
+    </div>
+    <div class="doc-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+  </div>`;
 }
 
 // ── BACK ──────────────────────────────────────────────
@@ -266,7 +368,9 @@ function goBack() {
   document.getElementById('actionBar').style.display = 'none';
 }
 
-// ── SAVE IMAGE (html2canvas — ทำใน browser เลย เร็วมาก) ──
+// ── SAVE IMAGE ──────────────────────────────────────
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 async function saveImage() {
   const btn = document.getElementById('btnSave');
   btn.textContent = '⏳ กำลังสร้างรูป...';
@@ -274,22 +378,36 @@ async function saveImage() {
   try {
     const el = document.getElementById('docRender');
     const canvas = await html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
+      scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
     });
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    // download
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `สลิป_${currentDocData.month}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('✅ บันทึกรูปสำเร็จ');
+
+    if (isIOS) {
+      // iOS: เปิดหน้าใหม่ให้กดค้างบันทึก
+      const win = window.open('', '_blank');
+      win.document.write(`<!DOCTYPE html><html><head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>บันทึกรูป</title>
+        <style>body{margin:0;background:#111;font-family:sans-serif}
+        .tip{background:#222;color:#fff;padding:16px;text-align:center;font-size:14px;line-height:1.8}
+        .tip b{color:#f0c040;font-size:16px}
+        img{width:100%;display:block}</style></head><body>
+        <div class="tip">📱 กด <b>ค้างที่รูป</b> แล้วเลือก<br><b>"บันทึกลงในรูปภาพ"</b></div>
+        <img src="${dataUrl}"></body></html>`);
+      win.document.close();
+      showToast('📱 กดค้างที่รูปเพื่อบันทึก');
+    } else {
+      // Android: download ได้ตรงๆ
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'สลิป_' + currentDocData.month + '.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('✅ บันทึกรูปสำเร็จ');
+    }
   } catch(e) {
-    showToast('❌ บันทึกรูปไม่สำเร็จ: ' + e.message);
+    showToast('❌ ไม่สำเร็จ: ' + e.message);
   } finally {
     btn.textContent = '💾 บันทึกรูป';
     btn.classList.remove('btn-disabled');
