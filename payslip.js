@@ -4,15 +4,122 @@ const imageStore = {}; // เก็บ JPG buffer สำหรับส่งเ
 
 function _buildPayslipHtml(d) {
   const fmt  = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-  const fmtN = n => { const v = parseFloat(n)||0; return v > 0 ? v.toLocaleString('th-TH',{minimumFractionDigits:2}) : (v < 0 ? v.toLocaleString('th-TH',{minimumFractionDigits:2}) : '—'); };
-  const isDaily   = d.payType === 'daily';
-  const payType   = isDaily ? 'รายวัน' : 'รายเดือน';
-  const baseWage  = parseFloat(d.baseWage) || 0;
-  const basePay   = parseFloat(d.basePay)  || 0;
-  const now       = new Date();
-  const thM       = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const printDate = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  const fmtN = n => { const v = parseFloat(n)||0; return v > 0 ? v.toString() : '0'; };
+  const n    = x => parseFloat(x) || 0;
+  const zero = v => n(v) > 0 ? fmt(v) : '0.00';
+  const totalInc = n(d.totalInc);
+  const totalDed = n(d.totalDed);
+  const netPay   = n(d.netPay);
+  const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
+  const isDaily = d.payType === 'daily';
+
+  // ── rows ฝั่งรายได้ ──
+  // รายวัน: แสดง ค่าแรง/วัน×วัน, OT, หยุดสัปดาห์, ประเพณี, เบี้ยเลี้ยง, เบี้ยขยัน, อื่นๆ
+  // รายเดือน: แสดง เงินเดือน, โบนัส, เบี้ยเลี้ยง, เบี้ยขยัน, อื่นๆ
+  const incRows = isDaily ? `
+      <tr>
+        <td>${isDaily ? `ค่าแรง/วัน (${fmt(d.baseWage)} × ${fmtN(d.workDays)} วัน)` : 'วันทำงานปกติ'}</td>
+        <td class="c">${fmtN(d.workDays)}</td>
+        <td class="n">${fmt(d.basePay)}</td>
+        <td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td>
+        <td>หักเบิกล่วงหน้า</td><td class="c">${n(d.advance)>0?'1':''}</td><td class="n">${zero(d.advance)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานวันหยุดสัปดาห์</td><td class="c">${fmtN(d.holidayD)}</td><td class="n">${zero(d.holidayPay)}</td>
+        <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
+        <td>หักประกันสังคม</td><td class="c">${n(d.soc)>0?'1':''}</td><td class="n">${fmt(d.soc)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานล่วงเวลา (OT)</td><td class="c">${fmtN(d.otH)} ชม.</td><td class="n">${zero(d.otPay)}</td>
+        <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
+        <td>หักกยศ.</td><td class="c">${n(d.kot)>0?'1':''}</td><td class="n">${zero(d.kot)}</td>
+      </tr>
+      <tr>
+        <td>วันหยุดประเพณี</td><td class="c">${fmtN(d.festivalD)}</td><td class="n">${zero(d.festivalPay)}</td>
+        <td>ขาดงาน</td><td class="c">${fmtN(d.absent)}</td>
+        <td>สาย</td><td class="c">${n(d.late)>0?'1':''}</td><td class="n">${zero(d.late)}</td>
+      </tr>
+      <tr>
+        <td>เพิ่มเติมประเพณี</td><td class="c"></td><td class="n">${zero(d.festivalExtra)}</td>
+        <td></td><td></td>
+        <td>รายจ่ายอื่นๆ</td><td></td><td class="n">${zero(d.otherDed)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยเลี้ยง</td><td class="c">${n(d.allowance)>0?'1':''}</td><td class="n">${zero(d.allowance)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>เบี้ยขยัน</td><td class="c">${n(d.bonus)>0?'1':''}</td><td class="n">${zero(d.bonus)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>รายได้อื่นๆ</td><td></td><td class="n">${zero(d.otherInc)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+      </tr>` : `
+      <tr>
+        <td>วันทำงานปกติ</td>
+        <td class="c">${fmtN(d.workDays)}</td>
+        <td class="n">${fmt(d.basePay||d.baseWage)}</td>
+        <td>ลาพักร้อน</td><td class="c">${fmtN(d.leaveVac)}</td>
+        <td>หักเบิกเงินล่วงหน้า</td>
+        <td class="c">${n(d.advance)>0?'1':''}</td>
+        <td class="n">${zero(d.advance)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานวันหยุด</td>
+        <td class="c">${fmtN(d.holidayD)}</td>
+        <td class="n">${zero(d.holidayPay)}</td>
+        <td>ลากิจ</td><td class="c">${fmtN(d.leaveP)}</td>
+        <td>หักประกันสังคม</td>
+        <td class="c">${n(d.soc)>0?'1':''}</td>
+        <td class="n">${fmt(d.soc)}</td>
+      </tr>
+      <tr>
+        <td>ทำงานล่วงเวลา</td>
+        <td class="c">${n(d.otH)>0?fmtN(d.otH)+' ชม.':0}</td>
+        <td class="n">${zero(d.otPay)}</td>
+        <td>ลาป่วย</td><td class="c">${fmtN(d.leaveSick)}</td>
+        <td>หัก ณ ที่จ่าย</td>
+        <td class="c">${n(d.tax)>0?'1':''}</td>
+        <td class="n">${zero(d.tax)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยเลี้ยง</td>
+        <td class="c">${n(d.allowance)>0?'1':''}</td>
+        <td class="n">${zero(d.allowance)}</td>
+        <td>ลาไม่รับค่าจ้าง</td><td class="c">${fmtN(d.leaveNoPay||0)}</td>
+        <td>หักขาดงาน</td>
+        <td class="c">${n(d.absentDed)>0?'1':''}</td>
+        <td class="n">${zero(d.absentDed)}</td>
+      </tr>
+      <tr>
+        <td>เบี้ยขยัน</td>
+        <td class="c">${n(d.bonus)>0?'1':''}</td>
+        <td class="n">${zero(d.bonus)}</td>
+        <td>ลาคลอด</td><td class="c">${fmtN(d.leaveMat||0)}</td>
+        <td>หักขอลาโดยไม่ขอรับ</td>
+        <td class="c">${n(d.noPayDed)>0?'1':''}</td>
+        <td class="n">${zero(d.noPayDed)}</td>
+      </tr>
+      <tr>
+        <td>วันหยุดตามประเพณี</td>
+        <td class="c">${fmtN(d.festivalD||0)}</td>
+        <td class="n">${zero(d.festivalPay||0)}</td>
+        <td>ลาหยุดวันเกิด</td><td class="c">${fmtN(d.leaveBday||0)}</td>
+        <td>หักกยศ.</td>
+        <td class="c">${n(d.kot)>0?'1':''}</td>
+        <td class="n">${n(d.kot)>0?fmt(d.kot):'-'}</td>
+      </tr>
+      <tr>
+        <td>อื่นๆ</td>
+        <td></td>
+        <td class="n">${zero(d.otherInc)}</td>
+        <td></td><td></td>
+        <td></td><td></td><td></td>
+      </tr>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -83,6 +190,7 @@ tr:nth-child(even) td{background:#FDFAF4}
 </div>
 <div style="margin-top:5px;font-size:9px;color:#aaa;text-align:right">สร้างโดยระบบ HR อัตโนมัติ | ${now}</div>
 </body></html>`;
+
   return html;
 }
 
