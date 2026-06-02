@@ -374,21 +374,28 @@ function goBack() {
 // รองรับ iOS 15+ และ Android Chrome
 async function saveImage() {
   const btn = document.getElementById('btnSave');
+  if (!btn) return;
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
-  try {
-    // ดึง HTML สลิปจริงจาก server
-    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
-    const data = await r.json();
-    if (!data.html) throw new Error('ไม่พบข้อมูล');
 
-    // สร้าง div ซ่อนอยู่นอกหน้าจอสำหรับ render สลิปจริง
+  const bar = document.getElementById('actionBar');
+
+  try {
+    if (!currentDocData) throw new Error('กรุณาเลือกเอกสารก่อน');
+    if (!empData) throw new Error('ไม่พบข้อมูลพนักงาน');
+
+    // ดึง HTML สลิปจาก server
+    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
+    if (!r.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ (' + r.status + ')');
+    const data = await r.json();
+    if (!data.html) throw new Error(data.error || 'ไม่พบข้อมูล');
+
+    // render ใน div ซ่อน
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;overflow:visible';
     wrapper.innerHTML = data.html;
     document.body.appendChild(wrapper);
 
-    // รอ font โหลดจาก Google Fonts ก่อน
     await document.fonts.ready;
     await new Promise(r => setTimeout(r, 800));
 
@@ -406,32 +413,35 @@ async function saveImage() {
     document.body.removeChild(wrapper);
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) throw new Error('สร้างรูปไม่สำเร็จ');
+
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
     const file = new File([blob], filename, { type: 'image/jpeg' });
 
-    // iOS + Android ที่รองรับ Web Share API
+    // Web Share API (iOS + Android ที่รองรับ)
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: filename });
       showToast('✅ บันทึกรูปสำเร็จ');
       return;
     }
 
-    // Android fallback — เปิดรูปใน tab ใหม่
+    // Android fallback — download ตรงๆ
     const objUrl = URL.createObjectURL(blob);
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head>
-      <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-      <style>body{margin:0;background:#111}
-      .tip{background:#1E3A5F;color:#fff;padding:14px;text-align:center;font-size:14px;line-height:1.8;font-family:sans-serif}
-      .tip b{color:#E8B84B}img{width:100%;display:block}</style></head><body>
-      <div class="tip">📱 กด <b>ค้างที่รูป</b> → <b>บันทึกรูปภาพ</b></div>
-      <img src="${objUrl}"></body></html>`);
-    win.document.close();
-    showToast('📱 กดค้างที่รูปเพื่อบันทึก');
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+    showToast('✅ ดาวน์โหลดรูปสำเร็จ');
 
   } catch(e) {
-    if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
-    else { showToast('❌ ไม่สำเร็จ: ' + e.message); }
+    if (e.name === 'AbortError') {
+      showToast('ยกเลิกการบันทึก');
+    } else {
+      showToast('❌ ' + e.message);
+    }
   } finally {
     btn.textContent = '💾 บันทึกรูป';
     btn.classList.remove('btn-disabled');
