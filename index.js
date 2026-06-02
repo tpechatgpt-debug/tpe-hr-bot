@@ -668,7 +668,7 @@ app.get('/eslip/months', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// HTML ของเอกสาร (สำหรับแสดงใน LIFF)
+// HTML ของเอกสาร (สำหรับแสดงใน LIFF) — ไม่ใช้ puppeteer
 app.get('/eslip/doc', async (req, res) => {
   try {
     const { lineId, docType, month } = req.query;
@@ -681,10 +681,11 @@ app.get('/eslip/doc', async (req, res) => {
     const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
     const empData = await payroll.getEmployeePayroll(empName, month, pt);
     if (!empData) return res.status(404).json({ error: 'payroll not found' });
-    const pdfBuf = docType === 'payslip'
-      ? await payslip.createFromPayroll(empData)
-      : await cert.createFromPayroll(empData);
-    res.json({ html: pdfBuf._html || '' });
+    // สร้าง HTML โดยตรง ไม่ต้อง launch puppeteer
+    const html = docType === 'payslip'
+      ? payslip.buildPayslipHtml(empData)
+      : cert.buildCertHtml(empData);
+    res.json({ html });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
