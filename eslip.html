@@ -376,32 +376,27 @@ async function saveImage() {
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
   try {
-    // ดึง HTML จาก server
-    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
-    const data = await r.json();
-    if (!data.html) throw new Error('ไม่พบข้อมูล');
+    // จับ docRender element โดยตรง — ไม่ต้องผ่าน iframe
+    const el = document.getElementById('docRender');
+    if (!el || !el.children.length) throw new Error('ไม่พบข้อมูลเอกสาร');
 
-    // สร้าง iframe ด้วย Blob URL (หลีกเลี่ยง document.write warning)
-    const blob_html = new Blob([data.html], { type: 'text/html;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob_html);
+    // ซ่อน action bar ชั่วคราว
+    const bar = document.getElementById('actionBar');
+    bar.style.display = 'none';
 
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1200px;border:none;visibility:hidden';
-    iframe.src = blobUrl;
-    document.body.appendChild(iframe);
-
-    // รอ iframe โหลดเสร็จ + font
-    await new Promise(resolve => {
-      iframe.onload = () => setTimeout(resolve, 1000);
-      setTimeout(resolve, 3000); // fallback timeout
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      onclone: (doc) => {
+        // ให้แน่ใจว่า font โหลดแล้ว
+        doc.body.style.fontFamily = "'Sarabun', sans-serif";
+      }
     });
-    URL.revokeObjectURL(blobUrl);
 
-    const canvas = await html2canvas(iframe.contentDocument.body, {
-      scale: 2, useCORS: true, allowTaint: true,
-      backgroundColor: '#ffffff', width: 800, windowWidth: 800, logging: false,
-    });
-    document.body.removeChild(iframe);
+    bar.style.display = 'flex';
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
@@ -413,7 +408,8 @@ async function saveImage() {
       showToast('✅ บันทึกรูปสำเร็จ');
       return;
     }
-    // Fallback download
+
+    // Fallback: download
     const objUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = objUrl; a.download = filename;
@@ -423,6 +419,7 @@ async function saveImage() {
     showToast('✅ ดาวน์โหลดรูปสำเร็จ');
 
   } catch(e) {
+    document.getElementById('actionBar').style.display = 'flex';
     if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
     else { showToast('❌ ไม่สำเร็จ: ' + e.message); }
   } finally {
