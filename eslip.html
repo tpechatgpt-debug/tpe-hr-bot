@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TPE E-Slip</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -387,8 +388,9 @@ async function saveImage() {
     wrapper.innerHTML = data.html;
     document.body.appendChild(wrapper);
 
-    // รอ font + image โหลด
-    await new Promise(r => setTimeout(r, 1200));
+    // รอ font โหลดจาก Google Fonts ก่อน
+    await document.fonts.ready;
+    await new Promise(r => setTimeout(r, 800));
 
     const canvas = await html2canvas(wrapper, {
       scale: 2,
@@ -397,6 +399,8 @@ async function saveImage() {
       backgroundColor: '#ffffff',
       width: 794,
       windowWidth: 794,
+      height: wrapper.scrollHeight,
+      windowHeight: wrapper.scrollHeight,
       logging: false,
     });
     document.body.removeChild(wrapper);
