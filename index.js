@@ -711,6 +711,23 @@ app.get('/eslip/image', async (req, res) => {
   } catch(e) { res.status(500).send(e.message); }
 });
 
+// JSON data สำหรับ renderDocCard (ไม่ต้อง puppeteer)
+app.get('/eslip/data', async (req, res) => {
+  try {
+    const { lineId, docType, month } = req.query;
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+    const d = await payroll.getEmployeePayroll(empName, month, pt);
+    if (!d) return res.status(404).json({ error: 'payroll not found' });
+    res.json(d);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // PDF download
 app.get('/eslip/pdf', async (req, res) => {
   try {
