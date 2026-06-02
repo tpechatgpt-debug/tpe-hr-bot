@@ -284,7 +284,7 @@ async function openDoc(docType, month) {
 }
 
 // ── RENDER BEAUTIFUL DOC CARD ─────────────────────────
-function fmt(n) { return (parseFloat(n)||0).toLocaleString('th-TH',{minimumFractionDigits:2}); }
+function fmt(n) { const v=Math.round((parseFloat(n)||0)*100)/100; return v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function row(label, val, cls='') {
   const v = parseFloat(val)||0;
   const c = cls || (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
@@ -381,14 +381,21 @@ async function saveImage() {
     const data = await r.json();
     if (!data.html) throw new Error('ไม่พบข้อมูล');
 
-    // สร้าง iframe ชั่วคราว
+    // สร้าง iframe ด้วย Blob URL (หลีกเลี่ยง document.write warning)
+    const blob_html = new Blob([data.html], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob_html);
+
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1200px;border:none;visibility:hidden';
+    iframe.src = blobUrl;
     document.body.appendChild(iframe);
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(data.html);
-    iframe.contentDocument.close();
-    await new Promise(r => setTimeout(r, 1500));
+
+    // รอ iframe โหลดเสร็จ + font
+    await new Promise(resolve => {
+      iframe.onload = () => setTimeout(resolve, 1000);
+      setTimeout(resolve, 3000); // fallback timeout
+    });
+    URL.revokeObjectURL(blobUrl);
 
     const canvas = await html2canvas(iframe.contentDocument.body, {
       scale: 2, useCORS: true, allowTaint: true,
