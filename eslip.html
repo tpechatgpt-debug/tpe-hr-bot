@@ -376,50 +376,56 @@ async function saveImage() {
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
   try {
-    // จับ docRender element โดยตรง — ไม่ต้องผ่าน iframe
-    const el = document.getElementById('docRender');
-    if (!el || !el.children.length) throw new Error('ไม่พบข้อมูลเอกสาร');
+    // ดึง HTML สลิปจริงจาก server
+    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
+    const data = await r.json();
+    if (!data.html) throw new Error('ไม่พบข้อมูล');
 
-    // ซ่อน action bar ชั่วคราว
-    const bar = document.getElementById('actionBar');
-    bar.style.display = 'none';
+    // สร้าง div ซ่อนอยู่นอกหน้าจอสำหรับ render สลิปจริง
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
+    wrapper.innerHTML = data.html;
+    document.body.appendChild(wrapper);
 
-    const canvas = await html2canvas(el, {
+    // รอ font + image โหลด
+    await new Promise(r => setTimeout(r, 1200));
+
+    const canvas = await html2canvas(wrapper, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
+      width: 794,
+      windowWidth: 794,
       logging: false,
-      onclone: (doc) => {
-        // ให้แน่ใจว่า font โหลดแล้ว
-        doc.body.style.fontFamily = "'Sarabun', sans-serif";
-      }
     });
-
-    bar.style.display = 'flex';
+    document.body.removeChild(wrapper);
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
     const file = new File([blob], filename, { type: 'image/jpeg' });
 
-    // Web Share API (iOS + Android)
+    // iOS + Android ที่รองรับ Web Share API
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: filename });
       showToast('✅ บันทึกรูปสำเร็จ');
       return;
     }
 
-    // Fallback: download
+    // Android fallback — เปิดรูปใน tab ใหม่
     const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = objUrl; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(objUrl);
-    showToast('✅ ดาวน์โหลดรูปสำเร็จ');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>body{margin:0;background:#111}
+      .tip{background:#1E3A5F;color:#fff;padding:14px;text-align:center;font-size:14px;line-height:1.8;font-family:sans-serif}
+      .tip b{color:#E8B84B}img{width:100%;display:block}</style></head><body>
+      <div class="tip">📱 กด <b>ค้างที่รูป</b> → <b>บันทึกรูปภาพ</b></div>
+      <img src="${objUrl}"></body></html>`);
+    win.document.close();
+    showToast('📱 กดค้างที่รูปเพื่อบันทึก');
 
   } catch(e) {
-    document.getElementById('actionBar').style.display = 'flex';
     if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
     else { showToast('❌ ไม่สำเร็จ: ' + e.message); }
   } finally {
