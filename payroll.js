@@ -42,7 +42,7 @@ if 'ค่าแรง' in sheet_names:
 def n(sh, r, c):
     try:
         v = sh.cell_value(r, c)
-        return float(v) if v != '' else 0.0
+        return round(float(v), 2) if v != '' else 0.0
     except:
         return 0.0
 
