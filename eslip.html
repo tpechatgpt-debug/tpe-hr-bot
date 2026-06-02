@@ -6,6 +6,7 @@
 <title>TPE E-Slip</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{--navy:#1E3A5F;--navy-dark:#132540;--navy-light:#2a4f80;--gold:#C9952A;--gold-light:#E8B84B;--gold-pale:#FDF5E8;--bg:#F0EDE8;--surface:#FDFCFA;--border:#E2DAD0;--text:#1a1a1a;--muted:#7A7368;--green:#1B7F4E}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -372,52 +373,57 @@ function goBack() {
 // รองรับ iOS 15+ และ Android Chrome
 async function saveImage() {
   const btn = document.getElementById('btnSave');
-  btn.textContent = '⏳ กำลังโหลดรูป...';
+  btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
   try {
-    // ดึงรูปจาก server
-    const url = `${API}/eslip/image?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('โหลดรูปไม่สำเร็จ');
-    const blob = await res.blob();
-    const filename = `สลิป_${currentDocData.month}.jpg`;
+    // ดึง HTML จาก server
+    const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
+    const data = await r.json();
+    if (!data.html) throw new Error('ไม่พบข้อมูล');
+
+    // สร้าง iframe ชั่วคราว
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:1200px;border:none;visibility:hidden';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(data.html);
+    iframe.contentDocument.close();
+    await new Promise(r => setTimeout(r, 1500));
+
+    const canvas = await html2canvas(iframe.contentDocument.body, {
+      scale: 2, useCORS: true, allowTaint: true,
+      backgroundColor: '#ffffff', width: 800, windowWidth: 800, logging: false,
+    });
+    document.body.removeChild(iframe);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    const filename = 'สลิป_' + currentDocData.month + '.jpg';
     const file = new File([blob], filename, { type: 'image/jpeg' });
 
-    // วิธีที่ 1: Web Share API (iOS Safari, Android Chrome)
+    // Web Share API (iOS + Android)
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: filename,
-      });
+      await navigator.share({ files: [file], title: filename });
       showToast('✅ บันทึกรูปสำเร็จ');
       return;
     }
-
-    // วิธีที่ 2: Download (Android fallback)
+    // Fallback download
     const objUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
+    a.href = objUrl; a.download = filename;
+    document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(objUrl);
     showToast('✅ ดาวน์โหลดรูปสำเร็จ');
 
   } catch(e) {
-    if (e.name === 'AbortError') {
-      // ผู้ใช้ยกเลิกเอง ไม่ใช่ error
-      showToast('ยกเลิกการบันทึก');
-    } else {
-      showToast('❌ ไม่สำเร็จ: ' + e.message);
-    }
+    if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
+    else { showToast('❌ ไม่สำเร็จ: ' + e.message); }
   } finally {
     btn.textContent = '💾 บันทึกรูป';
     btn.classList.remove('btn-disabled');
   }
 }
 
-// ── DOWNLOAD PDF ──────────────────────────────────────
 async function downloadPdf() {
   const btn = document.getElementById('btnPdf');
   btn.textContent = '⏳ กำลังสร้าง PDF...';
