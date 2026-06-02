@@ -3,6 +3,15 @@ const pdfStore   = {};
 const imageStore = {}; // เก็บ JPG buffer สำหรับส่งเป็นรูปใน LINE
 
 function _buildPayslipHtml(d) {
+  const fmt  = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  const fmtN = n => { const v = parseFloat(n)||0; return v > 0 ? v.toLocaleString('th-TH',{minimumFractionDigits:2}) : (v < 0 ? v.toLocaleString('th-TH',{minimumFractionDigits:2}) : '—'); };
+  const isDaily   = d.payType === 'daily';
+  const payType   = isDaily ? 'รายวัน' : 'รายเดือน';
+  const baseWage  = parseFloat(d.baseWage) || 0;
+  const basePay   = parseFloat(d.basePay)  || 0;
+  const now       = new Date();
+  const thM       = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const printDate = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 
