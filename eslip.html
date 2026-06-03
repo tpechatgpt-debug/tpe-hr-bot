@@ -264,8 +264,31 @@ function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tabPayslip').classList.toggle('active', tab === 'payslip');
   document.getElementById('tabCert').classList.toggle('active', tab === 'certificate');
-  document.getElementById('sectionLabel').textContent = tab === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-  loadMonths(tab);
+  if (tab === 'certificate') {
+    // เปิดหน้าใบรับรองทันที ใช้เดือนล่าสุด
+    openCertDirect();
+  } else {
+    document.getElementById('sectionLabel').textContent = 'สลิปเงินเดือน';
+    loadMonths('payslip');
+  }
+}
+
+async function openCertDirect() {
+  if (!empData) return;
+  // ดึงเดือนล่าสุดแล้วเปิดใบรับรองเลย
+  try {
+    const r = await fetch(`${API}/eslip/months?lineId=${empData.lineId}&payType=${empData.payType}`);
+    const months = await r.json();
+    if (!months.length) {
+      showToast('⚠️ ยังไม่มีข้อมูลในระบบ');
+      return;
+    }
+    // เปิดเดือนล่าสุด
+    const latest = months[0].month;
+    openDoc('certificate', latest);
+  } catch(e) {
+    showToast('❌ โหลดไม่สำเร็จ');
+  }
 }
 
 // ── LOAD MONTHS ──
@@ -322,6 +345,14 @@ function goBack() {
   document.getElementById('listView').style.display = 'block';
   document.getElementById('docView').classList.remove('show');
   document.getElementById('actionBar').style.display = 'none';
+  // ถ้ากลับจากใบรับรอง ให้ reset tab กลับเป็น payslip
+  if (currentDocData?.docType === 'certificate') {
+    currentTab = 'payslip';
+    document.getElementById('tabPayslip').classList.add('active');
+    document.getElementById('tabCert').classList.remove('active');
+    document.getElementById('sectionLabel').textContent = 'สลิปเงินเดือน';
+    loadMonths('payslip');
+  }
 }
 
 // ── RENDER CERT CARD ──
