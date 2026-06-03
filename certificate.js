@@ -1,7 +1,29 @@
 const { htmlToPdfBuffer } = require('./payslip');
 
 function buildCertHtml(d) {
-const html = `<!DOCTYPE html>
+  const fmt   = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  const today = new Date();
+  const thM   = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const dateStr  = `${today.getDate()} เดือน${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
+  const docNo    = `FM-HR-09-${today.getFullYear()+543}/${String(Math.floor(Math.random()*89+10)).padStart(2,'0')}`;
+  // รายวัน: ค่าแรง/วัน × 26 วัน (มาตรฐานใบรับรอง ไม่ใช่วันจริง)
+  // รายเดือน: ใช้ baseWage (เงินเดือนฐาน)
+  const salary = d.payType === 'daily'
+    ? ((parseFloat(d.baseWage) || 0) * 26)
+    : (parseFloat(d.baseWage) || parseFloat(d.basePay) || 0);
+
+  // คำนวณอายุงาน
+  let workDuration = '';
+  if (d.startDate) {
+    try {
+      const parts = d.startDate.split('/');
+      const start = new Date(parseInt(parts[2])-543, parseInt(parts[1])-1, parseInt(parts[0]));
+      const months = Math.floor((today - start) / (1000*60*60*24*30.44));
+      workDuration = `${Math.floor(months/12)} ปี ${months%12} เดือน`;
+    } catch(e) {}
+  }
+
+  const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
@@ -91,8 +113,10 @@ body{font-family:'Sarabun',sans-serif;font-size:14px;color:#1a1a1a;background:#f
 
 </div>
 </body></html>`;
+
   return html;
 }
+
 
 async function createFromPayroll(d) {
   const fmt   = n => (parseFloat(n)||0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
