@@ -661,6 +661,7 @@ app.get('/eslip/employee', async (req, res) => {
       name: payroll.normName(rawName.split('(')[0]),
       position: emp['ตำแหน่ง'] || '',
       payType: rawType.includes('รายวัน') ? 'daily' : 'monthly',
+      startDate: emp['วันที่เริ่มงาน'] || emp['เริ่มงาน'] || '',
       lineId,
     });
   } catch(e) { res.status(500).json({ error: e.message }); }
