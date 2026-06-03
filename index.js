@@ -803,6 +803,18 @@ app.get('/eslip/temp-image-raw/:token', (req, res) => {
   res.send(entry.buffer);
 });
 
+// Debug: ดู raw Lark fields
+app.get('/eslip/debug-emp', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.json({ error: 'not found' });
+    // ส่ง keys ทั้งหมดกลับมา
+    res.json({ keys: Object.keys(emp), values: emp });
+  } catch(e) { res.json({ error: e.message }); }
+});
+
 // E-Slip error log endpoint
 app.post('/eslip/log', express.json(), (req, res) => {
   const { step, message, ua, time, lineId } = req.body;
