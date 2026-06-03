@@ -5,108 +5,138 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TPE E-Slip</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-:root{--navy:#1E3A5F;--navy-dark:#132540;--navy-light:#2a4f80;--gold:#C9952A;--gold-light:#E8B84B;--gold-pale:#FDF5E8;--bg:#F0EDE8;--surface:#FDFCFA;--border:#E2DAD0;--text:#1a1a1a;--muted:#7A7368;--green:#1B7F4E}
+:root{
+  --navy:#1E3A5F;--navy-dark:#0F1F35;--navy-light:#2a4f80;
+  --gold:#C9952A;--gold-light:#E8B84B;--gold-pale:#FDF5E8;
+  --bg:#F4F2EF;--surface:#FFFFFF;--border:#E8E4DF;
+  --text:#1a1a1a;--muted:#888;--green:#1B7F4E;--red:#C0392B;
+  --radius:16px;--shadow:0 2px 16px rgba(0,0,0,.08);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-.loading-screen{position:fixed;inset:0;background:var(--navy-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s,visibility .4s}
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--navy-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s,visibility .3s}
 .loading-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
-.loading-logo{width:72px;height:72px;background:linear-gradient(135deg,#2C1A00,#C9952A);border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:pulse 1.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-.loading-text{color:rgba(255,255,255,.7);font-size:14px;letter-spacing:.05em}
-.loading-bar{width:120px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:16px;overflow:hidden}
-.loading-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0%;animation:loading 1s ease forwards}
-@keyframes loading{to{width:100%}}
+.loading-logo{width:80px;height:80px;background:linear-gradient(135deg,#2C1A00,#C9952A);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:36px;box-shadow:0 8px 32px rgba(201,149,42,.4)}
+.loading-text{color:rgba(255,255,255,.9);font-size:18px;font-weight:600;letter-spacing:.05em}
+.loading-sub{color:rgba(255,255,255,.4);font-size:12px;margin-top:6px}
+.loading-bar{width:140px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:20px;overflow:hidden}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:2px;width:0;animation:lb 1s ease forwards}
+@keyframes lb{to{width:100%}}
 
-.header{background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 60%,var(--navy-light) 100%);position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.2)}
-.header-inner{display:flex;align-items:center;gap:12px;padding:14px 16px}
-.header-logo{width:40px;height:40px;background:linear-gradient(135deg,#2C1A00,#C9952A);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
-.header-info{flex:1;min-width:0}
-.header-title{color:#fff;font-size:15px;font-weight:700}
-.header-sub{color:var(--gold-light);font-size:11px;margin-top:1px;opacity:.9}
-.header-avatar{width:36px;height:36px;border-radius:50%;border:2px solid rgba(201,149,42,.5);object-fit:cover;flex-shrink:0}
-.gold-line{height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold-light),var(--gold),transparent)}
+/* HEADER */
+.header{background:linear-gradient(160deg,var(--navy-dark) 0%,var(--navy) 100%);position:sticky;top:0;z-index:100;box-shadow:0 4px 24px rgba(0,0,0,.2)}
+.header-inner{display:flex;align-items:center;gap:12px;padding:14px 18px}
+.header-logo{width:38px;height:38px;background:linear-gradient(135deg,#2C1A00,#C9952A);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.header-info{flex:1}
+.header-title{color:#fff;font-size:16px;font-weight:700}
+.header-sub{color:rgba(255,255,255,.5);font-size:11px;margin-top:1px}
+.header-avatar{width:36px;height:36px;border-radius:50%;border:2px solid rgba(201,149,42,.6);object-fit:cover;flex-shrink:0}
+.gold-bar{height:2px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold-light),var(--gold),transparent)}
 
-.profile-section{padding:14px 16px 0}
-.profile-card{background:var(--surface);border-radius:16px;padding:14px 16px;border:1px solid var(--border);display:flex;align-items:center;gap:14px}
-.profile-avatar{width:50px;height:50px;border-radius:12px;object-fit:cover;border:2px solid var(--gold-pale);flex-shrink:0}
-.profile-name{font-size:15px;font-weight:700;color:var(--navy)}
+/* PROFILE */
+.profile-wrap{padding:16px 18px 0}
+.profile-card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;border:1px solid var(--border)}
+.profile-avatar{width:52px;height:52px;border-radius:14px;object-fit:cover;flex-shrink:0;background:#eee}
+.profile-name{font-size:16px;font-weight:700;color:var(--navy)}
 .profile-pos{font-size:12px;color:var(--muted);margin-top:2px}
-.profile-badge{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:5px;display:inline-block}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px}
 .badge-monthly{background:#E8F5EE;color:var(--green)}
 .badge-daily{background:#EEF4FF;color:var(--navy)}
 
-.tabs{padding:12px 16px 0}
-.tab-bar{display:flex;gap:8px;background:var(--surface);padding:4px;border-radius:12px;border:1px solid var(--border)}
-.tab-btn{flex:1;padding:9px 12px;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent}
-.tab-btn.active{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(30,58,95,.3)}
+/* TABS */
+.tabs-wrap{padding:14px 18px 0}
+.tabs{display:flex;background:var(--surface);border-radius:12px;padding:4px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.tab{flex:1;padding:10px;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent}
+.tab.active{background:var(--navy);color:#fff;box-shadow:0 3px 10px rgba(30,58,95,.3)}
 
-.content{padding:12px 16px 90px}
-.section-title{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;margin-top:4px}
-.month-list{display:flex;flex-direction:column;gap:8px}
-.month-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;box-shadow:0 1px 6px rgba(0,0,0,.04)}
-.month-card:active{transform:scale(.98);background:var(--gold-pale)}
-.month-icon{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--navy),var(--navy-light));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.month-info{flex:1;min-width:0}
-.month-name{font-size:14px;font-weight:600}
+/* MONTH LIST */
+.content{padding:12px 18px 100px}
+.section-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin:4px 0 10px}
+.months{display:flex;flex-direction:column;gap:8px}
+.month-item{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.month-item:active{transform:scale(.98);background:var(--gold-pale)}
+.month-icon-wrap{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.icon-payslip{background:linear-gradient(135deg,#1B4F72,#2980B9)}
+.icon-cert{background:linear-gradient(135deg,#6C3483,#9B59B6)}
+.month-info{flex:1}
+.month-name{font-size:14px;font-weight:600;color:var(--text)}
 .month-net{font-size:13px;color:var(--green);font-weight:600;margin-top:2px}
-.month-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+.month-arrow{color:#ccc;font-size:20px}
 
+/* EMPTY */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-icon{font-size:48px;margin-bottom:12px}
-.empty-text{font-size:14px;line-height:1.8}
+.empty-icon{font-size:52px;margin-bottom:12px}
+
+/* SKELETON */
+.skeleton{background:linear-gradient(90deg,#eee 25%,#e0e0e0 50%,#eee 75%);background-size:200%;animation:sk 1.4s infinite;border-radius:10px}
+@keyframes sk{0%{background-position:200%}100%{background-position:-200%}}
+.sk-item{height:72px;border-radius:14px;margin-bottom:8px}
 
 /* DOC VIEW */
-.doc-view{display:none;flex-direction:column;min-height:100vh}
+.doc-view{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
 .doc-view.show{display:flex}
-.back-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;color:var(--navy);font-weight:600;font-size:14px;background:var(--surface);border-bottom:1px solid var(--border)}
-.doc-scroll{flex:1;overflow-y:auto;padding:16px;padding-bottom:90px}
-.doc-render{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.doc-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px}
+.back-btn{width:36px;height:36px;border-radius:10px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0}
+.doc-topbar-title{font-size:15px;font-weight:700;color:var(--navy);flex:1}
+.doc-topbar-month{font-size:12px;color:var(--muted)}
+.doc-scroll{flex:1;overflow-y:auto;padding:16px 18px 100px}
 
-/* ACTION BAR */
-.action-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:50}
-.action-btn{flex:1;padding:13px 16px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
-.action-btn:active{transform:scale(.97)}
-.btn-save{background:var(--navy);color:#fff;box-shadow:0 3px 12px rgba(30,58,95,.3)}
-.btn-pdf{background:var(--gold);color:#fff;box-shadow:0 3px 12px rgba(201,149,42,.3)}
-.btn-disabled{opacity:.6;pointer-events:none}
+/* CERT CARD */
+.cert-card{background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.1)}
+.cert-header{background:linear-gradient(160deg,#3b1f6e,#6C3483);padding:28px 24px;position:relative;overflow:hidden}
+.cert-header::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,.05);border-radius:50%}
+.cert-badge{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:12px;border:1px solid rgba(255,255,255,.2)}
+.cert-name{color:#fff;font-size:22px;font-weight:700;margin-bottom:4px}
+.cert-pos{color:rgba(255,255,255,.65);font-size:13px}
+.cert-month-tag{margin-top:12px;color:rgba(255,255,255,.5);font-size:12px;display:flex;align-items:center;gap:6px}
+.cert-body{padding:20px 24px}
+.cert-section{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.cert-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f5}
+.cert-row:last-child{border-bottom:none}
+.cert-row-label{font-size:13px;color:var(--muted)}
+.cert-row-val{font-size:13px;font-weight:600;color:var(--text)}
+.cert-salary-wrap{background:linear-gradient(135deg,#f8f4ff,#ede8f5);border-radius:16px;padding:20px 24px;margin:16px 0;text-align:center}
+.cert-salary-label{font-size:11px;color:#9B59B6;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.cert-salary-val{font-size:32px;font-weight:800;color:#6C3483;letter-spacing:-.5px}
+.cert-salary-note{font-size:11px;color:#aaa;margin-top:6px}
+.cert-footer{background:#fafafa;padding:14px 24px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--navy-dark);color:#fff;padding:10px 20px;border-radius:30px;font-size:13px;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap;pointer-events:none}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-.skeleton{background:linear-gradient(90deg,#f0ede8 25%,#e8e4df 50%,#f0ede8 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.sk-card{height:72px;border-radius:14px;margin-bottom:8px}
-
-/* ── BEAUTIFUL DOC CARD ── */
-.doc-card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)}
-.doc-card-header{background:linear-gradient(135deg,var(--navy-dark),var(--navy-light));padding:24px 20px;position:relative;overflow:hidden}
-.doc-card-header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(201,149,42,.15);border-radius:50%}
-.doc-card-header::after{content:'';position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,.05);border-radius:50%}
-.doc-card-badge{background:rgba(201,149,42,.2);color:var(--gold-light);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:10px;border:1px solid rgba(201,149,42,.3)}
-.doc-card-name{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;position:relative}
-.doc-card-pos{color:rgba(255,255,255,.65);font-size:13px;position:relative}
-.doc-card-month{color:var(--gold-light);font-size:12px;margin-top:8px;position:relative;font-weight:500}
-
-.doc-card-net{background:linear-gradient(135deg,#f8f4ee,#fff);padding:20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ede8}
-.doc-card-net-label{font-size:12px;color:var(--muted);font-weight:500}
-.doc-card-net-val{font-size:28px;font-weight:800;color:var(--green);letter-spacing:-.5px}
-
-.doc-rows{padding:16px 20px;display:flex;flex-direction:column;gap:0}
-.doc-section-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid #f0ede8;margin-bottom:4px}
-.doc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f9f7f4}
+/* PAYSLIP CARD */
+.doc-card{background:var(--surface);border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.1)}
+.doc-header{background:linear-gradient(160deg,var(--navy-dark),var(--navy-light));padding:24px 20px;position:relative;overflow:hidden}
+.doc-header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(201,149,42,.1);border-radius:50%}
+.doc-badge{background:rgba(201,149,42,.2);color:var(--gold-light);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:10px;border:1px solid rgba(201,149,42,.3)}
+.doc-name{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;position:relative}
+.doc-pos{color:rgba(255,255,255,.6);font-size:13px;position:relative}
+.doc-month-tag{margin-top:10px;color:rgba(255,255,255,.45);font-size:12px}
+.doc-net-wrap{background:linear-gradient(135deg,#f8f4ee,#fff);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0ede8}
+.doc-net-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.doc-net-val{font-size:28px;font-weight:800;color:var(--green)}
+.doc-rows{padding:16px 20px}
+.doc-section{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.doc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f8f8f8}
 .doc-row:last-child{border-bottom:none}
 .doc-row-label{font-size:13px;color:var(--muted)}
-.doc-row-val{font-size:13px;font-weight:600;color:var(--text)}
-.doc-row-val.pos{color:var(--green)}
-.doc-row-val.neg{color:var(--red,#C0392B)}
-.doc-row-val.zero{color:#bbb}
+.doc-row-val{font-size:13px;font-weight:600}
+.pos{color:var(--green)}.neg{color:var(--red)}.zero{color:#ccc}
+.doc-footer{background:#fafafa;padding:14px 20px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-.doc-footer{background:#f8f6f2;padding:14px 20px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid #eee}
+/* ACTION BAR */
+.action-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:50;box-shadow:0 -4px 24px rgba(0,0,0,.08)}
+.action-btn{flex:1;padding:13px;border-radius:13px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.action-btn:active{transform:scale(.97)}
+.btn-save{background:var(--navy);color:#fff;box-shadow:0 4px 14px rgba(30,58,95,.3)}
+.btn-pdf{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;box-shadow:0 4px 14px rgba(201,149,42,.3)}
+.btn-disabled{opacity:.6;pointer-events:none}
+
+/* TOAST */
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-10px);background:rgba(15,31,53,.95);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -114,58 +144,66 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <div class="loading-screen" id="loadingScreen">
   <div class="loading-logo">🏢</div>
   <div class="loading-text">TPE E-Slip</div>
+  <div class="loading-sub">ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   <div class="loading-bar"><div class="loading-bar-fill"></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <div id="app" style="display:none">
-  <!-- HEADER -->
   <div class="header">
     <div class="header-inner">
       <div class="header-logo">🏢</div>
       <div class="header-info">
         <div class="header-title">TPE E-Slip</div>
-        <div class="header-sub">ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+        <div class="header-sub">เอกสารเงินเดือนออนไลน์</div>
       </div>
       <img id="headerAvatar" class="header-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
     </div>
-    <div class="gold-line"></div>
+    <div class="gold-bar"></div>
   </div>
 
   <!-- LIST VIEW -->
   <div id="listView">
-    <div class="profile-section">
+    <div class="profile-wrap">
       <div class="profile-card">
         <img id="profileAvatar" class="profile-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
         <div>
           <div class="profile-name" id="profileName">กำลังโหลด...</div>
           <div class="profile-pos" id="profilePos">—</div>
-          <span class="profile-badge badge-monthly" id="profileBadge">รายเดือน</span>
+          <span class="badge badge-monthly" id="profileBadge">รายเดือน</span>
         </div>
       </div>
     </div>
-    <div class="tabs">
-      <div class="tab-bar">
-        <button class="tab-btn active" id="tabPayslip" onclick="switchTab('payslip')">💰 สลิปเงินเดือน</button>
-        <button class="tab-btn" id="tabCert" onclick="switchTab('certificate')">📋 ใบรับรอง</button>
+
+    <div class="tabs-wrap">
+      <div class="tabs">
+        <button class="tab active" id="tabPayslip" onclick="switchTab('payslip')">💰 สลิปเงินเดือน</button>
+        <button class="tab" id="tabCert" onclick="switchTab('certificate')">📋 ใบรับรอง</button>
       </div>
     </div>
+
     <div class="content">
-      <div class="section-title" id="sectionTitle">สลิปเงินเดือน</div>
+      <div class="section-label" id="sectionLabel">สลิปเงินเดือน</div>
       <div id="monthList">
-        <div class="skeleton sk-card"></div>
-        <div class="skeleton sk-card"></div>
-        <div class="skeleton sk-card"></div>
+        <div class="skeleton sk-item"></div>
+        <div class="skeleton sk-item"></div>
+        <div class="skeleton sk-item"></div>
       </div>
     </div>
   </div>
 
   <!-- DOC VIEW -->
   <div id="docView" class="doc-view">
-    <div class="back-bar" onclick="goBack()">← <span id="backLabel">กลับ</span></div>
+    <div class="doc-topbar">
+      <div class="back-btn" onclick="goBack()">←</div>
+      <div>
+        <div class="doc-topbar-title" id="docTitle">เอกสาร</div>
+        <div class="doc-topbar-month" id="docMonth"></div>
+      </div>
+    </div>
     <div class="doc-scroll">
-      <div class="doc-render" id="docRender"></div>
+      <div id="docRender"></div>
     </div>
   </div>
 
@@ -179,20 +217,17 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <script>
 const API = 'https://tpe-hr-bot.onrender.com';
 const LIFF_ID = '2010255039-6dQLsh35';
-
 let currentTab = 'payslip';
 let empData = null;
 let currentDocData = null;
 
-// ── INIT ──────────────────────────────────────────────
+// ── INIT ──
 async function init() {
-  // fallback timeout 8 วินาที กรณี LIFF ค้าง
   const timeout = setTimeout(() => {
     document.getElementById('loadingScreen').classList.add('hide');
     document.getElementById('app').style.display = 'block';
     document.getElementById('profileName').textContent = 'โหลดช้า กรุณารีเฟรช';
   }, 8000);
-
   try {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -201,8 +236,7 @@ async function init() {
     document.getElementById('profileAvatar').src = profile.pictureUrl || '';
     await loadEmployee(profile.userId);
   } catch(e) {
-    document.getElementById('profileName').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
-    console.error(e);
+    document.getElementById('profileName').textContent = 'เกิดข้อผิดพลาด';
   } finally {
     clearTimeout(timeout);
     document.getElementById('loadingScreen').classList.add('hide');
@@ -214,152 +248,177 @@ async function loadEmployee(lineId) {
   try {
     const r = await fetch(`${API}/eslip/employee?lineId=${lineId}`);
     const d = await r.json();
-    if (!d || d.error) {
-      document.getElementById('profileName').textContent = 'ไม่พบข้อมูลพนักงาน';
-      return;
-    }
+    if (!d || d.error) { document.getElementById('profileName').textContent = 'ไม่พบข้อมูลพนักงาน'; return; }
     empData = d;
     document.getElementById('profileName').textContent = d.name;
     document.getElementById('profilePos').textContent = d.position || '—';
     const badge = document.getElementById('profileBadge');
     badge.textContent = d.payType === 'daily' ? 'รายวัน' : 'รายเดือน';
-    badge.className = 'profile-badge ' + (d.payType === 'daily' ? 'badge-daily' : 'badge-monthly');
+    badge.className = 'badge ' + (d.payType === 'daily' ? 'badge-daily' : 'badge-monthly');
     loadMonths('payslip');
-  } catch(e) {
-    document.getElementById('profileName').textContent = 'โหลดไม่สำเร็จ';
-  }
+  } catch(e) { document.getElementById('profileName').textContent = 'โหลดไม่สำเร็จ'; }
 }
 
-// ── TABS ──────────────────────────────────────────────
+// ── TABS ──
 function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tabPayslip').classList.toggle('active', tab === 'payslip');
   document.getElementById('tabCert').classList.toggle('active', tab === 'certificate');
-  document.getElementById('sectionTitle').textContent = tab === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+  document.getElementById('sectionLabel').textContent = tab === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
   loadMonths(tab);
 }
 
-// ── LOAD MONTHS ───────────────────────────────────────
+// ── LOAD MONTHS ──
 async function loadMonths(tab) {
   if (!empData) return;
   const list = document.getElementById('monthList');
-  list.innerHTML = '<div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>';
+  list.innerHTML = '<div class="skeleton sk-item"></div><div class="skeleton sk-item"></div><div class="skeleton sk-item"></div>';
   try {
     const r = await fetch(`${API}/eslip/months?lineId=${empData.lineId}&payType=${empData.payType}`);
     const months = await r.json();
     if (!months.length) {
-      list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">ยังไม่มีข้อมูลในระบบ<br>กรุณาติดต่อ HR</div></div>';
+      list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีข้อมูลในระบบ<br>กรุณาติดต่อ HR</p></div>';
       return;
     }
+    const isCert = tab === 'certificate';
     list.innerHTML = months.map(m => `
-      <div class="month-card" onclick="openDoc('${tab}','${m.month}')">
-        <div class="month-icon">${tab === 'payslip' ? '💰' : '📋'}</div>
+      <div class="month-item" onclick="openDoc('${tab}','${m.month}')">
+        <div class="month-icon-wrap ${isCert ? 'icon-cert' : 'icon-payslip'}">${isCert ? '📋' : '💰'}</div>
         <div class="month-info">
           <div class="month-name">${m.month}</div>
-          ${tab === 'payslip' && m.netPay ? `<div class="month-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>` : ''}
+          ${!isCert && m.netPay ? `<div class="month-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>` : '<div class="month-net" style="color:var(--muted);font-size:12px">${isCert ? "กดดูเงินเดือนฐาน" : ""}</div>'}
         </div>
         <div class="month-arrow">›</div>
       </div>`).join('');
   } catch(e) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">โหลดไม่สำเร็จ</div></div>';
+    list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';
   }
 }
 
-// ── OPEN DOC ──────────────────────────────────────────
+// ── OPEN DOC ──
 async function openDoc(docType, month) {
   if (!empData) return;
   currentDocData = { docType, month };
   document.getElementById('listView').style.display = 'none';
   document.getElementById('docView').classList.add('show');
   document.getElementById('actionBar').style.display = 'flex';
-  document.getElementById('backLabel').textContent = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-
+  document.getElementById('docTitle').textContent = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
+  document.getElementById('docMonth').textContent = month;
   const render = document.getElementById('docRender');
-  render.innerHTML = '<div style="padding:40px;text-align:center"><div class="skeleton" style="height:500px;border-radius:8px"></div></div>';
-
+  render.innerHTML = '<div style="padding:40px;text-align:center"><div class="skeleton" style="height:500px;border-radius:16px"></div></div>';
   try {
-    if (docType === 'certificate') {
-      // ใบรับรอง — render card สวยงาม (ไม่ใช้ HTML สลิป)
-      const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=certificate&month=${encodeURIComponent(month)}`);
-      if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
-      const d = await r.json();
-      if (!d || d.error) throw new Error(d.error || 'ไม่พบข้อมูล');
-      render.innerHTML = renderCertCard(d, month);
-    } else {
-      // สลิปเงินเดือน — render card จาก data
-      const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=payslip&month=${encodeURIComponent(month)}`);
-      if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
-      const d = await r.json();
-      if (!d || d.error) throw new Error(d.error || 'ไม่พบข้อมูล');
-      render.innerHTML = renderDocCard(d, 'payslip', month);
-    }
+    const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=${docType}&month=${encodeURIComponent(month)}`);
+    if (!r.ok) throw new Error('โหลดไม่สำเร็จ');
+    const d = await r.json();
+    if (!d || d.error) throw new Error(d?.error || 'ไม่พบข้อมูล');
+    render.innerHTML = docType === 'certificate' ? renderCertCard(d, month) : renderPayslipCard(d, month);
   } catch(e) {
-    render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">⚠️ ' + e.message + '</div>';
+    render.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted)">⚠️ ${e.message}</div>`;
   }
 }
 
-// ── RENDER CERT CARD ──────────────────────────────────
-function renderCertCard(d, month) {
-  const fmt = n => (Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const salary = d.payType === 'daily'
-    ? (parseFloat(d.baseWage)||0) * 26
-    : (parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
-  const today = new Date();
-  const thM = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const dateStr = `${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
-
-  return `<div class="doc-card">
-    <div class="doc-card-header">
-      <div class="doc-card-badge">📋 ใบรับรองเงินเดือน</div>
-      <div class="doc-card-name">${d.name||'—'}</div>
-      <div class="doc-card-pos">${d.position||'—'}</div>
-      <div class="doc-card-month">📅 ${month}</div>
-    </div>
-    <div class="doc-rows">
-      <div class="doc-section-label">ข้อมูลการจ้างงาน</div>
-      <div class="doc-row"><span class="doc-row-label">ตำแหน่ง</span><span class="doc-row-val">${d.position||'—'}</span></div>
-      <div class="doc-row"><span class="doc-row-label">ประเภท</span><span class="doc-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
-      ${d.startDate ? `<div class="doc-row"><span class="doc-row-label">วันที่เริ่มงาน</span><span class="doc-row-val">${d.startDate}</span></div>` : ''}
-      <div class="doc-section-label">อัตราเงินเดือน</div>
-      <div class="doc-row" style="font-weight:700">
-        <span class="doc-row-label">เงินเดือน ${d.payType==='daily'?'(×26 วัน)':'(ฐาน)'}</span>
-        <span class="doc-row-val pos" style="font-size:18px">฿${fmt(salary)}</span>
-      </div>
-      <div class="doc-row"><span class="doc-row-label" style="color:#aaa;font-size:11px">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</span></div>
-    </div>
-    <div class="doc-footer">ออกให้ ณ วันที่ ${dateStr} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
-  </div>`;
-}
-
-
-// ── BACK ──────────────────────────────────────────────
+// ── BACK ──
 function goBack() {
   document.getElementById('listView').style.display = 'block';
   document.getElementById('docView').classList.remove('show');
   document.getElementById('actionBar').style.display = 'none';
 }
 
-// ── SAVE IMAGE ──────────────────────────────────────
-// ใช้ Web Share API — กดปุ่มเดียว บันทึกลง Photos ได้เลย
-// รองรับ iOS 15+ และ Android Chrome
+// ── RENDER CERT CARD ──
+function renderCertCard(d, month) {
+  const fmt = n => (Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const salary = d.payType === 'daily' ? (parseFloat(d.baseWage)||0)*26 : (parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
+  const today = new Date();
+  const thM = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const dateStr = `${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
+  return `<div class="cert-card">
+    <div class="cert-header">
+      <div class="cert-badge">📋 ใบรับรองเงินเดือน</div>
+      <div class="cert-name">${d.name||'—'}</div>
+      <div class="cert-pos">${d.position||'—'}</div>
+      <div class="cert-month-tag">📅 ${month}</div>
+    </div>
+    <div class="cert-body">
+      <div class="cert-salary-wrap">
+        <div class="cert-salary-label">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div>
+        <div class="cert-salary-val">฿${fmt(salary)}</div>
+        <div class="cert-salary-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div>
+      </div>
+      <div class="cert-section">ข้อมูลการจ้างงาน</div>
+      <div class="cert-row"><span class="cert-row-label">ตำแหน่ง</span><span class="cert-row-val">${d.position||'—'}</span></div>
+      <div class="cert-row"><span class="cert-row-label">ประเภท</span><span class="cert-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
+      ${d.startDate?`<div class="cert-row"><span class="cert-row-label">วันเริ่มงาน</span><span class="cert-row-val">${d.startDate}</span></div>`:''}
+    </div>
+    <div class="cert-footer">ออกให้ ณ วันที่ ${dateStr} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+  </div>`;
+}
+
+// ── RENDER PAYSLIP CARD ──
+function renderPayslipCard(d, month) {
+  const fmt = n => (Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const row = (label, val, cls) => {
+    const v = parseFloat(val)||0;
+    if (v === 0) return '';
+    const c = cls || (v > 0 ? 'pos' : 'neg');
+    return `<div class="doc-row"><span class="doc-row-label">${label}</span><span class="doc-row-val ${c}">${fmt(Math.abs(v))}</span></div>`;
+  };
+  return `<div class="doc-card">
+    <div class="doc-header">
+      <div class="doc-badge">💰 สลิปเงินเดือน</div>
+      <div class="doc-name">${d.name||'—'}</div>
+      <div class="doc-pos">${d.position||'—'}</div>
+      <div class="doc-month-tag">📅 ${month}</div>
+    </div>
+    <div class="doc-net-wrap">
+      <div><div class="doc-net-label">เงินได้สุทธิ</div></div>
+      <div class="doc-net-val">฿${fmt(d.netPay)}</div>
+    </div>
+    <div class="doc-rows">
+      <div class="doc-section">สถิติการทำงาน</div>
+      ${row('วันทำงาน', d.workDays, 'zero')}
+      ${row('OT (ชม.)', d.otH, 'zero')}
+      ${row('ลากิจ', d.leaveP, 'zero')}
+      ${row('ลาป่วย', d.leaveSick, 'zero')}
+      <div class="doc-section">รายได้</div>
+      ${row('ค่าจ้างปกติ', d.basePay||d.baseWage, 'pos')}
+      ${row('ค่า OT', d.otPay, 'pos')}
+      ${row('เบี้ยเลี้ยง', d.allowance, 'pos')}
+      ${row('เบี้ยขยัน', d.bonus, 'pos')}
+      ${row('รายได้อื่นๆ', d.otherInc, 'pos')}
+      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมรายได้</span><span class="doc-row-val pos">฿${fmt(d.totalInc)}</span></div>
+      <div class="doc-section">รายการหัก</div>
+      ${row('ประกันสังคม', d.soc, 'neg')}
+      ${row('ภาษี ณ ที่จ่าย', d.tax, 'neg')}
+      ${row('หักล่วงหน้า', d.advance, 'neg')}
+      ${row('กยศ.', d.kot, 'neg')}
+      ${row('รายการหักอื่นๆ', d.otherDed, 'neg')}
+      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมหัก</span><span class="doc-row-val neg">฿${fmt(d.totalDed)}</span></div>
+    </div>
+    <div class="doc-net-wrap" style="background:linear-gradient(135deg,#e8f5ee,#f5fff9)">
+      <div><div class="doc-net-label" style="color:var(--green)">เงินได้สุทธิ</div></div>
+      <div class="doc-net-val">฿${fmt(d.netPay)}</div>
+    </div>
+    <div class="doc-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+  </div>`;
+}
+
+// ── SAVE IMAGE ──
+async function logError(step, msg) {
+  try { await fetch(`${API}/eslip/log`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step,message:msg,ua:navigator.userAgent,lineId:empData?.lineId||'?',time:new Date().toISOString()})}); } catch(e) {}
+}
+
 async function saveImage() {
   const btn = document.getElementById('btnSave');
-  if (!btn) return;
+  if (!btn || !currentDocData || !empData) return;
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
   try {
-    if (!currentDocData || !empData) throw new Error('ไม่พบข้อมูล currentDocData/empData');
-
-    // STEP 1: fetch HTML
-    await logError('step1_fetch', 'START');
+    // สร้างรูปจาก HTML สลิปจริง (ไม่ใช้ card UI)
     const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
-    if (!r.ok) throw new Error('fetch /eslip/doc failed: ' + r.status);
+    if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
     const data = await r.json();
-    if (!data.html) throw new Error('no html: ' + (data.error || 'unknown'));
-    await logError('step1_fetch', 'OK html=' + data.html.length);
+    if (!data.html) throw new Error(data.error || 'ไม่พบข้อมูล');
 
-    // STEP 2: render
-    await logError('step2_render', 'START');
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
     wrapper.innerHTML = data.html;
@@ -368,131 +427,80 @@ async function saveImage() {
     await new Promise(r => setTimeout(r, 600));
 
     const canvas = await html2canvas(wrapper, {
-      scale: 2, useCORS: true, allowTaint: true,
-      backgroundColor: '#ffffff',
-      width: 794, windowWidth: 794,
-      height: wrapper.scrollHeight, windowHeight: wrapper.scrollHeight,
-      logging: false,
+      scale:2, useCORS:true, allowTaint:true, backgroundColor:'#ffffff',
+      width:794, windowWidth:794, height:wrapper.scrollHeight, windowHeight:wrapper.scrollHeight, logging:false,
     });
     document.body.removeChild(wrapper);
-    await logError('step2_render', 'OK canvas=' + canvas.width + 'x' + canvas.height);
 
-    // STEP 3: blob
-    await logError('step3_blob', 'START');
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('toBlob returned null');
-    await logError('step3_blob', 'OK size=' + blob.size);
-
+    if (!blob) throw new Error('สร้างรูปไม่สำเร็จ');
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
+    const file = new File([blob], filename, {type:'image/jpeg'});
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    await logError('step4_save', 'isIOS=' + isIOS + ' share=' + !!navigator.share);
-
-    if (isIOS) {
-      // iOS — Web Share API
-      const file = new File([blob], filename, { type: 'image/jpeg' });
-      const canShare = navigator.canShare && navigator.canShare({ files: [file] });
-      await logError('step4_save', 'canShare=' + canShare);
-      if (navigator.share && canShare) {
-        await navigator.share({ files: [file], title: filename });
-        showToast('✅ บันทึกรูปสำเร็จ');
-        return;
-      }
-    }
-
-    // Android — LIFF บล็อก <a download> ต้องใช้ liff.openWindow เปิด Chrome
-    await logError('step4_save', 'Android download START');
-    const isInLiff = typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
-    await logError('step4_save', 'isInLiff=' + isInLiff);
-
-    if (isInLiff) {
-      // อัป blob เป็น temp URL ผ่าน server แล้วเปิด Chrome
-      const formData = new FormData();
-      formData.append('file', blob, filename);
-      const uploadRes = await fetch(`${API}/eslip/temp-image`, { method: 'POST', body: formData });
-      const uploadData = await uploadRes.json();
-      if (!uploadData.url) throw new Error('upload failed');
-      await logError('step4_save', 'temp url=' + uploadData.url);
-      liff.openWindow({ url: uploadData.url, external: true });
-      showToast('📱 กดค้างที่รูปเพื่อบันทึก');
-    } else {
-      // Chrome ปกติ — download ได้เลย
-      const objUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objUrl; a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objUrl), 3000);
+    if (isIOS && navigator.share && navigator.canShare({files:[file]})) {
+      await navigator.share({files:[file], title:filename});
       showToast('✅ บันทึกรูปสำเร็จ');
+      return;
     }
-    await logError('step4_save', 'Android download DONE');
+
+    // Android LIFF
+    const isInLiff = typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
+    if (isInLiff) {
+      const fd = new FormData();
+      fd.append('file', blob, filename);
+      const up = await fetch(`${API}/eslip/temp-image`, {method:'POST', body:fd});
+      const ud = await up.json();
+      if (!ud.url) throw new Error('upload failed');
+      liff.openWindow({url: ud.url, external: true});
+      showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');
+      return;
+    }
+
+    // Desktop / Chrome
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 3000);
+    showToast('✅ บันทึกรูปสำเร็จ');
 
   } catch(e) {
     await logError('saveImage_ERROR', e.name + ': ' + e.message);
-    if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
-    else { showToast('❌ ' + e.message); }
+    if (e.name === 'AbortError') showToast('ยกเลิกการบันทึก');
+    else showToast('❌ ' + e.message);
   } finally {
     btn.textContent = '💾 บันทึกรูป';
     btn.classList.remove('btn-disabled');
   }
 }
 
+// ── DOWNLOAD PDF ──
 async function downloadPdf() {
-  if (!currentDocData || !empData) { showToast('กรุณาเลือกเอกสารก่อน'); return; }
+  if (!currentDocData || !empData) return;
   const btn = document.getElementById('btnPdf');
   btn.textContent = '⏳ กำลังสร้าง PDF...';
   btn.classList.add('btn-disabled');
   try {
     const url = `${API}/eslip/pdf?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`;
-    // เปิดทันทีใน user gesture context
     const win = window.open(url, '_blank');
-    if (!win) {
-      // popup blocked — ทำ download link แทน
-      const a = document.createElement('a');
-      a.href = url; a.target = '_blank';
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-    }
+    if (!win) { const a = document.createElement('a'); a.href=url; a.target='_blank'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
     showToast('📄 กำลังเปิด PDF...');
-  } catch(e) {
-    showToast('❌ ' + e.message);
-  } finally {
-    btn.textContent = '📄 PDF';
-    btn.classList.remove('btn-disabled');
-  }
+  } catch(e) { showToast('❌ ' + e.message); }
+  finally { btn.textContent = '📄 PDF'; btn.classList.remove('btn-disabled'); }
 }
 
-// ── TOAST ──────────────────────────────────────────────
+// ── TOAST ──
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ── ERROR LOGGING ────────────────────────────────────
-async function logError(step, message) {
-  const info = {
-    step,
-    message,
-    ua: navigator.userAgent,
-    time: new Date().toISOString(),
-    lineId: empData?.lineId || 'unknown',
-  };
-  console.error('[E-Slip Error]', info);
-  try {
-    await fetch(`${API}/eslip/log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(info),
-    });
-  } catch(e) {}
-}
-
-// ── START ──────────────────────────────────────────────
+// ── START ──
 const urlParams = new URLSearchParams(window.location.search);
 const debugLineId = urlParams.get('lineId');
-
 if (urlParams.get('debug') === '1' && debugLineId) {
   document.getElementById('loadingScreen').classList.add('hide');
   document.getElementById('app').style.display = 'block';
