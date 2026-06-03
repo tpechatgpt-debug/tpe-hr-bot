@@ -378,15 +378,18 @@ async function saveImage() {
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
   try {
-    if (!currentDocData || !empData) throw new Error('กรุณาเลือกเอกสารก่อน');
+    if (!currentDocData || !empData) throw new Error('ไม่พบข้อมูล currentDocData/empData');
 
-    // ดึง HTML
+    // STEP 1: fetch HTML
+    await logError('step1_fetch', 'START');
     const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
-    if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
+    if (!r.ok) throw new Error('fetch /eslip/doc failed: ' + r.status);
     const data = await r.json();
-    if (!data.html) throw new Error(data.error || 'ไม่พบข้อมูล');
+    if (!data.html) throw new Error('no html: ' + (data.error || 'unknown'));
+    await logError('step1_fetch', 'OK html=' + data.html.length);
 
-    // render
+    // STEP 2: render
+    await logError('step2_render', 'START');
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
     wrapper.innerHTML = data.html;
@@ -402,56 +405,46 @@ async function saveImage() {
       logging: false,
     });
     document.body.removeChild(wrapper);
+    await logError('step2_render', 'OK canvas=' + canvas.width + 'x' + canvas.height);
 
+    // STEP 3: blob
+    await logError('step3_blob', 'START');
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('สร้างรูปไม่สำเร็จ');
+    if (!blob) throw new Error('toBlob returned null');
+    await logError('step3_blob', 'OK size=' + blob.size);
 
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
-
-    // iOS — Web Share API (ต้องเรียกทันทีหลัง user gesture)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    await logError('step4_save', 'isIOS=' + isIOS + ' share=' + !!navigator.share);
+
     if (isIOS) {
+      // iOS — Web Share API
       const file = new File([blob], filename, { type: 'image/jpeg' });
-      if (navigator.share && navigator.canShare({ files: [file] })) {
+      const canShare = navigator.canShare && navigator.canShare({ files: [file] });
+      await logError('step4_save', 'canShare=' + canShare);
+      if (navigator.share && canShare) {
         await navigator.share({ files: [file], title: filename });
         showToast('✅ บันทึกรูปสำเร็จ');
         return;
       }
     }
 
-    // Android — เปิดหน้าใหม่แสดงรูป + คำแนะนำ
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(`<!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-        <title>บันทึกรูปสลิป</title>
-        <style>
-          *{margin:0;padding:0;box-sizing:border-box}
-          body{background:#111;font-family:'Sarabun',sans-serif}
-          .tip{background:linear-gradient(135deg,#1E3A5F,#2a4f80);color:#fff;padding:16px 20px;text-align:center;font-size:15px;line-height:2}
-          .tip b{color:#E8B84B;font-size:16px;display:block}
-          img{width:100%;display:block}
-        </style></head><body>
-        <div class="tip">
-          📱 กด <b>ค้างที่รูปด้านล่าง</b>
-          แล้วเลือก "บันทึกรูปภาพ" หรือ "ดาวน์โหลด"
-        </div>
-        <img src="${dataUrl}" alt="สลิปเงินเดือน">
-      </body></html>`);
-      win.document.close();
-      showToast('📱 กดค้างที่รูปเพื่อบันทึก');
-    } else {
-      // popup blocked — download ตรงๆ
-      const a = document.createElement('a');
-      a.href = dataUrl; a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-      showToast('✅ ดาวน์โหลดสำเร็จ');
-    }
+    // Android — blob download
+    await logError('step4_save', 'Android download START');
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 3000);
+    await logError('step4_save', 'Android download DONE');
+    showToast('✅ บันทึกรูปสำเร็จ');
 
   } catch(e) {
+    await logError('saveImage_ERROR', e.name + ': ' + e.message);
     if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
     else { showToast('❌ ' + e.message); }
   } finally {
@@ -491,6 +484,25 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── ERROR LOGGING ────────────────────────────────────
+async function logError(step, message) {
+  const info = {
+    step,
+    message,
+    ua: navigator.userAgent,
+    time: new Date().toISOString(),
+    lineId: empData?.lineId || 'unknown',
+  };
+  console.error('[E-Slip Error]', info);
+  try {
+    await fetch(`${API}/eslip/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(info),
+    });
+  } catch(e) {}
 }
 
 // ── START ──────────────────────────────────────────────
