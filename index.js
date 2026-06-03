@@ -11,6 +11,7 @@ const { sendDocToLine, imageStore } = payslip;
 const cert     = require('./certificate');
 const sheet    = require('./sheet');
 
+const telegramBot = require('./telegram');
 const app    = express();
 const upload = multer({ dest: '/tmp/uploads/' });
 app.use(express.json());
@@ -605,6 +606,60 @@ app.post('/portal/approve', express.json(), async (req, res) => {
   }
 
   res.status(400).json({ error: 'invalid action' });
+});
+
+// ════════════════════════════════════════════════════════
+// Telegram Attendance Webhook
+// ════════════════════════════════════════════════════════
+app.post('/telegram-webhook', async (req, res) => {
+  res.sendStatus(200); // ตอบ Telegram ก่อนเสมอ
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const spreadsheetId = process.env.LOG_SHEET_ID;
+    await telegramBot.handleTelegramUpdate(req.body, sheets, spreadsheetId);
+  } catch(e) {
+    console.error('telegram webhook error:', e.message);
+  }
+});
+
+// ── ตั้ง Telegram Webhook ──────────────────────────────
+app.get('/telegram-setup', async (req, res) => {
+  try {
+    const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+    const webhookUrl = `${RENDER_URL}/telegram-webhook`;
+    const r = await require('axios').post(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/setWebhook`,
+      { url: webhookUrl }
+    );
+    res.json({ ok: true, result: r.data, webhookUrl });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── ดูประวัติ Attendance ──────────────────────────────
+app.get('/attendance', async (req, res) => {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.LOG_SHEET_ID,
+      range: 'Attendance!A:F',
+    });
+    const rows = r.data.values || [];
+    res.json({ total: rows.length - 1, rows: rows.slice(1).slice(-100) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── รวม PDF หลายไฟล์เป็นไฟล์เดียว ─────────────────────────
