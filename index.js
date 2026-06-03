@@ -757,6 +757,39 @@ app.post('/eslip/temp-image', upload.single('file'), (req, res) => {
 app.get('/eslip/temp-image/:token', (req, res) => {
   const entry = tempImages[req.params.token];
   if (!entry) return res.status(404).send('หมดอายุ');
+  // ถ้ามี ?download=1 ให้ download เลย
+  if (req.query.download === '1') {
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(entry.filename)}"`);
+    res.send(entry.buffer);
+    return;
+  }
+  // ไม่งั้นแสดงหน้า HTML พร้อมปุ่มบันทึก
+  const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+  const imgUrl = `${RENDER_URL}/eslip/temp-image-raw/${req.params.token}`;
+  const dlUrl  = `${RENDER_URL}/eslip/temp-image/${req.params.token}?download=1`;
+  res.send(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title>สลิปเงินเดือน</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{background:#111;font-family:sans-serif;min-height:100vh}
+      .bar{background:linear-gradient(135deg,#1E3A5F,#2a4f80);padding:16px;text-align:center}
+      .btn{display:block;background:#C9952A;color:#fff;font-size:16px;font-weight:700;
+           padding:14px;text-align:center;border-radius:12px;margin:12px 16px;text-decoration:none}
+      img{width:100%;display:block;margin-top:8px}
+    </style></head><body>
+    <div class="bar" style="color:#fff;font-size:14px">📄 สลิปเงินเดือน</div>
+    <a class="btn" href="${dlUrl}" download>💾 บันทึกรูปลงเครื่อง</a>
+    <img src="${imgUrl}" alt="สลิป">
+  </body></html>`);
+});
+
+// override ด้วย raw endpoint
+app.get('/eslip/temp-image-raw/:token', (req, res) => {
+  const entry = tempImages[req.params.token];
+  if (!entry) return res.status(404).send('หมดอายุ');
   res.setHeader('Content-Type', 'image/jpeg');
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(entry.filename)}"`);
   res.send(entry.buffer);
