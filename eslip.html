@@ -419,20 +419,37 @@ async function saveImage() {
       }
     }
 
-    // Android + fallback — เปิด blob URL ใน tab ใหม่
-    const objUrl = URL.createObjectURL(blob);
-    const win = window.open(objUrl, '_blank');
+    // Android — เปิดหน้าใหม่แสดงรูป + คำแนะนำ
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const win = window.open('', '_blank');
     if (win) {
-      showToast('📱 กดค้างที่รูป → บันทึกรูปภาพ');
+      win.document.write(`<!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+        <title>บันทึกรูปสลิป</title>
+        <style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{background:#111;font-family:'Sarabun',sans-serif}
+          .tip{background:linear-gradient(135deg,#1E3A5F,#2a4f80);color:#fff;padding:16px 20px;text-align:center;font-size:15px;line-height:2}
+          .tip b{color:#E8B84B;font-size:16px;display:block}
+          img{width:100%;display:block}
+        </style></head><body>
+        <div class="tip">
+          📱 กด <b>ค้างที่รูปด้านล่าง</b>
+          แล้วเลือก "บันทึกรูปภาพ" หรือ "ดาวน์โหลด"
+        </div>
+        <img src="${dataUrl}" alt="สลิปเงินเดือน">
+      </body></html>`);
+      win.document.close();
+      showToast('📱 กดค้างที่รูปเพื่อบันทึก');
     } else {
-      // popup blocked — download แทน
+      // popup blocked — download ตรงๆ
       const a = document.createElement('a');
-      a.href = objUrl; a.download = filename;
+      a.href = dataUrl; a.download = filename;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       showToast('✅ ดาวน์โหลดสำเร็จ');
     }
-    setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
 
   } catch(e) {
     if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
