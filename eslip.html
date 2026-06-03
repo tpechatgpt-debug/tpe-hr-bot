@@ -377,37 +377,28 @@ async function saveImage() {
   if (!btn) return;
   btn.textContent = '⏳ กำลังสร้างรูป...';
   btn.classList.add('btn-disabled');
-
-  const bar = document.getElementById('actionBar');
-
   try {
-    if (!currentDocData) throw new Error('กรุณาเลือกเอกสารก่อน');
-    if (!empData) throw new Error('ไม่พบข้อมูลพนักงาน');
+    if (!currentDocData || !empData) throw new Error('กรุณาเลือกเอกสารก่อน');
 
-    // ดึง HTML สลิปจาก server
+    // ดึง HTML
     const r = await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
-    if (!r.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ (' + r.status + ')');
+    if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
     const data = await r.json();
     if (!data.html) throw new Error(data.error || 'ไม่พบข้อมูล');
 
-    // render ใน div ซ่อน
+    // render
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;overflow:visible';
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
     wrapper.innerHTML = data.html;
     document.body.appendChild(wrapper);
-
     await document.fonts.ready;
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 600));
 
     const canvas = await html2canvas(wrapper, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
+      scale: 2, useCORS: true, allowTaint: true,
       backgroundColor: '#ffffff',
-      width: 794,
-      windowWidth: 794,
-      height: wrapper.scrollHeight,
-      windowHeight: wrapper.scrollHeight,
+      width: 794, windowWidth: 794,
+      height: wrapper.scrollHeight, windowHeight: wrapper.scrollHeight,
       logging: false,
     });
     document.body.removeChild(wrapper);
@@ -416,32 +407,36 @@ async function saveImage() {
     if (!blob) throw new Error('สร้างรูปไม่สำเร็จ');
 
     const filename = 'สลิป_' + currentDocData.month + '.jpg';
-    const file = new File([blob], filename, { type: 'image/jpeg' });
 
-    // Web Share API (iOS + Android ที่รองรับ)
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename });
-      showToast('✅ บันทึกรูปสำเร็จ');
-      return;
+    // iOS — Web Share API (ต้องเรียกทันทีหลัง user gesture)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      const file = new File([blob], filename, { type: 'image/jpeg' });
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        showToast('✅ บันทึกรูปสำเร็จ');
+        return;
+      }
     }
 
-    // Android fallback — download ตรงๆ
+    // Android + fallback — เปิด blob URL ใน tab ใหม่
     const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-    showToast('✅ ดาวน์โหลดรูปสำเร็จ');
+    const win = window.open(objUrl, '_blank');
+    if (win) {
+      showToast('📱 กดค้างที่รูป → บันทึกรูปภาพ');
+    } else {
+      // popup blocked — download แทน
+      const a = document.createElement('a');
+      a.href = objUrl; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      showToast('✅ ดาวน์โหลดสำเร็จ');
+    }
+    setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
 
   } catch(e) {
-    if (e.name === 'AbortError') {
-      showToast('ยกเลิกการบันทึก');
-    } else {
-      showToast('❌ ' + e.message);
-    }
+    if (e.name === 'AbortError') { showToast('ยกเลิกการบันทึก'); }
+    else { showToast('❌ ' + e.message); }
   } finally {
     btn.textContent = '💾 บันทึกรูป';
     btn.classList.remove('btn-disabled');
@@ -449,15 +444,24 @@ async function saveImage() {
 }
 
 async function downloadPdf() {
+  if (!currentDocData || !empData) { showToast('กรุณาเลือกเอกสารก่อน'); return; }
   const btn = document.getElementById('btnPdf');
   btn.textContent = '⏳ กำลังสร้าง PDF...';
   btn.classList.add('btn-disabled');
   try {
-    showToast('⏳ กำลังสร้าง PDF...');
     const url = `${API}/eslip/pdf?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`;
-    window.open(url, '_blank');
+    // เปิดทันทีใน user gesture context
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // popup blocked — ทำ download link แทน
+      const a = document.createElement('a');
+      a.href = url; a.target = '_blank';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+    }
+    showToast('📄 กำลังเปิด PDF...');
   } catch(e) {
-    showToast('❌ เกิดข้อผิดพลาด');
+    showToast('❌ ' + e.message);
   } finally {
     btn.textContent = '📄 PDF';
     btn.classList.remove('btn-disabled');
