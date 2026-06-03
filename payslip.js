@@ -394,14 +394,23 @@ async function htmlToPdfBuffer(html) {
   const puppeteer = require('puppeteer-core');
 
   const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
+    args: [
+      ...chromium.args,
+      '--font-render-hinting=none',
+      '--disable-font-subpixel-positioning',
+      '--lang=th',
+    ],
+    defaultViewport: { width: 794, height: 1123 },
     executablePath: await chromium.executablePath(),
     headless: chromium.headless,
   });
 
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+  // inject Sarabun font ผ่าน page.addStyleTag แทน @import
+  await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.addStyleTag({ url: 'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap' });
+  await page.evaluate(() => document.fonts.ready);
+  await new Promise(r => setTimeout(r, 800));
 
   const pdfBuffer = await page.pdf({
     format: 'A4',
