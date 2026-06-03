@@ -272,95 +272,59 @@ async function openDoc(docType, month) {
   render.innerHTML = '<div style="padding:40px;text-align:center"><div class="skeleton" style="height:500px;border-radius:8px"></div></div>';
 
   try {
-    const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=${docType}&month=${encodeURIComponent(month)}`);
-    const d = await r.json();
-    if (!d || d.error) {
-      render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">ไม่พบข้อมูล</div>';
-      return;
+    if (docType === 'certificate') {
+      // ใบรับรอง — render card สวยงาม (ไม่ใช้ HTML สลิป)
+      const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=certificate&month=${encodeURIComponent(month)}`);
+      if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
+      const d = await r.json();
+      if (!d || d.error) throw new Error(d.error || 'ไม่พบข้อมูล');
+      render.innerHTML = renderCertCard(d, month);
+    } else {
+      // สลิปเงินเดือน — render card จาก data
+      const r = await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=payslip&month=${encodeURIComponent(month)}`);
+      if (!r.ok) throw new Error('โหลดไม่สำเร็จ (' + r.status + ')');
+      const d = await r.json();
+      if (!d || d.error) throw new Error(d.error || 'ไม่พบข้อมูล');
+      render.innerHTML = renderDocCard(d, 'payslip', month);
     }
-    render.innerHTML = renderDocCard(d, docType, month);
   } catch(e) {
-    render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">โหลดไม่สำเร็จ</div>';
+    render.innerHTML = '<div style="padding:40px;text-align:center;color:#888">⚠️ ' + e.message + '</div>';
   }
 }
 
-// ── RENDER BEAUTIFUL DOC CARD ─────────────────────────
-function fmt(n) { const v=Math.round((parseFloat(n)||0)*100)/100; return v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function row(label, val, cls='') {
-  const v = parseFloat(val)||0;
-  const c = cls || (v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero');
-  return `<div class="doc-row"><span class="doc-row-label">${label}</span><span class="doc-row-val ${c}">${v !== 0 ? (v>0?'':'')+fmt(Math.abs(v)) : '—'}</span></div>`;
-}
+// ── RENDER CERT CARD ──────────────────────────────────
+function renderCertCard(d, month) {
+  const fmt = n => (Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const salary = d.payType === 'daily'
+    ? (parseFloat(d.baseWage)||0) * 26
+    : (parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
+  const today = new Date();
+  const thM = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const dateStr = `${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
 
-function renderDocCard(d, docType, month) {
-  const now = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-
-  if (docType === 'certificate') {
-    const salary = d.payType === 'daily'
-      ? (parseFloat(d.baseWage)||0) * 26
-      : (parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
-    return `<div class="doc-card">
-      <div class="doc-card-header">
-        <div class="doc-card-badge">📋 ใบรับรองเงินเดือน</div>
-        <div class="doc-card-name">${d.name||'—'}</div>
-        <div class="doc-card-pos">${d.position||'—'}</div>
-        <div class="doc-card-month">📅 ${month}</div>
-      </div>
-      <div class="doc-card-net">
-        <div><div class="doc-card-net-label">เงินเดือน (ฐาน)</div></div>
-        <div class="doc-card-net-val">฿${fmt(salary)}</div>
-      </div>
-      <div class="doc-rows">
-        <div class="doc-section-label">ข้อมูลการจ้างงาน</div>
-        <div class="doc-row"><span class="doc-row-label">ตำแหน่ง</span><span class="doc-row-val">${d.position||'—'}</span></div>
-        <div class="doc-row"><span class="doc-row-label">ประเภท</span><span class="doc-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
-        <div class="doc-row"><span class="doc-row-label">อัตราค่าจ้าง</span><span class="doc-row-val pos">฿${fmt(d.baseWage||d.basePay)}</span></div>
-      </div>
-      <div class="doc-footer">ออกให้ ณ วันที่ ${now} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
-    </div>`;
-  }
-
-  // PAYSLIP
   return `<div class="doc-card">
     <div class="doc-card-header">
-      <div class="doc-card-badge">💰 สลิปเงินเดือน</div>
+      <div class="doc-card-badge">📋 ใบรับรองเงินเดือน</div>
       <div class="doc-card-name">${d.name||'—'}</div>
       <div class="doc-card-pos">${d.position||'—'}</div>
       <div class="doc-card-month">📅 ${month}</div>
     </div>
-    <div class="doc-card-net">
-      <div><div class="doc-card-net-label">เงินได้สุทธิ</div></div>
-      <div class="doc-card-net-val">฿${fmt(d.netPay)}</div>
-    </div>
     <div class="doc-rows">
-      <div class="doc-section-label">สถิติการทำงาน</div>
-      ${row('วันทำงาน', d.workDays, '')} 
-      ${row('OT (ชั่วโมง)', d.otH, '')}
-      ${row('ลากิจ', d.leaveP, '')}
-      ${row('ลาป่วย', d.leaveSick, '')}
-      ${row('พักร้อน', d.leaveVac, '')}
-      <div class="doc-section-label">รายได้</div>
-      ${row('ค่าจ้างปกติ', d.basePay||d.baseWage, 'pos')}
-      ${(parseFloat(d.otPay)||0)>0 ? row('ค่า OT', d.otPay, 'pos') : ''}
-      ${(parseFloat(d.allowance)||0)>0 ? row('เบี้ยเลี้ยง', d.allowance, 'pos') : ''}
-      ${(parseFloat(d.bonus)||0)>0 ? row('เบี้ยขยัน', d.bonus, 'pos') : ''}
-      ${(parseFloat(d.otherInc)||0)>0 ? row('รายได้อื่นๆ', d.otherInc, 'pos') : ''}
-      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมรายได้</span><span class="doc-row-val pos">฿${fmt(d.totalInc)}</span></div>
-      <div class="doc-section-label">รายการหัก</div>
-      ${(parseFloat(d.soc)||0)>0 ? row('ประกันสังคม', d.soc, 'neg') : ''}
-      ${(parseFloat(d.tax)||0)>0 ? row('ภาษี ณ ที่จ่าย', d.tax, 'neg') : ''}
-      ${(parseFloat(d.advance)||0)>0 ? row('หักล่วงหน้า', d.advance, 'neg') : ''}
-      ${(parseFloat(d.kot)||0)>0 ? row('กยศ.', d.kot, 'neg') : ''}
-      ${(parseFloat(d.otherDed)||0)>0 ? row('รายการหักอื่นๆ', d.otherDed, 'neg') : ''}
-      <div class="doc-row" style="font-weight:700"><span class="doc-row-label">รวมหัก</span><span class="doc-row-val neg">฿${fmt(d.totalDed)}</span></div>
+      <div class="doc-section-label">ข้อมูลการจ้างงาน</div>
+      <div class="doc-row"><span class="doc-row-label">ตำแหน่ง</span><span class="doc-row-val">${d.position||'—'}</span></div>
+      <div class="doc-row"><span class="doc-row-label">ประเภท</span><span class="doc-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
+      ${d.startDate ? `<div class="doc-row"><span class="doc-row-label">วันที่เริ่มงาน</span><span class="doc-row-val">${d.startDate}</span></div>` : ''}
+      <div class="doc-section-label">อัตราเงินเดือน</div>
+      <div class="doc-row" style="font-weight:700">
+        <span class="doc-row-label">เงินเดือน ${d.payType==='daily'?'(×26 วัน)':'(ฐาน)'}</span>
+        <span class="doc-row-val pos" style="font-size:18px">฿${fmt(salary)}</span>
+      </div>
+      <div class="doc-row"><span class="doc-row-label" style="color:#aaa;font-size:11px">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</span></div>
     </div>
-    <div class="doc-card-net" style="background:linear-gradient(135deg,#e8f5ee,#f0faf4)">
-      <div><div class="doc-card-net-label" style="color:var(--green)">เงินได้สุทธิ</div></div>
-      <div class="doc-card-net-val">฿${fmt(d.netPay)}</div>
-    </div>
-    <div class="doc-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+    <div class="doc-footer">ออกให้ ณ วันที่ ${dateStr} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   </div>`;
 }
+
 
 // ── BACK ──────────────────────────────────────────────
 function goBack() {
