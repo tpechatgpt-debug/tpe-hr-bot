@@ -741,6 +741,27 @@ app.get('/eslip/image', async (req, res) => {
   } catch(e) { res.status(500).send(e.message); }
 });
 
+// temp image store สำหรับ Android LIFF download
+const tempImages = {};
+app.post('/eslip/temp-image', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'no file' });
+  const token = require('crypto').randomBytes(8).toString('hex');
+  const buf = require('fs').readFileSync(req.file.path);
+  require('fs').unlinkSync(req.file.path);
+  tempImages[token] = { buffer: buf, filename: req.file.originalname, createdAt: Date.now() };
+  // ลบหลัง 10 นาที
+  setTimeout(() => delete tempImages[token], 10 * 60 * 1000);
+  const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+  res.json({ url: `${RENDER_URL}/eslip/temp-image/${token}` });
+});
+app.get('/eslip/temp-image/:token', (req, res) => {
+  const entry = tempImages[req.params.token];
+  if (!entry) return res.status(404).send('หมดอายุ');
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(entry.filename)}"`);
+  res.send(entry.buffer);
+});
+
 // E-Slip error log endpoint
 app.post('/eslip/log', express.json(), (req, res) => {
   const { step, message, ua, time, lineId } = req.body;
