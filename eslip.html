@@ -429,19 +429,33 @@ async function saveImage() {
       }
     }
 
-    // Android — blob download
+    // Android — LIFF บล็อก <a download> ต้องใช้ liff.openWindow เปิด Chrome
     await logError('step4_save', 'Android download START');
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = objUrl;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(objUrl), 3000);
+    const isInLiff = typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
+    await logError('step4_save', 'isInLiff=' + isInLiff);
+
+    if (isInLiff) {
+      // อัป blob เป็น temp URL ผ่าน server แล้วเปิด Chrome
+      const formData = new FormData();
+      formData.append('file', blob, filename);
+      const uploadRes = await fetch(`${API}/eslip/temp-image`, { method: 'POST', body: formData });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.url) throw new Error('upload failed');
+      await logError('step4_save', 'temp url=' + uploadData.url);
+      liff.openWindow({ url: uploadData.url, external: true });
+      showToast('📱 กดค้างที่รูปเพื่อบันทึก');
+    } else {
+      // Chrome ปกติ — download ได้เลย
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl; a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objUrl), 3000);
+      showToast('✅ บันทึกรูปสำเร็จ');
+    }
     await logError('step4_save', 'Android download DONE');
-    showToast('✅ บันทึกรูปสำเร็จ');
 
   } catch(e) {
     await logError('saveImage_ERROR', e.name + ': ' + e.message);
