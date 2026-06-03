@@ -250,7 +250,7 @@ async function loadMonths(tab) {
         <div class="month-icon">${tab === 'payslip' ? '💰' : '📋'}</div>
         <div class="month-info">
           <div class="month-name">${m.month}</div>
-          ${m.netPay ? `<div class="month-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>` : ''}
+          ${tab === 'payslip' && m.netPay ? `<div class="month-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>` : ''}
         </div>
         <div class="month-arrow">›</div>
       </div>`).join('');
