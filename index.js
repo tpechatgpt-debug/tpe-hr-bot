@@ -68,9 +68,38 @@ app.post('/webhook', async (req, res) => {
     const employee = await lark.findByLineId(larkToken, userId);
 
     if (employee) {
-      await reply(replyToken, createLeaveCard(employee, imgUrl));
+      // ตรวจว่าพิมพ์ "เช็ควันลา" ตรงๆ เท่านั้น
+      if (msg === 'เช็ควันลา') {
+        await reply(replyToken, createLeaveCard(employee, imgUrl));
+      } else {
+        await reply(replyToken, {
+          type: 'flex', altText: 'กรุณาเลือกหัวข้อที่ต้องการ',
+          contents: {
+            type: 'bubble',
+            body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
+              contents: [
+                { type: 'text', text: '📋 TPE HR Connect', weight: 'bold', size: 'lg', color: '#1E3A5F' },
+                { type: 'text', text: 'กรุณาเลือกหัวข้อที่ต้องการครับ', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
+                { type: 'separator', margin: 'md' },
+                { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: [
+                  { type: 'button', style: 'primary', color: '#1E3A5F', action: { type: 'message', label: '💰 ขอสลิปเงินเดือน', text: 'ขอสลิปเงินเดือน' }},
+                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📋 ขอใบรับรองเงินเดือน', text: 'ขอใบรับรองเงินเดือน' }},
+                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📅 เช็ควันลา', text: 'เช็ควันลา' }},
+                ]}
+              ]
+            }
+          }
+        });
+      }
     } else {
+      // ลงทะเบียน — ตรวจสอบ ลงเทียน ซ้ำ
       if (msg.length < 2) { await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
+      // ตรวจว่าชื่อนี้มีในระบบแล้วไหม (อาจเคยลงเทียนแล้ว)
+      const existing = await lark.findByName(larkToken, msg).catch(() => null);
+      if (existing && existing['Line ID']) {
+        await reply(replyToken, `⚠️ ชื่อ "${msg}" ลงทะเบียนแล้วครับ หากมีปัญหากรุณาติดต่อ HR`);
+        return;
+      }
       await reply(replyToken, await lark.register(larkToken, msg, userId));
     }
 
