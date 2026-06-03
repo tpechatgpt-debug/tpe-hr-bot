@@ -657,9 +657,15 @@ app.get('/eslip/employee', async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'not found' });
     const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    // ดึงตำแหน่งจากชื่อ เช่น "อรุณ ช่วยจวน (Graphic Designer & DBA)"
+    const nameRaw = rawName.trim();
+    const posMatch = nameRaw.match(/[（(]([^)）]+)[)）]/);
+    const position = posMatch ? posMatch[1].trim() : (emp['ตำแหน่ง'] || '');
+    const cleanName = payroll.normName(nameRaw.split('(')[0].split('（')[0]);
+
     res.json({
-      name: payroll.normName(rawName.split('(')[0]),
-      position: emp['ตำแหน่ง'] || '',
+      name: cleanName,
+      position: position,
       payType: rawType.includes('รายวัน') ? 'daily' : 'monthly',
       startDate: emp['วันที่เริ่มงาน'] || emp['เริ่มงาน'] || '',
       lineId,
