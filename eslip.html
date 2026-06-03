@@ -19,7 +19,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 .loading-text{color:rgba(255,255,255,.7);font-size:14px;letter-spacing:.05em}
 .loading-bar{width:120px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:16px;overflow:hidden}
-.loading-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0%;animation:loading 2s ease forwards}
+.loading-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0%;animation:loading 1s ease forwards}
 @keyframes loading{to{width:100%}}
 
 .header{background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 60%,var(--navy-light) 100%);position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.2)}
@@ -186,6 +186,13 @@ let currentDocData = null;
 
 // ── INIT ──────────────────────────────────────────────
 async function init() {
+  // fallback timeout 8 วินาที กรณี LIFF ค้าง
+  const timeout = setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hide');
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('profileName').textContent = 'โหลดช้า กรุณารีเฟรช';
+  }, 8000);
+
   try {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -194,13 +201,12 @@ async function init() {
     document.getElementById('profileAvatar').src = profile.pictureUrl || '';
     await loadEmployee(profile.userId);
   } catch(e) {
-    document.getElementById('profileName').textContent = 'เกิดข้อผิดพลาด';
+    document.getElementById('profileName').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
     console.error(e);
   } finally {
-    setTimeout(() => {
-      document.getElementById('loadingScreen').classList.add('hide');
-      document.getElementById('app').style.display = 'block';
-    }, 2000);
+    clearTimeout(timeout);
+    document.getElementById('loadingScreen').classList.add('hide');
+    document.getElementById('app').style.display = 'block';
   }
 }
 
