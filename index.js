@@ -711,11 +711,18 @@ app.get('/eslip/doc', async (req, res) => {
     const empData = await payroll.getEmployeePayroll(empName, month, pt);
     if (!empData) return res.status(404).json({ error: 'payroll not found' });
     // สร้าง HTML โดยตรง ไม่ต้อง launch puppeteer
-    const html = docType === 'payslip'
-      ? payslip.buildPayslipHtml(empData)
-      : cert.buildCertHtml(empData);
+    let html;
+    if (docType === 'payslip') {
+      html = payslip.buildPayslipHtml(empData);
+    } else {
+      html = cert.buildCertHtml(empData);
+    }
+    if (!html) return res.status(500).json({ error: 'buildHtml returned empty' });
     res.json({ html });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error('/eslip/doc error:', e.message, e.stack?.split('\n')[1]);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // JPG image
