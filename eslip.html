@@ -194,6 +194,7 @@ body{font-family:'Sarabun','Inter',sans-serif;background:var(--bg);color:var(--t
         <div>
           <div class="hero-name" id="profileName">กำลังโหลด...</div>
           <div class="hero-pos" id="profilePos">—</div>
+          <div id="profileWorkAge" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
           <div class="hero-badge badge-monthly" id="profileBadge">● รายเดือน</div>
         </div>
       </div>
@@ -263,7 +264,22 @@ async function loadEmployee(lineId){
     if(!d||d.error){document.getElementById('profileName').textContent='ไม่พบข้อมูลพนักงาน';return;}
     empData=d;
     document.getElementById('profileName').textContent=d.name;
-    document.getElementById('profilePos').textContent=d.position||'—';
+    document.getElementById('profilePos').textContent=d.position||'ไม่ระบุตำแหน่ง';
+
+    // คำนวณอายุงาน
+    let workAge='';
+    if(d.startDate){
+      try{
+        const parts=d.startDate.split('/');
+        const start=new Date(parseInt(parts[2])-543,parseInt(parts[1])-1,parseInt(parts[0]));
+        const now=new Date();
+        const months=Math.floor((now-start)/(1000*60*60*24*30.44));
+        const y=Math.floor(months/12),m=months%12;
+        workAge=y>0?(m>0?`${y} ปี ${m} เดือน`:`${y} ปี`):(m>0?`${m} เดือน`:'');
+      }catch(e){}
+    }
+    document.getElementById('profileWorkAge').textContent=workAge?`⏱ อายุงาน ${workAge}`:'';
+
     const b=document.getElementById('profileBadge');
     b.textContent=d.payType==='daily'?'● รายวัน':'● รายเดือน';
     b.className='hero-badge'+(d.payType==='daily'?' daily':'');
