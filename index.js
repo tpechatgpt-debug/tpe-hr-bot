@@ -741,6 +741,14 @@ app.get('/eslip/image', async (req, res) => {
   } catch(e) { res.status(500).send(e.message); }
 });
 
+// E-Slip error log endpoint
+app.post('/eslip/log', express.json(), (req, res) => {
+  const { step, message, ua, time, lineId } = req.body;
+  const device = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : 'Desktop';
+  console.log(`[ESLIP-LOG] ${device} | ${step} | ${message} | lineId:${lineId} | ${time}`);
+  res.json({ ok: true });
+});
+
 // JSON data สำหรับ renderDocCard (ไม่ต้อง puppeteer)
 app.get('/eslip/data', async (req, res) => {
   try {
