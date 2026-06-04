@@ -8,7 +8,7 @@ const TELEGRAM_TOKEN  = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_API    = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
 const OWNER_CHAT_ID   = process.env.TELEGRAM_OWNER_ID || '7870528980';
 
-let lastUpdateId = 0;
+let lastUpdateId = -1; // -1 = ดึงทั้งหมดตั้งแต่ต้น
 
 // Parse ข้อความจาก bot สแกนหน้า (รองรับทั้ง newline และ inline)
 function parseAttendance(text) {
@@ -63,9 +63,11 @@ async function saveAttendance(sheets, spreadsheetId, data) {
 // ดึงข้อความใหม่จาก Telegram (getUpdates)
 async function pollTelegram(sheets, spreadsheetId) {
   try {
+    const params = lastUpdateId === -1
+      ? { limit: 100 }  // ครั้งแรก: ดึงทั้งหมด
+      : { offset: lastUpdateId + 1, limit: 100 };
     const r = await axios.get(`${TELEGRAM_API}/getUpdates`, {
-      params: { offset: lastUpdateId + 1, limit: 100 },
-      timeout: 5000
+      params, timeout: 5000
     });
     const updates = r.data.result || [];
     for (const update of updates) {
