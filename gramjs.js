@@ -96,6 +96,33 @@ async function startGramJS(sheets, spreadsheetId) {
     }, new NewMessage({}));
 
     console.log(`[GramJS] รอข้อความจาก @${BOT_USERNAME}...`);
+
+    // ดึงข้อความย้อนหลังตั้งแต่ 1 มิถุนายน 2026
+    try {
+      const sinceDate = new Date('2026-06-01T00:00:00+07:00');
+      const sinceUnix = Math.floor(sinceDate.getTime() / 1000);
+      console.log('[GramJS] กำลังดึงข้อความย้อนหลังตั้งแต่ 1 มิ.ย. 2569...');
+
+      const botEntity = await client.getEntity(BOT_USERNAME);
+      const messages  = await client.getMessages(botEntity, {
+        limit: 500,
+        offsetDate: Math.floor(Date.now() / 1000), // เริ่มจากปัจจุบัน
+      });
+
+      let count = 0;
+      for (const msg of messages.reverse()) {
+        // ข้ามข้อความก่อน 1 มิถุนายน
+        if (msg.date < sinceUnix) continue;
+        const text = msg.text || '';
+        const data = parseAttendance(text);
+        if (!data) continue;
+        await saveAttendance(sheets, spreadsheetId, data);
+        count++;
+      }
+      console.log(`[GramJS] ดึงย้อนหลังเสร็จ บันทึก ${count} รายการ`);
+    } catch(e) {
+      console.error('[GramJS] ดึงย้อนหลังไม่สำเร็จ:', e.message);
+    }
   } catch(e) {
     console.error('[GramJS] เชื่อมต่อไม่สำเร็จ:', e.message);
   }
