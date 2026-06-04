@@ -10,19 +10,26 @@ const OWNER_CHAT_ID   = process.env.TELEGRAM_OWNER_ID || '7870528980';
 
 let lastUpdateId = 0;
 
-// Parse ข้อความจาก bot สแกนหน้า
+// Parse ข้อความจาก bot สแกนหน้า (รองรับทั้ง newline และ inline)
 function parseAttendance(text) {
   if (!text) return null;
   const id_m   = text.match(/ID:\s*(\d+)/);
-  const name_m = text.match(/ชื่อ:\s*(.+)/);
-  const mode_m = text.match(/ตรวจสอบโหมด:\s*(.+)/);
-  const time_m = text.match(/เวลา:\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+  const name_m = text.match(/ชื่อ:\s*(.+?)(?:ตรวจสอบ|เวลา|$)/);
+  const mode_m = text.match(/ตรวจสอบโหมด:\s*(.+?)(?:เวลา|$)/);
+  // รองรับ yyyy/mm/dd และ dd/mm/yyyy
+  const time_m = text.match(/เวลา:\s*(\d{4}\/\d{2}\/\d{2}|\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})/);
   if (!name_m || !time_m) return null;
+  // แปลง yyyy/mm/dd → dd/mm/yyyy
+  let rawDate = time_m[1];
+  if (rawDate.indexOf('/') === 4) {
+    const p = rawDate.split('/');
+    rawDate = `${p[2]}/${p[1]}/${p[0]}`;
+  }
   return {
     id:   id_m   ? id_m[1].trim()   : '',
     name: name_m[1].trim(),
     mode: mode_m ? mode_m[1].trim() : '',
-    date: time_m[1],
+    date: rawDate,
     time: time_m[2],
   };
 }
