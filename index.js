@@ -936,10 +936,18 @@ startServer(PORT);
   } catch(e) {
     console.error('Telegram polling init error:', e.message);
   }
+})();
 
-  // เริ่ม GramJS (อ่านข้อความที่ bot ส่งมาหาเรา)
+// เริ่ม GramJS แยก async block
+(async () => {
   try {
-    gramJS.startGramJS(sheetsClient, process.env.LOG_SHEET_ID);
+    const { google } = require('googleapis');
+    const auth2 = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheetsClient2 = google.sheets({ version: 'v4', auth: await auth2.getClient() });
+    gramJS.startGramJS(sheetsClient2, process.env.LOG_SHEET_ID);
   } catch(e) {
     console.error('GramJS init error:', e.message);
   }
