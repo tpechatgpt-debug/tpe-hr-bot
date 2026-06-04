@@ -670,6 +670,125 @@ app.get('/eslip/attendance', async (req, res) => {
   }
 });
 
+
+// ════════════════════════════════════════════════════════
+// ATTENDANCE ADMIN ENDPOINTS
+// ════════════════════════════════════════════════════════
+
+// ดึงข้อมูล attendance ทุกคน + holidays สำหรับ admin
+app.get('/admin/attendance', async (req, res) => {
+  const { password, year, month } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    // ดึง Attendance
+    const attR = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Attendance!A:F' });
+    const attRows = (attR.data.values || []).slice(1);
+
+    // ดึง Holidays
+    let holidays = [];
+    try {
+      const holR = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Holidays!A:B' });
+      holidays = (holR.data.values || []).slice(1).map(r => ({ date: r[0], name: r[1] || 'วันหยุดบริษัท' }));
+    } catch(e) {}
+
+    // ดึงพนักงานจาก Lark
+    const larkToken = await lark.getToken();
+    const emps = await lark.getAllEmployees(larkToken).catch(() => []);
+
+    // กรองตามรอบเดือน (26 เดือนก่อน - 25 เดือนนี้)
+    const y = parseInt(year) || new Date().getFullYear();
+    const m = parseInt(month) || new Date().getMonth() + 1;
+    // รอบ: 26/(m-1) - 25/m
+    const prevM = m === 1 ? 12 : m - 1;
+    const prevY = m === 1 ? y - 1 : y;
+    const startDate = `${String(26).padStart(2,'0')}/${String(prevM).padStart(2,'0')}/${prevY}`;
+    const endDate   = `${String(25).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+
+    // สร้าง array วันในรอบ
+    const start = new Date(prevY, prevM-1, 26);
+    const end   = new Date(y, m-1, 25);
+    const days = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      days.push(`${dd}/${mm}/${yyyy}`);
+    }
+
+    // จัด attendance ตามวัน+ชื่อ
+    const attMap = {};
+    attRows.forEach(row => {
+      const date = row[0], time = row[1], name = row[3];
+      if (!attMap[date]) attMap[date] = {};
+      if (!attMap[date][name]) attMap[date][name] = [];
+      attMap[date][name].push(time);
+    });
+
+    res.json({ days, attMap, holidays, emps: emps.map(e => ({
+      name: (e['ชื่อ - นามสกุล']||'').split('(')[0].trim(),
+      type: (e['ประเภท']||'').includes('รายวัน') ? 'daily' : 'monthly'
+    })), startDate, endDate, year: y, month: m });
+  } catch(e) {
+    console.error('/admin/attendance error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// เพิ่ม/ลบวันหยุด
+app.post('/admin/holidays', express.json(), async (req, res) => {
+  const { password, action, date, name } = req.body;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    // ตรวจ/สร้าง Holidays sheet
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sid });
+    const exists = meta.data.sheets.some(s => s.properties.title === 'Holidays');
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'Holidays' } } }] }
+      });
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Holidays!A1',
+        valueInputOption: 'RAW', requestBody: { values: [['วันที่', 'ชื่อวันหยุด']] }
+      });
+    }
+
+    if (action === 'add') {
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Holidays!A:B',
+        valueInputOption: 'RAW', requestBody: { values: [[date, name || 'วันหยุดบริษัท']] }
+      });
+    } else if (action === 'delete') {
+      // ดึงทั้งหมดแล้วลบแถวที่ตรง
+      const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Holidays!A:B' });
+      const rows = r.data.values || [];
+      const sheetId = meta.data.sheets.find(s => s.properties.title === 'Holidays').properties.sheetId;
+      const delIdx = rows.findIndex((row, i) => i > 0 && row[0] === date);
+      if (delIdx > 0) {
+        await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid,
+          requestBody: { requests: [{ deleteDimension: { range: {
+            sheetId, dimension: 'ROWS', startIndex: delIdx, endIndex: delIdx + 1
+          }}}]}
+        });
+      }
+    }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ════════════════════════════════════════════════════════
 // Telegram Attendance Webhook
 // ════════════════════════════════════════════════════════
@@ -763,6 +882,7 @@ function startServer(port) {
 // E-Slip LIFF Endpoints
 // ════════════════════════════════════════════════════════
 app.get('/eslip', (req, res) => res.sendFile(path.join(__dirname, 'eslip.html')));
+app.get('/attendance-admin', (req, res) => res.sendFile(path.join(__dirname, 'attendance-admin.html')));
 
 // พนักงาน: ข้อมูลตัวเอง
 app.get('/eslip/employee', async (req, res) => {
