@@ -12,6 +12,7 @@ const cert     = require('./certificate');
 const sheet    = require('./sheet');
 
 const telegramBot = require('./telegram');
+const gramJS      = require('./gramjs');
 const app    = express();
 const upload = multer({ dest: '/tmp/uploads/' });
 app.use(express.json());
@@ -934,5 +935,12 @@ startServer(PORT);
     telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID);
   } catch(e) {
     console.error('Telegram polling init error:', e.message);
+  }
+
+  // เริ่ม GramJS (อ่านข้อความที่ bot ส่งมาหาเรา)
+  try {
+    gramJS.startGramJS(sheetsClient, process.env.LOG_SHEET_ID);
+  } catch(e) {
+    console.error('GramJS init error:', e.message);
   }
 })();
