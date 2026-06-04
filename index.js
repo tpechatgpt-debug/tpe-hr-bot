@@ -95,12 +95,6 @@ app.post('/webhook', async (req, res) => {
     } else {
       // ลงทะเบียน — ตรวจสอบ ลงเทียน ซ้ำ
       if (msg.length < 2) { await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
-      // ตรวจว่าชื่อนี้มีในระบบแล้วไหม (อาจเคยลงเทียนแล้ว)
-      const existing = await lark.findByName(larkToken, msg).catch(() => null);
-      if (existing && existing['Line ID']) {
-        await reply(replyToken, `⚠️ ชื่อ "${msg}" ลงทะเบียนแล้วครับ หากมีปัญหากรุณาติดต่อ HR`);
-        return;
-      }
       await reply(replyToken, await lark.register(larkToken, msg, userId));
     }
 
@@ -927,3 +921,18 @@ app.get('/eslip/pdf', async (req, res) => {
 
 
 startServer(PORT);
+
+// ── เริ่ม Telegram Attendance Polling ─────────────────
+(async () => {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheetsClient = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID);
+  } catch(e) {
+    console.error('Telegram polling init error:', e.message);
+  }
+})();
