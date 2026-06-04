@@ -15,6 +15,7 @@
     "puppeteer-core": "^21.0.0",
     "@sparticuz/chromium": "^123.0.0",
     "form-data": "^4.0.0",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "telegram": "^2.26.0"
   }
 }
