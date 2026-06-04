@@ -4,295 +4,396 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>TPE E-Slip</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{
-  --bg:#0A0F1E;
-  --bg2:#0F1629;
-  --surface:#141B2D;
-  --surface2:#1A2340;
-  --border:rgba(255,255,255,.08);
-  --gold:#F5A623;
-  --gold2:#FFD166;
-  --blue:#4F8EF7;
-  --green:#06D6A0;
-  --red:#EF476F;
-  --purple:#7B61FF;
-  --text:#F0F4FF;
-  --muted:rgba(240,244,255,.45);
-  --muted2:rgba(240,244,255,.25);
+  --bg:#0A0F1E;--bg2:#0F1629;--surface:#141B2D;--surface2:#1A2340;
+  --border:rgba(255,255,255,.08);--gold:#F5A623;--gold2:#FFD166;
+  --blue:#4F8EF7;--green:#06D6A0;--red:#EF476F;--purple:#7B61FF;
+  --orange:#FF9500;--text:#F0F4FF;--muted:rgba(240,244,255,.45);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Sarabun','Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-/* ── LOADING ── */
+/* LOADING */
 .ls{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s,visibility .4s}
 .ls.hide{opacity:0;visibility:hidden;pointer-events:none}
-.ls-logo{width:88px;height:88px;border-radius:28px;background:linear-gradient(135deg,#1a0a00,#C9952A);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:28px;box-shadow:0 0 60px rgba(245,166,35,.3);animation:ls-pulse 2s ease-in-out infinite}
-@keyframes ls-pulse{0%,100%{box-shadow:0 0 60px rgba(245,166,35,.3)}50%{box-shadow:0 0 80px rgba(245,166,35,.6)}}
-.ls-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.ls-logo{width:88px;height:88px;border-radius:28px;background:linear-gradient(135deg,#1a0a00,#C9952A);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:28px;animation:lp 2s ease-in-out infinite}
+@keyframes lp{0%,100%{box-shadow:0 0 60px rgba(245,166,35,.3)}50%{box-shadow:0 0 80px rgba(245,166,35,.6)}}
+.ls-title{font-size:22px;font-weight:700;letter-spacing:.02em}
 .ls-sub{font-size:12px;color:var(--muted);margin-top:6px}
 .ls-bar{width:160px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:28px;overflow:hidden}
-.ls-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;animation:ls-fill 1s ease forwards}
-@keyframes ls-fill{to{width:100%}}
+.ls-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));animation:lf 1s ease forwards}
+@keyframes lf{to{width:100%}}
 
-/* ── HEADER ── */
-.hdr{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,30,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 8px;cursor:pointer;transition:all .2s;border:none;background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:10px;gap:4px}
+.bnav-btn.active{color:var(--gold)}
+.bnav-icon{font-size:20px;transition:transform .2s}
+.bnav-btn.active .bnav-icon{transform:scale(1.2)}
+
+/* PAGES */
+.page{display:none;min-height:100vh;padding-bottom:80px}
+.page.show{display:block}
+
+/* HEADER */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
 .hdr-inner{display:flex;align-items:center;gap:12px;padding:14px 18px}
 .hdr-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1a0a00,#C9952A);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.hdr-info{flex:1}
-.hdr-title{font-size:15px;font-weight:700;color:var(--text)}
+.hdr-title{flex:1;font-size:15px;font-weight:700}
 .hdr-sub{font-size:10px;color:var(--muted);margin-top:1px}
 .hdr-avatar{width:34px;height:34px;border-radius:50%;border:2px solid rgba(245,166,35,.5);object-fit:cover;flex-shrink:0}
 
-/* ── PROFILE HERO ── */
-.hero{margin:16px 18px;border-radius:20px;background:linear-gradient(135deg,#1a2a4a 0%,#0f1a33 50%,#1a1040 100%);padding:20px;position:relative;overflow:hidden;border:1px solid var(--border)}
-.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(79,142,247,.2),transparent 70%)}
-.hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,166,35,.1),transparent 70%)}
-.hero-top{display:flex;align-items:center;gap:14px;position:relative}
-.hero-avatar{width:56px;height:56px;border-radius:16px;object-fit:cover;border:2px solid rgba(245,166,35,.4);flex-shrink:0;background:var(--surface2)}
-.hero-name{font-size:17px;font-weight:700;color:#fff}
-.hero-pos{font-size:12px;color:var(--muted);margin-top:3px}
-.hero-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.3);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px}
-.hero-badge.daily{background:rgba(79,142,247,.15);color:var(--blue);border-color:rgba(79,142,247,.3)}
+/* ── PAGE: HOME ── */
+.profile-hero{margin:16px 18px;border-radius:22px;background:linear-gradient(160deg,#1a2a4a,#0f1a33,#1a1040);padding:22px;position:relative;overflow:hidden;border:1px solid var(--border)}
+.profile-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(79,142,247,.15),transparent 70%)}
+.profile-hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,166,35,.08),transparent 70%)}
+.ph-top{display:flex;align-items:center;gap:14px;position:relative}
+.ph-avatar{width:60px;height:60px;border-radius:18px;object-fit:cover;border:2px solid rgba(245,166,35,.4);flex-shrink:0}
+.ph-name{font-size:18px;font-weight:700;color:#fff}
+.ph-pos{font-size:12px;color:rgba(255,255,255,.5);margin-top:3px}
+.ph-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px}
+.badge-m{background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.3)}
+.badge-d{background:rgba(79,142,247,.15);color:var(--blue);border:1px solid rgba(79,142,247,.3)}
 
-/* ── TABS ── */
-.tabs-wrap{padding:0 18px 14px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface);border-radius:14px;padding:5px;border:1px solid var(--border)}
-.tab{padding:10px;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent;display:flex;align-items:center;justify-content:center;gap:6px}
-.tab.active{background:linear-gradient(135deg,#1a3a6a,#2a4f8a);color:#fff;box-shadow:0 4px 12px rgba(79,142,247,.3)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 18px 0}
+.stat-card{background:var(--surface);border-radius:16px;padding:14px 16px;border:1px solid var(--border)}
+.stat-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.stat-val{font-size:24px;font-weight:800;margin-top:4px}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
 
-/* ── MONTH LIST ── */
-.list-wrap{padding:0 18px 100px}
-.list-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.quick-actions{margin:14px 18px 0}
+.qa-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:all .15s;text-align:left}
+.qa-btn:active{transform:scale(.97)}
+.qa-icon{font-size:24px}
+.qa-label{font-size:13px;font-weight:600;color:var(--text)}
+.qa-desc{font-size:10px;color:var(--muted)}
+
+/* ── PAGE: SLIP ── */
+.month-list-wrap{padding:14px 18px 0}
+.ml-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ml-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
 .months{display:flex;flex-direction:column;gap:8px}
-.month-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
-.month-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,142,247,.05),transparent);opacity:0;transition:opacity .2s}
-.month-card:active::before{opacity:1}
-.month-card:active{transform:scale(.98)}
-.m-icon{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.m-icon-pay{background:linear-gradient(135deg,rgba(79,142,247,.2),rgba(79,142,247,.1));border:1px solid rgba(79,142,247,.2)}
-.m-info{flex:1}
-.m-name{font-size:14px;font-weight:600;color:var(--text)}
-.m-net{font-size:13px;color:var(--green);font-weight:600;margin-top:2px}
-.m-arrow{color:var(--muted2);font-size:18px;flex-shrink:0}
-
-/* ── EMPTY ── */
-.empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-icon{font-size:52px;margin-bottom:14px;opacity:.6}
-
-/* ── SKELETON ── */
-.sk{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200%;animation:sk 1.4s infinite;border-radius:14px}
-@keyframes sk{0%{background-position:200%}100%{background-position:-200%}}
-.sk-h{height:72px;margin-bottom:8px}
+.month-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s}
+.month-card:active{transform:scale(.98);background:var(--surface2)}
+.mc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.mc-pay{background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.2)}
+.mc-cert{background:rgba(123,97,255,.15);border:1px solid rgba(123,97,255,.2)}
+.mc-info{flex:1}
+.mc-name{font-size:14px;font-weight:600}
+.mc-net{font-size:13px;color:var(--green);font-weight:600;margin-top:2px}
+.mc-arrow{color:var(--muted);font-size:20px}
 
 /* ── DOC VIEW ── */
-.doc-view{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
+.doc-view{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column}
 .doc-view.show{display:flex}
-.doc-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;backdrop-filter:blur(20px)}
-.back-btn{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:16px;flex-shrink:0;transition:opacity .15s}
-.back-btn:active{opacity:.6}
-.doc-top-info{flex:1}
-.doc-top-title{font-size:15px;font-weight:700;color:var(--text)}
-.doc-top-month{font-size:11px;color:var(--muted);margin-top:2px}
-.doc-scroll{flex:1;overflow-y:auto;padding:16px 18px 100px}
+.dv-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.dv-back{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0}
+.dv-info{flex:1}
+.dv-title{font-size:15px;font-weight:700}
+.dv-month{font-size:11px;color:var(--muted);margin-top:2px}
+.dv-scroll{flex:1;overflow-y:auto;padding:16px 18px}
+.dv-actions{background:rgba(10,15,30,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;flex-shrink:0}
+.dv-btn{flex:1;padding:13px;border-radius:13px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s}
+.dv-btn:active{transform:scale(.97)}
+.btn-save{background:linear-gradient(135deg,#1a3a6a,#2a5fa0);color:#fff;box-shadow:0 4px 16px rgba(79,142,247,.3)}
+.btn-pdf{background:linear-gradient(135deg,#7a3500,#C9952A);color:#fff;box-shadow:0 4px 16px rgba(245,166,35,.3)}
+.btn-dis{opacity:.5;pointer-events:none}
 
-/* ── CERT CARD ── */
+/* ── PAGE: ATTENDANCE ── */
+.att-wrap{padding:14px 18px 0}
+.year-select{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.year-select::-webkit-scrollbar{display:none}
+.year-chip{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.year-chip.active{background:var(--gold);color:#000;border-color:var(--gold)}
+
+.month-group{margin-bottom:20px}
+.mg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mg-title{font-size:13px;font-weight:700;color:var(--text)}
+.mg-stats{display:flex;gap:8px}
+.mg-stat{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.mg-late{background:rgba(239,71,111,.15);color:var(--red);border:1px solid rgba(239,71,111,.2)}
+.mg-ok{background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.2)}
+
+.att-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:6px}
+.att-row{display:flex;align-items:center;padding:12px 14px;gap:12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.att-row:last-child{border-bottom:none}
+.att-date-col{flex-shrink:0;text-align:center;width:42px}
+.att-day{font-size:20px;font-weight:800;line-height:1;color:var(--text)}
+.att-weekday{font-size:9px;color:var(--muted);margin-top:2px}
+.att-divider{width:1px;height:32px;background:var(--border);flex-shrink:0}
+.att-info{flex:1}
+.att-time{font-size:15px;font-weight:700;color:var(--text)}
+.att-status{font-size:11px;margin-top:3px;display:flex;align-items:center;gap:5px}
+.status-ok{color:var(--green)}
+.status-late{color:var(--red)}
+.att-late-badge{background:rgba(239,71,111,.15);color:var(--red);border:1px solid rgba(239,71,111,.2);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:52px;margin-bottom:14px;opacity:.5}
+
+.sk{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200%;animation:sk 1.4s infinite;border-radius:14px}
+@keyframes sk{0%{background-position:200%}100%{background-position:-200%}}
+.sk-h{height:72px;margin-bottom:6px}
+
+/* CERT CARD */
 .cert-card{border-radius:20px;overflow:hidden;border:1px solid var(--border)}
-.cert-hero{background:linear-gradient(160deg,#2d1b69,#6C3483,#9B59B6);padding:28px 22px;position:relative;overflow:hidden}
+.cert-hero{background:linear-gradient(160deg,#2d1b69,#6C3483);padding:28px 22px;position:relative;overflow:hidden}
 .cert-hero::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;background:rgba(255,255,255,.06);border-radius:50%}
-.cert-hero::after{content:'';position:absolute;bottom:-60px;left:-30px;width:140px;height:140px;background:rgba(255,255,255,.04);border-radius:50%}
-.cert-tag{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:14px;letter-spacing:.05em}
-.cert-emp-name{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;position:relative}
-.cert-emp-pos{font-size:13px;color:rgba(255,255,255,.6);position:relative}
-.cert-month{font-size:11px;color:rgba(255,255,255,.4);margin-top:12px;position:relative}
-
-.cert-salary-section{background:var(--surface);padding:24px 22px;border-bottom:1px solid var(--border)}
-.cert-salary-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
-.cert-salary-amount{font-size:38px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1}
-.cert-salary-sub{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
-.cert-salary-badge{display:inline-block;background:rgba(155,89,182,.15);color:#C39BD3;border:1px solid rgba(155,89,182,.2);font-size:10px;font-weight:600;padding:2px 10px;border-radius:20px;margin-top:8px}
-
-.cert-info-section{background:var(--surface);padding:20px 22px}
-.cert-info-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
-.cert-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.cert-tag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:14px}
+.cert-name{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px}
+.cert-pos{font-size:13px;color:rgba(255,255,255,.6)}
+.cert-month{font-size:11px;color:rgba(255,255,255,.4);margin-top:12px}
+.cert-salary{background:var(--surface);padding:24px 22px;border-bottom:1px solid var(--border)}
+.cert-s-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.cert-s-amount{font-size:36px;font-weight:800;color:var(--text)}
+.cert-s-note{font-size:11px;color:var(--muted);margin-top:8px}
+.cert-info{background:var(--surface);padding:20px 22px}
+.cert-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .cert-row:last-child{border-bottom:none}
-.cert-row-label{font-size:13px;color:var(--muted)}
-.cert-row-val{font-size:13px;font-weight:600;color:var(--text)}
-
+.cert-rl{font-size:13px;color:var(--muted)}
+.cert-rv{font-size:13px;font-weight:600}
 .cert-footer{background:var(--surface2);padding:14px 22px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-/* ── PAYSLIP CARD ── */
+/* PAY CARD */
 .pay-card{border-radius:20px;overflow:hidden;border:1px solid var(--border)}
-.pay-hero{background:linear-gradient(160deg,#0a1628,#1a3a6a,#0f2040);padding:24px 22px;position:relative;overflow:hidden}
+.pay-hero{background:linear-gradient(160deg,#0a1628,#1a3a6a);padding:24px 22px;position:relative;overflow:hidden}
 .pay-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(79,142,247,.15),transparent)}
-.pay-tag{background:rgba(245,166,35,.15);backdrop-filter:blur(10px);border:1px solid rgba(245,166,35,.25);color:var(--gold);font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:14px;letter-spacing:.05em}
-.pay-emp-name{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
-.pay-emp-pos{font-size:13px;color:rgba(255,255,255,.5)}
+.pay-tag{background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.25);color:var(--gold);font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:14px}
+.pay-name{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+.pay-pos{font-size:13px;color:rgba(255,255,255,.5)}
 .pay-month{font-size:11px;color:rgba(255,255,255,.35);margin-top:10px}
-
-.pay-net-section{background:var(--surface);padding:22px;border-bottom:1px solid var(--border)}
-.pay-net-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
-.pay-net-amount{font-size:36px;font-weight:800;color:var(--green);letter-spacing:-.5px}
-
+.pay-net{background:var(--surface);padding:22px;border-bottom:1px solid var(--border)}
+.pay-nl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.pay-nv{font-size:34px;font-weight:800;color:var(--green)}
 .pay-body{background:var(--surface);padding:16px 22px}
-.pay-section-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.pay-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pay-st{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.pay-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .pay-row:last-child{border-bottom:none}
-.pay-row-label{font-size:13px;color:var(--muted)}
-.pay-row-val{font-size:13px;font-weight:600}
-.c-green{color:var(--green)}.c-red{color:var(--red)}.c-blue{color:var(--blue)}.c-text{color:var(--text)}
-.pay-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--border);margin-top:4px}
-.pay-total-label{font-size:13px;font-weight:700;color:var(--text)}
-.pay-total-val{font-size:15px;font-weight:700}
+.pay-rl{font-size:13px;color:var(--muted)}
+.pay-rv{font-size:13px;font-weight:600}
+.c-g{color:var(--green)}.c-r{color:var(--red)}.c-b{color:var(--blue)}.c-t{color:var(--text)}
+.pay-footer{background:var(--surface2);padding:14px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-.pay-footer{background:var(--surface2);padding:14px 22px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
-
-/* ── ACTION BAR ── */
-.action-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,30,.9);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:50}
-.act-btn{flex:1;padding:14px;border-radius:14px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
-.act-btn:active{transform:scale(.97)}
-.btn-save{background:linear-gradient(135deg,#1a3a6a,#2a5fa0);color:#fff;box-shadow:0 4px 16px rgba(79,142,247,.3);border:1px solid rgba(79,142,247,.2)}
-.btn-pdf{background:linear-gradient(135deg,#7a3500,#C9952A);color:#fff;box-shadow:0 4px 16px rgba(245,166,35,.3);border:1px solid rgba(245,166,35,.2)}
-.btn-disabled{opacity:.5;pointer-events:none}
-
-/* ── TOAST ── */
+/* TOAST */
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<div class="ls" id="loadingScreen">
+<div class="ls" id="ls">
   <div class="ls-logo">🏢</div>
   <div class="ls-title">TPE E-Slip</div>
   <div class="ls-sub">ธนพลเอ็นจิเนียริ่ง จำกัด</div>
-  <div class="ls-bar"><div class="ls-fill"></div></div>
+  <div class="ls-bar"><div class="ls-fill" style="width:0"></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <div id="app" style="display:none">
-  <div class="hdr">
-    <div class="hdr-inner">
-      <div class="hdr-logo">🏢</div>
-      <div class="hdr-info">
-        <div class="hdr-title">TPE E-Slip</div>
-        <div class="hdr-sub">เอกสารเงินเดือนออนไลน์</div>
-      </div>
-      <img id="headerAvatar" class="hdr-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
-    </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <button class="bnav-btn active" id="nav-home" onclick="showPage('home')">
+      <span class="bnav-icon">🏠</span>หน้าหลัก
+    </button>
+    <button class="bnav-btn" id="nav-slip" onclick="showPage('slip')">
+      <span class="bnav-icon">💰</span>สลิปเงินเดือน
+    </button>
+    <button class="bnav-btn" id="nav-att" onclick="showPage('att')">
+      <span class="bnav-icon">🕐</span>เวลาเข้างาน
+    </button>
   </div>
 
-  <!-- LIST VIEW -->
-  <div id="listView">
-    <div class="hero">
-      <div class="hero-top">
-        <img id="profileAvatar" class="hero-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+  <!-- ── PAGE: HOME ── -->
+  <div class="page show" id="page-home">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <div class="hdr-logo">🏢</div>
         <div>
-          <div class="hero-name" id="profileName">กำลังโหลด...</div>
-          <div class="hero-pos" id="profilePos">—</div>
-          <div id="profileWorkAge" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
-          <div class="hero-badge badge-monthly" id="profileBadge">● รายเดือน</div>
+          <div class="hdr-title">TPE E-Slip</div>
+          <div class="hdr-sub">ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+        </div>
+        <img id="hdrAvatar" class="hdr-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+      </div>
+    </div>
+
+    <div class="profile-hero">
+      <div class="ph-top">
+        <img id="phAvatar" class="ph-avatar" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+        <div>
+          <div class="ph-name" id="phName">กำลังโหลด...</div>
+          <div class="ph-pos" id="phPos">—</div>
+          <div class="ph-badge badge-m" id="phBadge">● รายเดือน</div>
         </div>
       </div>
     </div>
 
-    <div class="tabs-wrap">
-      <div class="tabs">
-        <button class="tab active" id="tabPayslip" onclick="switchTab('payslip')">💰 สลิปเงินเดือน</button>
-        <button class="tab" id="tabCert" onclick="switchTab('certificate')">📋 ใบรับรอง</button>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">เดือนนี้</div>
+        <div class="stat-val c-g" id="statDays">—</div>
+        <div class="stat-sub">วันที่สแกนเข้า</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">สายเดือนนี้</div>
+        <div class="stat-val c-r" id="statLate">—</div>
+        <div class="stat-sub">ครั้ง</div>
       </div>
     </div>
 
-    <div class="list-wrap">
-      <div class="list-title" id="listTitle">สลิปเงินเดือน</div>
+    <div class="quick-actions">
+      <div class="qa-title">เมนูลัด</div>
+      <div class="qa-grid">
+        <div class="qa-btn" onclick="showPage('slip')">
+          <div class="qa-icon">💰</div>
+          <div class="qa-label">สลิปเงินเดือน</div>
+          <div class="qa-desc">ดูสลิปย้อนหลัง</div>
+        </div>
+        <div class="qa-btn" onclick="openCertDirect()">
+          <div class="qa-icon">📋</div>
+          <div class="qa-label">ใบรับรองเงินเดือน</div>
+          <div class="qa-desc">บันทึกรูป / PDF</div>
+        </div>
+        <div class="qa-btn" onclick="showPage('att')">
+          <div class="qa-icon">🕐</div>
+          <div class="qa-label">เวลาเข้างาน</div>
+          <div class="qa-desc">ประวัติการสแกน</div>
+        </div>
+        <div class="qa-btn" onclick="showToast('🚧 เร็วๆ นี้')">
+          <div class="qa-icon">📊</div>
+          <div class="qa-label">สรุปรายเดือน</div>
+          <div class="qa-desc">เร็วๆ นี้</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: SLIP ── -->
+  <div class="page" id="page-slip">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <div class="hdr-logo">💰</div>
+        <div>
+          <div class="hdr-title">สลิปเงินเดือน</div>
+          <div class="hdr-sub" id="slipSub">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="month-list-wrap">
+      <div class="ml-header">
+        <div class="ml-title">เลือกเดือน</div>
+      </div>
       <div id="monthList">
-        <div class="sk sk-h"></div>
-        <div class="sk sk-h"></div>
-        <div class="sk sk-h"></div>
+        <div class="sk sk-h"></div><div class="sk sk-h"></div><div class="sk sk-h"></div>
       </div>
     </div>
   </div>
 
-  <!-- DOC VIEW -->
-  <div id="docView" class="doc-view">
-    <div class="doc-topbar">
-      <div class="back-btn" onclick="goBack()">←</div>
-      <div class="doc-top-info">
-        <div class="doc-top-title" id="docTitle">เอกสาร</div>
-        <div class="doc-top-month" id="docMonth"></div>
+  <!-- ── PAGE: ATTENDANCE ── -->
+  <div class="page" id="page-att">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <div class="hdr-logo">🕐</div>
+        <div>
+          <div class="hdr-title">เวลาเข้างาน</div>
+          <div class="hdr-sub">08:00 — ตรงเวลา | หลัง 08:00:59 — สาย</div>
+        </div>
       </div>
     </div>
-    <div class="doc-scroll">
-      <div id="docRender"></div>
+    <div class="att-wrap">
+      <div class="year-select" id="yearSelect"></div>
+      <div id="attContent"><div class="sk sk-h"></div><div class="sk sk-h"></div></div>
     </div>
   </div>
 
-  <!-- ACTION BAR -->
-  <div class="action-bar" id="actionBar" style="display:none">
-    <button class="act-btn btn-save" id="btnSave" onclick="saveImage()">💾 บันทึกรูป</button>
-    <button class="act-btn btn-pdf" id="btnPdf" onclick="downloadPdf()">📄 PDF</button>
+  <!-- ── DOC VIEW ── -->
+  <div class="doc-view" id="docView">
+    <div class="dv-topbar">
+      <div class="dv-back" onclick="closeDoc()">←</div>
+      <div class="dv-info">
+        <div class="dv-title" id="dvTitle">เอกสาร</div>
+        <div class="dv-month" id="dvMonth"></div>
+      </div>
+    </div>
+    <div class="dv-scroll"><div id="dvRender"></div></div>
+    <div class="dv-actions">
+      <button class="dv-btn btn-save" id="btnSave" onclick="saveImg()">💾 บันทึกรูป</button>
+      <button class="dv-btn btn-pdf" id="btnPdf" onclick="dlPdf()">📄 PDF</button>
+    </div>
   </div>
+
 </div>
 
 <script>
 const API='https://tpe-hr-bot.onrender.com';
 const LIFF_ID='2010255039-6dQLsh35';
-let currentTab='payslip',empData=null,currentDocData=null;
+let empData=null, attData=[], currentDoc=null, currentYear=null;
 
+// ── INIT ──
 async function init(){
-  const t=setTimeout(()=>{hide();document.getElementById('profileName').textContent='โหลดช้า กรุณารีเฟรช';},8000);
+  const t=setTimeout(()=>{hide();document.getElementById('phName').textContent='โหลดช้า กรุณารีเฟรช';},10000);
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login();return;}
     const p=await liff.getProfile();
-    document.getElementById('headerAvatar').src=p.pictureUrl||'';
-    document.getElementById('profileAvatar').src=p.pictureUrl||'';
-    await loadEmployee(p.userId);
-  }catch(e){document.getElementById('profileName').textContent='เกิดข้อผิดพลาด';}
+    ['hdrAvatar','phAvatar'].forEach(id=>document.getElementById(id).src=p.pictureUrl||'');
+    await loadEmp(p.userId);
+  }catch(e){document.getElementById('phName').textContent='เกิดข้อผิดพลาด';}
   finally{clearTimeout(t);hide();}
 }
-function hide(){document.getElementById('loadingScreen').classList.add('hide');document.getElementById('app').style.display='block';}
+function hide(){document.getElementById('ls').classList.add('hide');document.getElementById('app').style.display='block';}
 
-async function loadEmployee(lineId){
+async function loadEmp(lineId){
   try{
     const r=await fetch(`${API}/eslip/employee?lineId=${lineId}`);
     const d=await r.json();
-    if(!d||d.error){document.getElementById('profileName').textContent='ไม่พบข้อมูลพนักงาน';return;}
+    if(!d||d.error)return;
     empData=d;
-    document.getElementById('profileName').textContent=d.name;
-    document.getElementById('profilePos').textContent=d.position||'ไม่ระบุตำแหน่ง';
-
-    // คำนวณอายุงาน
-    let workAge='';
-    if(d.startDate){
-      try{
-        const parts=d.startDate.split('/');
-        const start=new Date(parseInt(parts[2])-543,parseInt(parts[1])-1,parseInt(parts[0]));
-        const now=new Date();
-        const months=Math.floor((now-start)/(1000*60*60*24*30.44));
-        const y=Math.floor(months/12),m=months%12;
-        workAge=y>0?(m>0?`${y} ปี ${m} เดือน`:`${y} ปี`):(m>0?`${m} เดือน`:'');
-      }catch(e){}
-    }
-    document.getElementById('profileWorkAge').textContent=workAge?`⏱ อายุงาน ${workAge}`:'';
-
-    const b=document.getElementById('profileBadge');
+    document.getElementById('phName').textContent=d.name;
+    document.getElementById('phPos').textContent=d.position||'—';
+    document.getElementById('slipSub').textContent=d.name;
+    const b=document.getElementById('phBadge');
     b.textContent=d.payType==='daily'?'● รายวัน':'● รายเดือน';
-    b.className='hero-badge'+(d.payType==='daily'?' daily':'');
-    loadMonths('payslip');
-  }catch(e){document.getElementById('profileName').textContent='โหลดไม่สำเร็จ';}
+    b.className='ph-badge '+(d.payType==='daily'?'badge-d':'badge-m');
+    loadSlipMonths();
+    loadAttendance();
+  }catch(e){}
 }
 
-function switchTab(tab){
-  currentTab=tab;
-  document.getElementById('tabPayslip').classList.toggle('active',tab==='payslip');
-  document.getElementById('tabCert').classList.toggle('active',tab==='certificate');
-  if(tab==='certificate'){openCertDirect();}
-  else{document.getElementById('listTitle').textContent='สลิปเงินเดือน';loadMonths('payslip');}
+// ── PAGES ──
+function showPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('show');
+  document.getElementById('nav-'+page).classList.add('active');
+}
+
+// ── SLIP ──
+async function loadSlipMonths(){
+  if(!empData)return;
+  const list=document.getElementById('monthList');
+  list.innerHTML='<div class="sk sk-h"></div><div class="sk sk-h"></div><div class="sk sk-h"></div>';
+  try{
+    const r=await fetch(`${API}/eslip/months?lineId=${empData.lineId}&payType=${empData.payType}`);
+    const months=await r.json();
+    if(!months.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีข้อมูล</p></div>';return;}
+    list.innerHTML=months.map(m=>`
+      <div class="month-card" onclick="openDoc('payslip','${m.month}')">
+        <div class="mc-icon mc-pay">💰</div>
+        <div class="mc-info">
+          <div class="mc-name">${m.month}</div>
+          ${m.netPay?`<div class="mc-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>`:''}
+        </div>
+        <div class="mc-arrow">›</div>
+      </div>`).join('');
+  }catch(e){list.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
 }
 
 async function openCertDirect(){
@@ -300,143 +401,200 @@ async function openCertDirect(){
   try{
     const r=await fetch(`${API}/eslip/months?lineId=${empData.lineId}&payType=${empData.payType}`);
     const months=await r.json();
-    if(!months.length){showToast('⚠️ ยังไม่มีข้อมูลในระบบ');return;}
+    if(!months.length){showToast('⚠️ ยังไม่มีข้อมูล');return;}
     openDoc('certificate',months[0].month);
   }catch(e){showToast('❌ โหลดไม่สำเร็จ');}
 }
 
-async function loadMonths(tab){
-  if(!empData)return;
-  const list=document.getElementById('monthList');
-  list.innerHTML='<div class="sk sk-h"></div><div class="sk sk-h"></div><div class="sk sk-h"></div>';
-  try{
-    const r=await fetch(`${API}/eslip/months?lineId=${empData.lineId}&payType=${empData.payType}`);
-    const months=await r.json();
-    if(!months.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีข้อมูล<br>กรุณาติดต่อ HR</p></div>';return;}
-    list.innerHTML=months.map(m=>`
-      <div class="month-card" onclick="openDoc('payslip','${m.month}')">
-        <div class="m-icon m-icon-pay">💰</div>
-        <div class="m-info">
-          <div class="m-name">${m.month}</div>
-          ${m.netPay?`<div class="m-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>`:''}
-        </div>
-        <div class="m-arrow">›</div>
-      </div>`).join('');
-  }catch(e){list.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
-}
-
+// ── DOC VIEW ──
 async function openDoc(docType,month){
   if(!empData)return;
-  currentDocData={docType,month};
-  document.getElementById('listView').style.display='none';
+  currentDoc={docType,month};
+  document.getElementById('dvTitle').textContent=docType==='payslip'?'สลิปเงินเดือน':'ใบรับรองเงินเดือน';
+  document.getElementById('dvMonth').textContent=month;
+  document.getElementById('dvRender').innerHTML='<div class="sk" style="height:500px;border-radius:20px"></div>';
   document.getElementById('docView').classList.add('show');
-  document.getElementById('actionBar').style.display='flex';
-  document.getElementById('docTitle').textContent=docType==='payslip'?'สลิปเงินเดือน':'ใบรับรองเงินเดือน';
-  document.getElementById('docMonth').textContent=month;
-  const render=document.getElementById('docRender');
-  render.innerHTML='<div style="padding:40px;text-align:center"><div class="sk" style="height:500px;border-radius:20px"></div></div>';
   try{
     const r=await fetch(`${API}/eslip/data?lineId=${empData.lineId}&docType=${docType}&month=${encodeURIComponent(month)}`);
-    if(!r.ok)throw new Error('โหลดไม่สำเร็จ');
     const d=await r.json();
     if(!d||d.error)throw new Error(d?.error||'ไม่พบข้อมูล');
-    render.innerHTML=docType==='certificate'?renderCert(d,month):renderPay(d,month);
-  }catch(e){render.innerHTML=`<div style="padding:40px;text-align:center;color:var(--muted)">⚠️ ${e.message}</div>`;}
+    document.getElementById('dvRender').innerHTML=docType==='certificate'?renderCert(d,month):renderPay(d,month);
+  }catch(e){document.getElementById('dvRender').innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;}
+}
+function closeDoc(){document.getElementById('docView').classList.remove('show');}
+
+// ── ATTENDANCE ──
+async function loadAttendance(){
+  if(!empData)return;
+  try{
+    const r=await fetch(`${API}/eslip/attendance?lineId=${empData.lineId}`);
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    attData=d.records||[];
+
+    // คำนวณ stats เดือนนี้
+    const now=new Date();
+    const thisMonth=String(now.getMonth()+1).padStart(2,'0');
+    const thisYear=now.getFullYear();
+    const thisMonthRecs=attData.filter(r=>{
+      const [dd,mm,yyyy]=r.date.split('/');
+      return parseInt(yyyy)===thisYear && mm===thisMonth;
+    });
+    document.getElementById('statDays').textContent=thisMonthRecs.length;
+    document.getElementById('statLate').textContent=thisMonthRecs.filter(r=>r.late).length;
+
+    renderAttendance();
+  }catch(e){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
 }
 
-function goBack(){
-  document.getElementById('listView').style.display='block';
-  document.getElementById('docView').classList.remove('show');
-  document.getElementById('actionBar').style.display='none';
-  if(currentDocData?.docType==='certificate'){
-    currentTab='payslip';
-    document.getElementById('tabPayslip').classList.add('active');
-    document.getElementById('tabCert').classList.remove('active');
-    document.getElementById('listTitle').textContent='สลิปเงินเดือน';
-    loadMonths('payslip');
+function renderAttendance(){
+  if(!attData.length){
+    document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติ</p></div>';
+    return;
   }
+
+  // จัดกลุ่มตามปี
+  const byYear={};
+  attData.forEach(r=>{
+    const [dd,mm,yyyy]=r.date.split('/');
+    if(!byYear[yyyy])byYear[yyyy]=[];
+    byYear[yyyy].push({...r,dd:parseInt(dd),mm:parseInt(mm),yyyy:parseInt(yyyy)});
+  });
+
+  const years=Object.keys(byYear).sort((a,b)=>b-a);
+
+  // Year chips
+  const sel=document.getElementById('yearSelect');
+  sel.innerHTML=years.map((y,i)=>`<div class="year-chip${i===0?' active':''}" onclick="selectYear('${y}')">${parseInt(y)+543}</div>`).join('');
+
+  currentYear=years[0];
+  renderYear(currentYear,byYear);
+
+  window._attByYear=byYear;
 }
 
+function selectYear(y){
+  currentYear=y;
+  document.querySelectorAll('.year-chip').forEach(c=>{
+    c.classList.toggle('active',c.textContent==parseInt(y)+543);
+  });
+  renderYear(y,window._attByYear);
+}
+
+const MONTH_NAMES=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+function renderYear(y,byYear){
+  const recs=byYear[y]||[];
+  // จัดกลุ่มตามเดือน
+  const byMonth={};
+  recs.forEach(r=>{
+    if(!byMonth[r.mm])byMonth[r.mm]=[];
+    byMonth[r.mm].push(r);
+  });
+
+  const months=Object.keys(byMonth).map(Number).sort((a,b)=>b-a);
+  const html=months.map(m=>{
+    const mrs=byMonth[m].sort((a,b)=>b.dd-a.dd);
+    const lateCount=mrs.filter(r=>r.late).length;
+    const rows=mrs.map(r=>{
+      const dateObj=new Date(r.yyyy,r.mm-1,r.dd);
+      const wd=DAY_NAMES[dateObj.getDay()];
+      return`<div class="att-row">
+        <div class="att-date-col">
+          <div class="att-day">${String(r.dd).padStart(2,'0')}</div>
+          <div class="att-weekday">${wd}</div>
+        </div>
+        <div class="att-divider"></div>
+        <div class="att-info">
+          <div class="att-time">${r.time}</div>
+          <div class="att-status ${r.late?'status-late':'status-ok'}">
+            ${r.late?'⚠️ สาย':'✅ ตรงเวลา'}
+          </div>
+        </div>
+        ${r.late?`<div class="att-late-badge">+${r.lateMinutes} นาที</div>`:''}
+      </div>`;
+    }).join('');
+
+    return`<div class="month-group">
+      <div class="mg-header">
+        <div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)+543}</div>
+        <div class="mg-stats">
+          <span class="mg-stat mg-ok">${mrs.length} วัน</span>
+          ${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}
+        </div>
+      </div>
+      <div class="att-card">${rows}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('attContent').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div><p>ไม่มีข้อมูลในปีนี้</p></div>';
+}
+
+// ── RENDER CARDS ──
 function fmt(n){return(Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 function renderCert(d,month){
   const salary=d.payType==='daily'?(parseFloat(d.baseWage)||0)*26:(parseFloat(d.baseWage)||parseFloat(d.basePay)||0);
   const today=new Date();
   const thM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const dateStr=`${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
+  const ds=`${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
   return`<div class="cert-card">
     <div class="cert-hero">
       <div class="cert-tag">📋 ใบรับรองเงินเดือน</div>
-      <div class="cert-emp-name">${d.name||'—'}</div>
-      <div class="cert-emp-pos">${d.position||'—'}</div>
+      <div class="cert-name">${d.name||'—'}</div>
+      <div class="cert-pos">${d.position||'—'}</div>
       <div class="cert-month">📅 ${month}</div>
     </div>
-    <div class="cert-salary-section">
-      <div class="cert-salary-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div>
-      <div class="cert-salary-amount">฿${fmt(salary)}</div>
-      <div class="cert-salary-sub">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div>
-      <div class="cert-salary-badge">${d.payType==='daily'?'รายวัน':'รายเดือน'}</div>
+    <div class="cert-salary">
+      <div class="cert-s-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div>
+      <div class="cert-s-amount">฿${fmt(salary)}</div>
+      <div class="cert-s-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div>
     </div>
-    <div class="cert-info-section">
-      <div class="cert-info-title">ข้อมูลการจ้างงาน</div>
-      <div class="cert-row"><span class="cert-row-label">ตำแหน่ง</span><span class="cert-row-val">${d.position||'—'}</span></div>
-      <div class="cert-row"><span class="cert-row-label">ประเภทการจ้าง</span><span class="cert-row-val">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
-      ${d.startDate?`<div class="cert-row"><span class="cert-row-label">วันเริ่มงาน</span><span class="cert-row-val">${d.startDate}</span></div>`:''}
+    <div class="cert-info">
+      <div class="cert-row"><span class="cert-rl">ตำแหน่ง</span><span class="cert-rv">${d.position||'—'}</span></div>
+      <div class="cert-row"><span class="cert-rl">ประเภท</span><span class="cert-rv">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
     </div>
-    <div class="cert-footer">ออกให้ ณ วันที่ ${dateStr} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
+    <div class="cert-footer">ออกให้ ณ วันที่ ${ds} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   </div>`;
 }
 
 function renderPay(d,month){
-  const row=(l,v,cls)=>{const n=parseFloat(v)||0;if(!n)return'';return`<div class="pay-row"><span class="pay-row-label">${l}</span><span class="pay-row-val ${cls||'c-text'}">${fmt(Math.abs(n))}</span></div>`;};
+  const row=(l,v,c)=>{const n=parseFloat(v)||0;if(!n)return'';return`<div class="pay-row"><span class="pay-rl">${l}</span><span class="pay-rv ${c}">${fmt(Math.abs(n))}</span></div>`;};
   return`<div class="pay-card">
     <div class="pay-hero">
       <div class="pay-tag">💰 สลิปเงินเดือน</div>
-      <div class="pay-emp-name">${d.name||'—'}</div>
-      <div class="pay-emp-pos">${d.position||'—'}</div>
+      <div class="pay-name">${d.name||'—'}</div>
+      <div class="pay-pos">${d.position||'—'}</div>
       <div class="pay-month">📅 ${month}</div>
     </div>
-    <div class="pay-net-section">
-      <div class="pay-net-label">เงินได้สุทธิ</div>
-      <div class="pay-net-amount">฿${fmt(d.netPay)}</div>
-    </div>
+    <div class="pay-net"><div class="pay-nl">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div>
     <div class="pay-body">
-      <div class="pay-section-title">สถิติการทำงาน</div>
-      ${row('วันทำงาน',d.workDays,'c-text')}
-      ${row('OT (ชม.)',d.otH,'c-blue')}
-      ${row('ลากิจ',d.leaveP,'c-text')}
-      ${row('ลาป่วย',d.leaveSick,'c-text')}
-      <div class="pay-section-title">รายได้</div>
-      ${row('ค่าจ้างปกติ',d.basePay||d.baseWage,'c-green')}
-      ${row('ค่า OT',d.otPay,'c-green')}
-      ${row('เบี้ยเลี้ยง',d.allowance,'c-green')}
-      ${row('เบี้ยขยัน',d.bonus,'c-green')}
-      ${row('รายได้อื่นๆ',d.otherInc,'c-green')}
-      <div class="pay-total-row"><span class="pay-total-label">รวมรายได้</span><span class="pay-total-val c-green">฿${fmt(d.totalInc)}</span></div>
-      <div class="pay-section-title">รายการหัก</div>
-      ${row('ประกันสังคม',d.soc,'c-red')}
-      ${row('ภาษี ณ ที่จ่าย',d.tax,'c-red')}
-      ${row('หักล่วงหน้า',d.advance,'c-red')}
-      ${row('กยศ.',d.kot,'c-red')}
-      ${row('รายการหักอื่นๆ',d.otherDed,'c-red')}
-      <div class="pay-total-row"><span class="pay-total-label">รวมหัก</span><span class="pay-total-val c-red">฿${fmt(d.totalDed)}</span></div>
+      <div class="pay-st">สถิติการทำงาน</div>
+      ${row('วันทำงาน',d.workDays,'c-t')}${row('OT (ชม.)',d.otH,'c-b')}${row('ลากิจ',d.leaveP,'c-t')}${row('ลาป่วย',d.leaveSick,'c-t')}
+      <div class="pay-st">รายได้</div>
+      ${row('ค่าจ้างปกติ',d.basePay||d.baseWage,'c-g')}${row('ค่า OT',d.otPay,'c-g')}${row('เบี้ยเลี้ยง',d.allowance,'c-g')}${row('เบี้ยขยัน',d.bonus,'c-g')}${row('รายได้อื่นๆ',d.otherInc,'c-g')}
+      <div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมรายได้</span><span class="pay-rv c-g">฿${fmt(d.totalInc)}</span></div>
+      <div class="pay-st">รายการหัก</div>
+      ${row('ประกันสังคม',d.soc,'c-r')}${row('ภาษี ณ ที่จ่าย',d.tax,'c-r')}${row('หักล่วงหน้า',d.advance,'c-r')}${row('กยศ.',d.kot,'c-r')}${row('รายการหักอื่นๆ',d.otherDed,'c-r')}
+      <div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมหัก</span><span class="pay-rv c-r">฿${fmt(d.totalDed)}</span></div>
     </div>
-    <div class="pay-net-section" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)">
-      <div class="pay-net-label" style="color:var(--green)">เงินได้สุทธิ</div>
-      <div class="pay-net-amount">฿${fmt(d.netPay)}</div>
+    <div class="pay-net" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)">
+      <div class="pay-nl" style="color:var(--green)">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div>
     </div>
     <div class="pay-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   </div>`;
 }
 
-async function logError(step,msg){try{await fetch(`${API}/eslip/log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step,message:msg,ua:navigator.userAgent,lineId:empData?.lineId||'?',time:new Date().toISOString()})});}catch(e){}}
+// ── SAVE IMAGE ──
+async function logErr(s,m){try{await fetch(`${API}/eslip/log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:s,message:m,ua:navigator.userAgent,lineId:empData?.lineId||'?',time:new Date().toISOString()})});}catch(e){}}
 
-async function saveImage(){
+async function saveImg(){
   const btn=document.getElementById('btnSave');
-  if(!btn||!currentDocData||!empData)return;
-  btn.textContent='⏳ กำลังสร้างรูป...';btn.classList.add('btn-disabled');
+  if(!btn||!currentDoc||!empData)return;
+  btn.textContent='⏳ กำลังสร้างรูป...';btn.classList.add('btn-dis');
   try{
-    const r=await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`);
+    const r=await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`);
     if(!r.ok)throw new Error('โหลดไม่สำเร็จ ('+r.status+')');
     const data=await r.json();
     if(!data.html)throw new Error(data.error||'ไม่พบข้อมูล');
@@ -449,12 +607,12 @@ async function saveImage(){
     document.body.removeChild(w);
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.92));
     if(!blob)throw new Error('สร้างรูปไม่สำเร็จ');
-    const filename='สลิป_'+currentDocData.month+'.jpg';
+    const filename='สลิป_'+currentDoc.month+'.jpg';
     const file=new File([blob],filename,{type:'image/jpeg'});
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     if(isIOS&&navigator.share&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});showToast('✅ บันทึกรูปสำเร็จ');return;}
-    const isInLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
-    if(isInLiff){
+    const isLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
+    if(isLiff){
       const fd=new FormData();fd.append('file',blob,filename);
       const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});
       const ud=await up.json();if(!ud.url)throw new Error('upload failed');
@@ -465,29 +623,28 @@ async function saveImage(){
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(objUrl),3000);showToast('✅ บันทึกรูปสำเร็จ');
   }catch(e){
-    await logError('saveImage_ERROR',e.name+': '+e.message);
-    if(e.name==='AbortError')showToast('ยกเลิกการบันทึก');else showToast('❌ '+e.message);
-  }finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-disabled');}
+    await logErr('saveImage_ERROR',e.name+': '+e.message);
+    if(e.name==='AbortError')showToast('ยกเลิก');else showToast('❌ '+e.message);
+  }finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-dis');}
 }
 
-async function downloadPdf(){
-  if(!currentDocData||!empData)return;
+async function dlPdf(){
+  if(!currentDoc||!empData)return;
   const btn=document.getElementById('btnPdf');
-  btn.textContent='⏳ กำลังสร้าง PDF...';btn.classList.add('btn-disabled');
-  try{
-    const url=`${API}/eslip/pdf?lineId=${empData.lineId}&docType=${currentDocData.docType}&month=${encodeURIComponent(currentDocData.month)}`;
-    const win=window.open(url,'_blank');
-    if(!win){const a=document.createElement('a');a.href=url;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);}
-    showToast('📄 กำลังเปิด PDF...');
-  }catch(e){showToast('❌ '+e.message);}
-  finally{btn.textContent='📄 PDF';btn.classList.remove('btn-disabled');}
+  btn.textContent='⏳...';btn.classList.add('btn-dis');
+  const url=`${API}/eslip/pdf?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`;
+  const win=window.open(url,'_blank');
+  if(!win){const a=document.createElement('a');a.href=url;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  showToast('📄 กำลังเปิด PDF...');
+  btn.textContent='📄 PDF';btn.classList.remove('btn-dis');
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
-const urlParams=new URLSearchParams(window.location.search);
-const debugLineId=urlParams.get('lineId');
-if(urlParams.get('debug')==='1'&&debugLineId){hide();loadEmployee(debugLineId);}
+// ── START ──
+const up=new URLSearchParams(window.location.search);
+const did=up.get('lineId');
+if(up.get('debug')==='1'&&did){hide();empData={lineId:did};loadEmp(did);}
 else{init();}
 </script>
 </body>
