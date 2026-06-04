@@ -33,10 +33,16 @@ function parseAttendance(text) {
   };
 }
 
-// บันทึก Google Sheets
-async function saveAttendance(sheets, spreadsheetId, data) {
+// queue สำหรับ batch write
+const writeQueue = [];
+let writing = false;
+
+async function flushQueue(sheets, spreadsheetId) {
+  if (writing || !writeQueue.length) return;
+  writing = true;
   const sheetName = 'Attendance';
   try {
+    // ตรวจ sheet
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
     const exists = meta.data.sheets.some(s => s.properties.title === sheetName);
     if (!exists) {
@@ -49,14 +55,28 @@ async function saveAttendance(sheets, spreadsheetId, data) {
         requestBody: { values: [['วันที่', 'เวลา', 'ID', 'ชื่อ', 'โหมด', 'บันทึกเมื่อ']] }
       });
     }
-  } catch(e) { console.error('sheet check:', e.message); }
+    // เขียนทีละ 20 rows
+    while (writeQueue.length > 0) {
+      const batch = writeQueue.splice(0, 20);
+      await sheets.spreadsheets.values.append({
+        spreadsheetId, range: `${sheetName}!A:F`, valueInputOption: 'RAW',
+        requestBody: { values: batch }
+      });
+      if (writeQueue.length > 0) await new Promise(r => setTimeout(r, 2000));
+    }
+  } catch(e) {
+    console.error('[GramJS] flush error:', e.message);
+  }
+  writing = false;
+}
 
+// บันทึก Google Sheets (queue-based)
+async function saveAttendance(sheets, spreadsheetId, data) {
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-  await sheets.spreadsheets.values.append({
-    spreadsheetId, range: `${sheetName}!A:F`, valueInputOption: 'RAW',
-    requestBody: { values: [[data.date, data.time, data.id, data.name, data.mode, now]] }
-  });
+  writeQueue.push([data.date, data.time, data.id, data.name, data.mode, now]);
   console.log(`[GramJS] ✅ ${data.name} | ${data.date} ${data.time}`);
+  // flush ทุก 3 วินาที
+  setTimeout(() => flushQueue(sheets, spreadsheetId), 3000);
 }
 
 // เริ่ม GramJS client
@@ -111,7 +131,6 @@ async function startGramJS(sheets, spreadsheetId) {
 
       let count = 0;
       for (const msg of messages.reverse()) {
-        // ข้ามข้อความก่อน 1 มิถุนายน
         if (msg.date < sinceUnix) continue;
         const text = msg.text || '';
         const data = parseAttendance(text);
@@ -119,7 +138,11 @@ async function startGramJS(sheets, spreadsheetId) {
         await saveAttendance(sheets, spreadsheetId, data);
         count++;
       }
-      console.log(`[GramJS] ดึงย้อนหลังเสร็จ บันทึก ${count} รายการ`);
+      console.log(`[GramJS] queue ${count} รายการ กำลังเขียน Sheets...`);
+      // flush ทั้งหมดหลัง queue เสร็จ
+      await new Promise(r => setTimeout(r, 4000));
+      await flushQueue(sheets, spreadsheetId);
+      console.log('[GramJS] ดึงย้อนหลังเสร็จ ✅');
     } catch(e) {
       console.error('[GramJS] ดึงย้อนหลังไม่สำเร็จ:', e.message);
     }
