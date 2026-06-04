@@ -75,12 +75,15 @@ async function pollTelegram(sheets, spreadsheetId) {
       const msg = update.message;
       if (!msg) continue;
 
-      // รับเฉพาะข้อความจาก owner chat ID
-      if (String(msg.chat.id) !== String(OWNER_CHAT_ID)) continue;
+      // Log ทุก message เพื่อ debug
+      console.log(`[Attendance] msg from chat_id=${msg.chat.id} type=${msg.chat.type} text=${(msg.text||'').slice(0,50)}`);
 
+      // รับทุก chat ID (ไม่ filter) เพื่อ debug
       const data = parseAttendance(msg.text);
-      if (!data) continue;
-
+      if (!data) {
+        console.log('[Attendance] parse failed — ไม่ใช่ข้อความ attendance');
+        continue;
+      }
       await saveAttendance(sheets, spreadsheetId, data);
     }
   } catch(e) {
