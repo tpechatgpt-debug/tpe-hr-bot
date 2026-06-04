@@ -57,7 +57,8 @@ async function saveAttendance(sheets, spreadsheetId, data) {
 async function pollTelegram(sheets, spreadsheetId) {
   try {
     const r = await axios.get(`${TELEGRAM_API}/getUpdates`, {
-      params: { offset: lastUpdateId + 1, timeout: 10, allowed_updates: ['message'] }
+      params: { offset: lastUpdateId + 1, limit: 100 },
+      timeout: 5000
     });
     const updates = r.data.result || [];
     for (const update of updates) {
