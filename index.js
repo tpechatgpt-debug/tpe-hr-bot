@@ -624,13 +624,13 @@ app.post('/telegram-webhook', async (req, res) => {
 // ── ตั้ง Telegram Webhook ──────────────────────────────
 app.get('/telegram-setup', async (req, res) => {
   try {
-    const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
-    const webhookUrl = `${RENDER_URL}/telegram-webhook`;
-    const r = await require('axios').post(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/setWebhook`,
-      { url: webhookUrl }
+    const token = process.env.TELEGRAM_TOKEN;
+    // ลบ Webhook ออกก่อนเสมอ เพื่อให้ polling ทำงานได้
+    await require('axios').post(
+      `https://api.telegram.org/bot${token}/deleteWebhook`,
+      { drop_pending_updates: true }
     );
-    res.json({ ok: true, result: r.data, webhookUrl });
+    res.json({ ok: true, message: 'Webhook removed — polling is active' });
   } catch(e) {
     res.json({ ok: false, error: e.message });
   }
