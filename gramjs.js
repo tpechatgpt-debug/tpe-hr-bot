@@ -33,6 +33,25 @@ function parseAttendance(text) {
   };
 }
 
+// ชุดข้อมูลที่มีอยู่แล้วใน Sheet (เพื่อกันซ้ำ)
+const existingKeys = new Set();
+
+async function loadExistingKeys(sheets, spreadsheetId) {
+  try {
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId, range: 'Attendance!A:D',
+    });
+    const rows = (r.data.values || []).slice(1);
+    rows.forEach(row => {
+      const key = `${row[0]}_${row[1]}_${row[3]}`; // date_time_name
+      existingKeys.add(key);
+    });
+    console.log(`[GramJS] โหลด ${existingKeys.size} รายการที่มีอยู่แล้ว`);
+  } catch(e) {
+    console.error('[GramJS] loadExistingKeys error:', e.message);
+  }
+}
+
 // queue สำหรับ batch write
 const writeQueue = [];
 let writing = false;
@@ -70,12 +89,14 @@ async function flushQueue(sheets, spreadsheetId) {
   writing = false;
 }
 
-// บันทึก Google Sheets (queue-based)
+// บันทึก Google Sheets (queue-based + กันซ้ำ)
 async function saveAttendance(sheets, spreadsheetId, data) {
+  const key = `${data.date}_${data.time}_${data.name}`;
+  if (existingKeys.has(key)) return; // ข้ามถ้ามีอยู่แล้ว
+  existingKeys.add(key);
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
   writeQueue.push([data.date, data.time, data.id, data.name, data.mode, now]);
   console.log(`[GramJS] ✅ ${data.name} | ${data.date} ${data.time}`);
-  // flush ทุก 3 วินาที
   setTimeout(() => flushQueue(sheets, spreadsheetId), 3000);
 }
 
@@ -122,6 +143,7 @@ async function startGramJS(sheets, spreadsheetId) {
       const sinceDate = new Date('2026-06-01T00:00:00+07:00');
       const sinceUnix = Math.floor(sinceDate.getTime() / 1000);
       console.log('[GramJS] กำลังดึงข้อความย้อนหลังตั้งแต่ 1 มิ.ย. 2569...');
+      await loadExistingKeys(sheets, spreadsheetId);
 
       const botEntity = await client.getEntity(BOT_USERNAME);
       const messages  = await client.getMessages(botEntity, {
