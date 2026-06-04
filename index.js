@@ -603,6 +603,73 @@ app.post('/portal/approve', express.json(), async (req, res) => {
   res.status(400).json({ error: 'invalid action' });
 });
 
+
+// ════════════════════════════════════════════════════════
+// E-Slip: ดึงข้อมูลเวลาเข้า-ออกของพนักงาน
+// ════════════════════════════════════════════════════════
+app.get('/eslip/attendance', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+
+    // ดึงชื่อพนักงานจาก Lark
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const posMatch = rawName.match(/[（(]([^)）]+)[)）]/);
+    const position = posMatch ? posMatch[1].trim() : (emp['ตำแหน่ง'] || '');
+    const empName = payroll.normName(rawName.split('(')[0].split('（')[0]);
+
+    // ดึงข้อมูล Attendance จาก Google Sheets
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.LOG_SHEET_ID,
+      range: 'Attendance!A:F',
+    });
+
+    const rows = (r.data.values || []).slice(1); // ข้าม header
+
+    // กรองเฉพาะของพนักงานคนนี้
+    const myRows = rows.filter(row => {
+      const name = (row[3] || '').trim();
+      return name === empName || empName.includes(name) || name.includes(empName.split(' ')[0]);
+    });
+
+    // คำนวณสาย (เวลาทำงาน 08:00 ถ้าสแกนหลัง 08:00:59 = สาย)
+    const WORK_START = '08:00:59';
+    const records = myRows.map(row => {
+      const date = row[0] || '';
+      const time = row[1] || '';
+      const isLate = time > WORK_START;
+      // คำนวณนาทีสาย
+      let lateMinutes = 0;
+      if (isLate) {
+        const [h, m, s] = time.split(':').map(Number);
+        const [wh, wm, ws] = WORK_START.split(':').map(Number);
+        lateMinutes = Math.floor(((h * 3600 + m * 60 + s) - (wh * 3600 + wm * 60 + ws)) / 60);
+      }
+      return { date, time, late: isLate, lateMinutes };
+    }).sort((a, b) => {
+      // เรียงจากใหม่ไปเก่า
+      const [ad, am, ay] = a.date.split('/').map(Number);
+      const [bd, bm, by] = b.date.split('/').map(Number);
+      return (by*10000+bm*100+bd) - (ay*10000+am*100+ad);
+    });
+
+    res.json({ name: empName, position, records });
+  } catch(e) {
+    console.error('/eslip/attendance error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ════════════════════════════════════════════════════════
 // Telegram Attendance Webhook
 // ════════════════════════════════════════════════════════
