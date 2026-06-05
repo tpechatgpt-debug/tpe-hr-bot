@@ -901,6 +901,71 @@ app.get('/admin/attendance', async (req, res) => {
   }
 });
 
+// ดึง leave map สำหรับ admin
+app.get('/admin/leave-map', async (req, res) => {
+  const { password, year, month } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const larkToken = await lark.getToken();
+    const axios = require('axios');
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+
+    // ดึงพนักงานทั้งหมด
+    const emps = await lark.getAllEmployees(larkToken).catch(() => []);
+    const larkEmps = emps.map(e => ({
+      clean: (e['ชื่อ - นามสกุล']||'').split('(')[0].trim(),
+      norm: normN((e['ชื่อ - นามสกุล']||'').split('(')[0])
+    }));
+
+    // ดึง leave records
+    let allRecords = [], pageToken = '';
+    for (let i = 0; i < 5; i++) {
+      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const data = r.data?.data;
+      allRecords = allRecords.concat(data?.items || []);
+      if (!data?.has_more) break;
+      pageToken = data.page_token || '';
+    }
+
+    // สร้าง leaveMap: { empName: { 'dd/mm/yyyy': leaveType } }
+    const leaveMap = {};
+    allRecords.forEach(item => {
+      const f = item.fields;
+      const rawName = (f['ชื่อ-นามสกุล'] || '').split('(')[0].trim();
+      const rn = normN(rawName);
+      const type = f['ประเภทการลา'] || 'ลา';
+      const start = f['ลาตั้งเเต่วันที่'];
+      const end   = f['จนถึงวันที่'];
+      if (!start) return;
+
+      // หาชื่อ Lark ที่ match
+      let larkName = rawName;
+      for (const le of larkEmps) {
+        if (le.norm === rn || le.norm.includes(rn) || rn.includes(le.norm) ||
+            (le.norm.length >= 4 && rn.includes(le.norm.slice(0,4)))) {
+          larkName = le.clean; break;
+        }
+      }
+
+      if (!leaveMap[larkName]) leaveMap[larkName] = {};
+      const startD = new Date(start);
+      const endD   = end ? new Date(end) : new Date(start);
+      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate()+1)) {
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const yyyy = d.getFullYear();
+        leaveMap[larkName][`${dd}/${mm}/${yyyy}`] = type;
+      }
+    });
+
+    res.json({ leaveMap });
+  } catch(e) {
+    console.error('/admin/leave-map error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // เพิ่ม/ลบวันหยุด
 app.post('/admin/holidays', express.json(), async (req, res) => {
   const { password, action, date, name } = req.body;
