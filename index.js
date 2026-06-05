@@ -1112,7 +1112,11 @@ async function mergePdfs(buffers) {
 // ════════════════════════════════════════════════════════
 const PORT = parseInt(process.env.PORT) || 3000;
 function startServer(port) {
-  const srv = app.listen(port, '0.0.0.0', () => console.log(`TPE HR Bot v2 on port ${port}`));
+  const srv = app.listen(port, '0.0.0.0', () => {
+    console.log(`TPE HR Bot v2 on port ${port}`);
+    // เริ่ม background services หลัง server listen แล้ว
+    setTimeout(() => initBackgroundServices(), 2000);
+  });
   srv.on('error', err => {
     if (err.code === 'EADDRINUSE') { console.log(`Port ${port} busy, trying ${port+1}`); srv.close(() => startServer(port+1)); }
     else { console.error('Server error:', err); process.exit(1); }
@@ -1432,10 +1436,7 @@ app.get('/eslip/pdf', async (req, res) => {
 });
 
 
-startServer(PORT);
-
-// ── เริ่ม Telegram Attendance Polling ─────────────────
-(async () => {
+async function initBackgroundServices() {
   try {
     const { google } = require('googleapis');
     const auth = new google.auth.GoogleAuth({
@@ -1443,11 +1444,16 @@ startServer(PORT);
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
     const sheetsClient = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID);
+    try { telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID); }
+    catch(e) { console.error('Telegram polling error:', e.message); }
+    try { gramJS.startGramJS(sheetsClient, process.env.LOG_SHEET_ID); }
+    catch(e) { console.error('GramJS error:', e.message); }
   } catch(e) {
-    console.error('Telegram polling init error:', e.message);
+    console.error('initBackgroundServices error:', e.message);
   }
-})();
+}
+
+startServer(PORT);
 
 // เริ่ม GramJS แยก async block
 (async () => {
