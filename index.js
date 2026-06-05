@@ -625,6 +625,7 @@ app.get('/eslip/attendance', async (req, res) => {
     const posMatch = rawName.match(/[（(]([^)）]+)[)）]/);
     const position = posMatch ? posMatch[1].trim() : (emp['ตำแหน่ง'] || '');
     const empName = payroll.normName(rawName.split('(')[0].split('（')[0]);
+    const empId   = (emp['รหัสพนักงาน'] || '').toString().trim();
 
     // ดึงข้อมูล Attendance จาก Google Sheets
     const { google } = require('googleapis');
@@ -669,8 +670,6 @@ app.get('/eslip/attendance', async (req, res) => {
     }
     const myRows = rows.filter(row => fuzzyMatch(row[3]||'', empName));
 
-    // ดึง รหัสพนักงาน จาก Lark
-    const empId = (emp['รหัสพนักงาน'] || '').toString().trim();
     console.log(`[Attendance] empName="${empName}" empId="${empId}" totalRows=${rows.length}`);
 
     // กรองด้วย ID ก่อน (แม่นยำสุด) ถ้าไม่มีค่อย fuzzy name
