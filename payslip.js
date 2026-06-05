@@ -428,26 +428,38 @@ async function htmlToImageBuffer(html) {
   const puppeteer = require('puppeteer-core');
 
   const browser = await puppeteer.launch({
-    args: chromium.args,
+    args: [
+      ...chromium.args,
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',
+      '--no-zygote',
+    ],
     defaultViewport: { width: 794, height: 1123, deviceScaleFactor: 2 },
     executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+    headless: 'new',
+    timeout: 30000,
   });
 
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 25000 });
+    await page.addStyleTag({ url: 'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap' });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(500);
 
-  // รอ font โหลด
-  await page.evaluate(() => document.fonts.ready);
+    const imgBuffer = await page.screenshot({
+      type: 'jpeg',
+      quality: 92,
+      fullPage: true,
+    });
 
-  const imgBuffer = await page.screenshot({
-    type: 'jpeg',
-    quality: 92,
-    fullPage: true,
-  });
-
-  await browser.close();
-  return Buffer.from(imgBuffer);
+    return Buffer.from(imgBuffer);
+  } finally {
+    await browser.close();
+  }
 }
 
 async function sendPdfToLine(userId, pdfBuffer, filename) {
