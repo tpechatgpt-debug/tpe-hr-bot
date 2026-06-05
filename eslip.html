@@ -715,42 +715,49 @@ async function saveImg(){
   if(!btn||!currentDoc||!empData)return;
   btn.textContent='⏳ กำลังสร้างรูป...';btn.classList.add('btn-dis');
   try{
-    const r=await fetch(`${API}/eslip/doc?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`);
-    if(!r.ok)throw new Error('โหลดไม่สำเร็จ ('+r.status+')');
-    const data=await r.json();
-    if(!data.html)throw new Error(data.error||'ไม่พบข้อมูล');
-    const w=document.createElement('div');
-    w.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
-    w.innerHTML=data.html;document.body.appendChild(w);
-    await document.fonts.ready;
-    await new Promise(r=>setTimeout(r,600));
-    const canvas=await html2canvas(w,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:794,windowWidth:794,height:w.scrollHeight,windowHeight:w.scrollHeight,logging:false});
-    document.body.removeChild(w);
-    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.92));
-    if(!blob)throw new Error('สร้างรูปไม่สำเร็จ');
+    // ดึงรูปจาก server (puppeteer) — ไม่ใช้ html2canvas
+    const imgUrl=`${API}/eslip/image?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`;
+    const r=await fetch(imgUrl);
+    if(!r.ok)throw new Error('สร้างรูปไม่สำเร็จ ('+r.status+')');
+    const blob=await r.blob();
     const filename='สลิป_'+currentDoc.month+'.jpg';
     const file=new File([blob],filename,{type:'image/jpeg'});
+
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS&&navigator.share&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});showToast('✅ บันทึกรูปสำเร็จ');return;}
+    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:filename});
+      showToast('✅ บันทึกรูปสำเร็จ');return;
+    }
+
     const isLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
     if(isLiff){
+      // Android LIFF — upload ให้ server แล้วเปิด Chrome
       const fd=new FormData();fd.append('file',blob,filename);
       const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});
-      const ud=await up.json();if(!ud.url)throw new Error('upload failed');
-      liff.openWindow({url:ud.url,external:true});showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;
+      const ud=await up.json();
+      if(!ud.url)throw new Error('upload failed');
+      liff.openWindow({url:ud.url,external:true});
+      showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;
     }
+
+    // Desktop / Chrome
     const objUrl=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=objUrl;a.download=filename;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(objUrl),3000);showToast('✅ บันทึกรูปสำเร็จ');
+    setTimeout(()=>URL.revokeObjectURL(objUrl),3000);
+    showToast('✅ บันทึกรูปสำเร็จ');
+
   }catch(e){
     await logErr('saveImage_ERROR',e.name+': '+e.message);
-    if(e.name==='AbortError')showToast('ยกเลิก');else showToast('❌ '+e.message);
+    if(e.name==='AbortError')showToast('ยกเลิก');
+    else showToast('❌ '+e.message);
   }finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-dis');}
 }
 
 async function dlPdf(){
   if(!currentDoc||!empData)return;
+  // ใบรับรองไม่มี PDF
+  if(currentDoc.docType==='certificate'){showToast('📋 ใบรับรองไม่มี PDF');return;}
   const btn=document.getElementById('btnPdf');
   btn.textContent='⏳...';btn.classList.add('btn-dis');
   const url=`${API}/eslip/pdf?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`;
