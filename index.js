@@ -966,6 +966,27 @@ app.get('/admin/leave-map', async (req, res) => {
   }
 });
 
+// ดูประเภทการลาทั้งหมด
+app.get('/admin/leave-types', async (req, res) => {
+  const { password } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const larkToken = await lark.getToken();
+    const axios = require('axios');
+    let allRecords = [], pageToken = '';
+    for (let i = 0; i < 10; i++) {
+      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const data = r.data?.data;
+      allRecords = allRecords.concat(data?.items || []);
+      if (!data?.has_more) break;
+      pageToken = data.page_token || '';
+    }
+    const types = [...new Set(allRecords.map(r => r.fields['ประเภทการลา']).filter(Boolean))];
+    res.json({ types, total: allRecords.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // เพิ่ม/ลบวันหยุด
 app.post('/admin/holidays', express.json(), async (req, res) => {
   const { password, action, date, name } = req.body;
