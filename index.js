@@ -1162,6 +1162,24 @@ app.get('/eslip/temp-image-raw/:token', (req, res) => {
   res.send(entry.buffer);
 });
 
+// Debug: ดู Leave table fields
+app.get('/eslip/debug-leave', async (req, res) => {
+  try {
+    const larkToken = await lark.getToken();
+    const r = await require('axios').get(
+      'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=5',
+      { headers: { 'Authorization': `Bearer ${larkToken}` } }
+    );
+    const items = r.data?.data?.items || [];
+    if (!items.length) return res.json({ error: 'no records', raw: r.data });
+    res.json({
+      keys: Object.keys(items[0].fields),
+      sample: items[0].fields,
+      total: r.data?.data?.total
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Debug: ดู raw Lark fields
 app.get('/eslip/debug-emp', async (req, res) => {
   try {
