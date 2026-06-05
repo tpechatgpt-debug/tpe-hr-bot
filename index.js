@@ -651,9 +651,18 @@ app.get('/eslip/attendance', async (req, res) => {
     }
     const myRows = rows.filter(row => fuzzyMatch(row[3]||'', empName));
 
-    // จัดกลุ่มตามวันก่อน
+    // ดึง รหัสพนักงาน จาก Lark
+    const empId = (emp['รหัสพนักงาน'] || '').toString().trim();
+
+    // กรองใหม่ด้วย ID ถ้ามี ไม่งั้นใช้ fuzzy name
+    const myRowsById = empId
+      ? rows.filter(row => (row[2]||'').toString().trim() === empId)
+      : myRows;
+    const finalRows = myRowsById.length > 0 ? myRowsById : myRows;
+
+    // จัดกลุ่มตามวัน
     const byDate = {};
-    myRows.forEach(row => {
+    finalRows.forEach(row => {
       const date = row[0]||'', time = row[1]||'';
       if (!byDate[date]) byDate[date] = [];
       byDate[date].push(time);
@@ -758,32 +767,42 @@ app.get('/admin/attendance', async (req, res) => {
       days.push(`${dd}/${mm}/${yyyy}`);
     }
 
-    // normalize ชื่อ
+    // สร้าง map รหัสพนักงาน → ชื่อ Lark
     const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
-
-    // สร้าง Lark employee name list
     const larkEmps = emps.map(e => ({
       raw: e,
       clean: (e['ชื่อ - นามสกุล']||'').split('(')[0].trim(),
-      norm: normN((e['ชื่อ - นามสกุล']||'').split('(')[0])
+      norm: normN((e['ชื่อ - นามสกุล']||'').split('(')[0]),
+      id: (e['รหัสพนักงาน']||'').toString().trim()
     }));
 
-    // จัด attendance โดย map ชื่อ Attendance → ชื่อ Lark
+    // สร้าง ID → ชื่อ map
+    const idToName = {};
+    larkEmps.forEach(e => { if(e.id) idToName[e.id] = e.clean; });
+
+    // จัด attendance โดย map ID/ชื่อ → ชื่อ Lark
     const attMap = {};
     attRows.forEach(row => {
-      const date = row[0], time = row[1], rawAtt = (row[3]||'').trim();
-      if (!date || !time || !rawAtt) return;
-      const attNorm = normN(rawAtt);
-      // หาชื่อ Lark ที่ match
+      const date = row[0], time = row[1];
+      const attId = (row[2]||'').toString().trim();
+      const rawAtt = (row[3]||'').trim();
+      if (!date || !time) return;
+
+      // หาชื่อ Lark — ใช้ ID ก่อน ถ้าไม่มีค่อย fuzzy name
       let larkName = rawAtt;
-      for (const le of larkEmps) {
-        const ln = le.norm;
-        if (ln === attNorm || ln.includes(attNorm) || attNorm.includes(ln) ||
-            (ln.length >= 4 && attNorm.includes(ln.slice(0,4))) ||
-            (attNorm.length >= 4 && ln.includes(attNorm.slice(0,4)))) {
-          larkName = le.clean; break;
+      if (attId && idToName[attId]) {
+        larkName = idToName[attId];
+      } else {
+        const attNorm = normN(rawAtt);
+        for (const le of larkEmps) {
+          const ln = le.norm;
+          if (ln === attNorm || ln.includes(attNorm) || attNorm.includes(ln) ||
+              (ln.length >= 4 && attNorm.includes(ln.slice(0,4)))) {
+            larkName = le.clean; break;
+          }
         }
       }
+
       if (!attMap[date]) attMap[date] = {};
       if (!attMap[date][larkName]) attMap[date][larkName] = [];
       attMap[date][larkName].push(time);
