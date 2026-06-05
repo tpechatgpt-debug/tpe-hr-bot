@@ -495,6 +495,7 @@ function renderSummary(){
         <span class="sum-badge sb-work">🏢 ${m.work} วัน</span>
         ${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}
         ${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}
+        ${m.leave>0?`<span class="sum-badge" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥 ลา ${m.leave} วัน</span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -602,20 +603,31 @@ function renderYear(y,byYear){
       if(isToday) cls+=' cal-today';
       if(!rec&&!isSun&&!isSat) cls+=' cal-absent';
       if(rec&&rec.late) cls+=' cal-late';
-      if(rec&&rec.status==='ok') cls+=' cal-ok';
-      if(rec&&(rec.status==='half-am'||rec.status==='half-pm')) cls+=' cal-leave';
+      else if(rec&&rec.status==='ok') cls+=' cal-ok';
+      else if(rec&&rec.status==='leave') cls+=' cal-leave';
+      else if(rec&&(rec.status==='half-am'||rec.status==='half-pm')) cls+=' cal-leave';
 
-      const timeIn=rec?rec.time:'';
-      const timeOut=rec?rec.timeOut:'';
+      const timeIn=rec&&rec.time?rec.time:'';
+      const timeOut=rec&&rec.timeOut?rec.timeOut:'';
       const otBadge=rec&&rec.ot>0?`<div class="cal-ot">OT${rec.ot}</div>`:'';
       const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
 
-      cells.push(`<div class="${cls}">
-        <div class="cal-day-num">${d}${lateBadge}</div>
-        <div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div>
-        <div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>
-        ${otBadge}
-      </div>`);
+      // วันลา
+      if(rec&&rec.status==='leave'){
+        const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);
+        cells.push(`<div class="${cls}">
+          <div class="cal-day-num">${d}</div>
+          <div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div>
+          <div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div>
+        </div>`);
+      } else {
+        cells.push(`<div class="${cls}">
+          <div class="cal-day-num">${d}${lateBadge}</div>
+          <div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div>
+          <div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>
+          ${otBadge}
+        </div>`);
+      }
     }
 
     return`<div class="month-group">
