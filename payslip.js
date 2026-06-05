@@ -427,6 +427,9 @@ async function htmlToImageBuffer(html) {
   const chromium  = require('@sparticuz/chromium');
   const puppeteer = require('puppeteer-core');
 
+  const execPath = await chromium.executablePath();
+  console.log('[puppeteer] execPath:', execPath);
+
   const browser = await puppeteer.launch({
     args: [
       ...chromium.args,
@@ -434,28 +437,34 @@ async function htmlToImageBuffer(html) {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--single-process',
       '--no-zygote',
+      '--single-process',
+      '--disable-extensions',
     ],
-    defaultViewport: { width: 794, height: 1123, deviceScaleFactor: 2 },
-    executablePath: await chromium.executablePath(),
-    headless: 'new',
-    timeout: 30000,
+    defaultViewport: { width: 794, height: 1200, deviceScaleFactor: 1 },
+    executablePath: execPath,
+    headless: true,
+    timeout: 60000,
+    ignoreHTTPSErrors: true,
   });
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 25000 });
-    await page.addStyleTag({ url: 'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap' });
+    // inject font แทน @import
+    const htmlWithFont = html.replace(
+      '<style>',
+      `<style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');`
+    );
+    await page.setContent(htmlWithFont, { waitUntil: 'networkidle0', timeout: 30000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(500);
 
     const imgBuffer = await page.screenshot({
       type: 'jpeg',
-      quality: 92,
+      quality: 90,
       fullPage: true,
     });
 
+    console.log('[puppeteer] screenshot OK, size:', imgBuffer.length);
     return Buffer.from(imgBuffer);
   } finally {
     await browser.close();
