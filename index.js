@@ -607,9 +607,9 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 // ════════════════════════════════════════════════════════
 // E-Slip: ดึงข้อมูลเวลาเข้า-ออกของพนักงาน
 // ════════════════════════════════════════════════════════
-// Cache สำหรับ attendance (5 นาที)
+// Cache สำหรับ attendance แยกตาม lineId (5 นาที)
 const attCache = {};
-const LEAVE_CACHE = { data: null, ts: 0 };
+const LEAVE_CACHE = {}; // key = lineId
 
 app.get('/eslip/attendance', async (req, res) => {
   try {
@@ -644,11 +644,12 @@ app.get('/eslip/attendance', async (req, res) => {
         range: 'Attendance!A:F',
       }),
       (async () => {
-        if (LEAVE_CACHE.data && (now2 - LEAVE_CACHE.ts) < CACHE_TTL2) {
-          return LEAVE_CACHE.data;
+        const cached = LEAVE_CACHE[lineId];
+        if (cached && (now2 - cached.ts) < CACHE_TTL2) {
+          return cached.data;
         }
         const d = await getLeaveDates(larkToken, empName, empId).catch(() => ({}));
-        LEAVE_CACHE.data = d; LEAVE_CACHE.ts = now2;
+        LEAVE_CACHE[lineId] = { data: d, ts: now2 };
         return d;
       })()
     ]);
@@ -656,31 +657,20 @@ app.get('/eslip/attendance', async (req, res) => {
     const rows = (attResult.data.values || []).slice(1);
 
     // กรองเฉพาะของพนักงานคนนี้ — fuzzy match
-    function normalize(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
-    function fuzzyMatch(a, b){
-      const na=normalize(a), nb=normalize(b);
-      if(na===nb) return true;
-      if(na.includes(nb)||nb.includes(na)) return true;
-      // ตรวจชื่อแรก (first name)
-      const aFirst=normalize(a.split(' ')[0]), bFirst=normalize(b.split(' ')[0]);
-      if(aFirst.length>=3 && bFirst.length>=3 && (aFirst.includes(bFirst)||bFirst.includes(aFirst))) return true;
-      // ตรวจ substring ยาว >= 5 ตัว
-      if(na.length>=5 && nb.length>=5 && (na.includes(nb.slice(0,5))||nb.includes(na.slice(0,5)))) return true;
-      return false;
-    }
-    const myRows = rows.filter(row => fuzzyMatch(row[3]||'', empName));
-
     console.log(`[Attendance] empName="${empName}" empId="${empId}" totalRows=${rows.length}`);
 
-    // กรองด้วย ID ก่อน (แม่นยำสุด) ถ้าไม่มีค่อย fuzzy name
-    let finalRows;
+    // กรองด้วย ID เป็นหลัก (แม่นยำ 100%)
+    let finalRows = [];
     if (empId) {
       finalRows = rows.filter(row => (row[2]||'').toString().trim() === empId);
       console.log(`[Attendance] ID match: ${finalRows.length} rows`);
     }
-    if (!finalRows || finalRows.length === 0) {
-      finalRows = myRows;
-      console.log(`[Attendance] Name match: ${finalRows.length} rows`);
+    // ถ้าไม่มี ID ให้ exact match ชื่อเท่านั้น
+    if (finalRows.length === 0) {
+      const normName = (s) => (s||'').replace(/\s+/g,'').toLowerCase();
+      const empNorm = normName(empName);
+      finalRows = rows.filter(row => normName(row[3]||'') === empNorm);
+      console.log(`[Attendance] Exact name match: ${finalRows.length} rows`);
     }
 
     // จัดกลุ่มตามวัน — เก็บทุก time ในวันเดียวกัน
