@@ -180,6 +180,23 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .c-g{color:var(--green)}.c-r{color:var(--red)}.c-b{color:var(--blue)}.c-t{color:var(--text)}
 .pay-footer{background:var(--surface2);padding:14px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:var(--surface);border-radius:16px;padding:10px;border:1px solid var(--border)}
+.cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0;letter-spacing:.05em}
+.cal-cell{border-radius:10px;padding:5px 3px;min-height:64px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;border:1px solid transparent}
+.cal-cell.empty{background:transparent;border:none}
+.cal-weekend{background:rgba(255,255,255,.03)}
+.cal-today{border:1px solid var(--gold)!important}
+.cal-absent{background:rgba(255,255,255,.02)}
+.cal-ok{background:rgba(6,214,160,.08);border-color:rgba(6,214,160,.15)!important}
+.cal-late{background:rgba(239,71,111,.08);border-color:rgba(239,71,111,.15)!important}
+.cal-leave{background:rgba(79,142,247,.08);border-color:rgba(79,142,247,.15)!important}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--text);position:relative;display:flex;align-items:center;gap:2px}
+.cal-time-in{font-size:9px;font-weight:600;color:var(--green);background:rgba(6,214,160,.1);padding:1px 4px;border-radius:4px;min-height:14px}
+.cal-time-out{font-size:9px;font-weight:600;color:var(--blue);background:rgba(79,142,247,.1);padding:1px 4px;border-radius:4px;min-height:14px}
+.cal-ot{font-size:8px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.15);padding:1px 4px;border-radius:4px}
+.cal-late-dot{font-size:8px;color:var(--red);font-weight:700}
+
 /* TOAST */
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -303,7 +320,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
         <div class="hdr-logo">🕐</div>
         <div>
           <div class="hdr-title">เวลาเข้างาน</div>
-          <div class="hdr-sub">08:00 — ตรงเวลา | หลัง 08:00:59 — สาย</div>
+          <div class="hdr-sub">≤08:00:59 ตรงเวลา | หลัง 08:01 สาย | ≥17:30 OT</div>
         </div>
       </div>
     </div>
@@ -486,35 +503,58 @@ const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 
 function renderYear(y,byYear){
   const recs=byYear[y]||[];
-  // จัดกลุ่มตามเดือน
   const byMonth={};
-  recs.forEach(r=>{
-    if(!byMonth[r.mm])byMonth[r.mm]=[];
-    byMonth[r.mm].push(r);
-  });
-
+  recs.forEach(r=>{if(!byMonth[r.mm])byMonth[r.mm]=[];byMonth[r.mm].push(r);});
   const months=Object.keys(byMonth).map(Number).sort((a,b)=>b-a);
+
   const html=months.map(m=>{
-    const mrs=byMonth[m].sort((a,b)=>b.dd-a.dd);
+    const mrs=byMonth[m];
     const lateCount=mrs.filter(r=>r.late).length;
-    const rows=mrs.map(r=>{
-      const dateObj=new Date(r.yyyy,r.mm-1,r.dd);
-      const wd=DAY_NAMES[dateObj.getDay()];
-      return`<div class="att-row">
-        <div class="att-date-col">
-          <div class="att-day">${String(r.dd).padStart(2,'0')}</div>
-          <div class="att-weekday">${wd}</div>
-        </div>
-        <div class="att-divider"></div>
-        <div class="att-info">
-          <div class="att-time">${r.time}</div>
-          <div class="att-status ${r.late?'status-late':'status-ok'}">
-            ${r.late?'⚠️ สาย':'✅ ตรงเวลา'}
-          </div>
-        </div>
-        ${r.late?`<div class="att-late-badge">+${r.lateMinutes} นาที</div>`:''}
-      </div>`;
-    }).join('');
+    const otCount=mrs.filter(r=>r.ot>0).length;
+
+    // สร้าง map วัน → record
+    const dayMap={};
+    mrs.forEach(r=>{ dayMap[r.dd]=r; });
+
+    // หาจำนวนวันในเดือน
+    const daysInMonth=new Date(parseInt(y),m,0).getDate();
+    // วันแรกของเดือนตกวันอะไร
+    const firstDay=new Date(parseInt(y),m-1,1).getDay();
+
+    // สร้าง calendar grid
+    const cells=[];
+    // header วัน
+    const dayHeaders=['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+    // blank cells ก่อนวันที่ 1
+    for(let i=0;i<firstDay;i++) cells.push(`<div class="cal-cell empty"></div>`);
+
+    for(let d=1;d<=daysInMonth;d++){
+      const rec=dayMap[d];
+      const dateObj=new Date(parseInt(y),m-1,d);
+      const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
+      const isToday=new Date().getDate()===d&&new Date().getMonth()===m-1&&new Date().getFullYear()===parseInt(y);
+
+      let cls='cal-cell';
+      if(isSun||isSat) cls+=' cal-weekend';
+      if(isToday) cls+=' cal-today';
+      if(!rec&&!isSun&&!isSat) cls+=' cal-absent';
+      if(rec&&rec.late) cls+=' cal-late';
+      if(rec&&rec.status==='ok') cls+=' cal-ok';
+      if(rec&&(rec.status==='half-am'||rec.status==='half-pm')) cls+=' cal-leave';
+
+      const timeIn=rec?rec.time:'';
+      const timeOut=rec?rec.timeOut:'';
+      const otBadge=rec&&rec.ot>0?`<div class="cal-ot">OT${rec.ot}</div>`:'';
+      const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
+
+      cells.push(`<div class="${cls}">
+        <div class="cal-day-num">${d}${lateBadge}</div>
+        <div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div>
+        <div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>
+        ${otBadge}
+      </div>`);
+    }
 
     return`<div class="month-group">
       <div class="mg-header">
@@ -522,14 +562,19 @@ function renderYear(y,byYear){
         <div class="mg-stats">
           <span class="mg-stat mg-ok">${mrs.length} วัน</span>
           ${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}
+          ${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}
         </div>
       </div>
-      <div class="att-card">${rows}</div>
+      <div class="cal-grid">
+        ${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}
+        ${cells.join('')}
+      </div>
     </div>`;
   }).join('');
 
   document.getElementById('attContent').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div><p>ไม่มีข้อมูลในปีนี้</p></div>';
 }
+
 
 // ── RENDER CARDS ──
 function fmt(n){return(Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
