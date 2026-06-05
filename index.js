@@ -636,30 +636,65 @@ app.get('/eslip/attendance', async (req, res) => {
 
     const rows = (r.data.values || []).slice(1); // ข้าม header
 
-    // กรองเฉพาะของพนักงานคนนี้
-    const myRows = rows.filter(row => {
-      const name = (row[3] || '').trim();
-      return name === empName || empName.includes(name) || name.includes(empName.split(' ')[0]);
+    // กรองเฉพาะของพนักงานคนนี้ — fuzzy match
+    function normalize(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+    function fuzzyMatch(a, b){
+      const na=normalize(a), nb=normalize(b);
+      if(na===nb) return true;
+      if(na.includes(nb)||nb.includes(na)) return true;
+      // ตรวจชื่อแรก (first name)
+      const aFirst=normalize(a.split(' ')[0]), bFirst=normalize(b.split(' ')[0]);
+      if(aFirst.length>=3 && bFirst.length>=3 && (aFirst.includes(bFirst)||bFirst.includes(aFirst))) return true;
+      // ตรวจ substring ยาว >= 5 ตัว
+      if(na.length>=5 && nb.length>=5 && (na.includes(nb.slice(0,5))||nb.includes(na.slice(0,5)))) return true;
+      return false;
+    }
+    const myRows = rows.filter(row => fuzzyMatch(row[3]||'', empName));
+
+    // จัดกลุ่มตามวันก่อน
+    const byDate = {};
+    myRows.forEach(row => {
+      const date = row[0]||'', time = row[1]||'';
+      if (!byDate[date]) byDate[date] = [];
+      byDate[date].push(time);
     });
 
-    // คำนวณสาย (เวลาทำงาน 08:00 ถ้าสแกนหลัง 08:00:59 = สาย)
-    const WORK_START = '08:00:59';
-    const records = myRows.map(row => {
-      const date = row[0] || '';
-      const time = row[1] || '';
-      const isLate = time > WORK_START;
-      // คำนวณนาทีสาย
-      let lateMinutes = 0;
-      if (isLate) {
-        const [h, m, s] = time.split(':').map(Number);
-        const [wh, wm, ws] = WORK_START.split(':').map(Number);
-        lateMinutes = Math.floor(((h * 3600 + m * 60 + s) - (wh * 3600 + wm * 60 + ws)) / 60);
+    const toM = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
+
+    const records = Object.entries(byDate).map(([date, times]) => {
+      const sorted = [...times].sort();
+      const first  = sorted[0];
+      const last   = sorted[sorted.length-1];
+      const fm     = toM(first);
+      const lm     = toM(last);
+
+      // สถานะเข้างาน
+      let status = 'ok', lateMinutes = 0;
+      if (fm <= toM('08:00:59'))       status = 'ok';
+      else if (fm <= toM('11:59:59')) { status = 'late'; lateMinutes = Math.round(fm - toM('08:01:00')); }
+      else if (fm <= toM('12:00:59')) status = 'half-am';
+      else                            { status = 'late'; lateMinutes = Math.round(fm - toM('08:01:00')); }
+
+      // OT
+      let ot = 0;
+      if (sorted.length > 1) {
+        if      (lm >= toM('11:50:00') && lm <= toM('12:30:00')) status = 'half-pm';
+        else if (lm >= toM('17:30:00') && lm < toM('17:55:00')) ot = 0.5;
+        else if (lm >= toM('17:55:00') && lm < toM('18:25:00')) ot = 1;
+        else if (lm >= toM('18:25:00') && lm < toM('18:55:00')) ot = 1.5;
+        else if (lm >= toM('18:55:00') && lm < toM('19:25:00')) ot = 2;
+        else if (lm >= toM('19:25:00') && lm < toM('19:55:00')) ot = 2.5;
+        else if (lm >= toM('19:55:00') && lm < toM('20:25:00')) ot = 3;
+        else if (lm >= toM('20:25:00'))                          ot = 3.5;
       }
-      return { date, time, late: isLate, lateMinutes };
+
+      return {
+        date, time: first, timeOut: sorted.length > 1 ? last : null,
+        late: status === 'late', lateMinutes, status, ot
+      };
     }).sort((a, b) => {
-      // เรียงจากใหม่ไปเก่า
-      const [ad, am, ay] = a.date.split('/').map(Number);
-      const [bd, bm, by] = b.date.split('/').map(Number);
+      const [ad,am,ay] = a.date.split('/').map(Number);
+      const [bd,bm,by] = b.date.split('/').map(Number);
       return (by*10000+bm*100+bd) - (ay*10000+am*100+ad);
     });
 
@@ -706,11 +741,11 @@ app.get('/admin/attendance', async (req, res) => {
     // กรองตามรอบเดือน (26 เดือนก่อน - 25 เดือนนี้)
     const y = parseInt(year) || new Date().getFullYear();
     const m = parseInt(month) || new Date().getMonth() + 1;
-    // รอบ: 26/(m-1) - 25/m
+    // รอบ: 26 เดือนก่อน - 25 เดือนนี้
     const prevM = m === 1 ? 12 : m - 1;
     const prevY = m === 1 ? y - 1 : y;
-    const startDate = `${String(26).padStart(2,'0')}/${String(prevM).padStart(2,'0')}/${prevY}`;
-    const endDate   = `${String(25).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+    const startDate = `26/${String(prevM).padStart(2,'0')}/${prevY}`;
+    const endDate   = `25/${String(m).padStart(2,'0')}/${y}`;
 
     // สร้าง array วันในรอบ
     const start = new Date(prevY, prevM-1, 26);
@@ -723,18 +758,40 @@ app.get('/admin/attendance', async (req, res) => {
       days.push(`${dd}/${mm}/${yyyy}`);
     }
 
-    // จัด attendance ตามวัน+ชื่อ
+    // normalize ชื่อ
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+
+    // สร้าง Lark employee name list
+    const larkEmps = emps.map(e => ({
+      raw: e,
+      clean: (e['ชื่อ - นามสกุล']||'').split('(')[0].trim(),
+      norm: normN((e['ชื่อ - นามสกุล']||'').split('(')[0])
+    }));
+
+    // จัด attendance โดย map ชื่อ Attendance → ชื่อ Lark
     const attMap = {};
     attRows.forEach(row => {
-      const date = row[0], time = row[1], name = row[3];
+      const date = row[0], time = row[1], rawAtt = (row[3]||'').trim();
+      if (!date || !time || !rawAtt) return;
+      const attNorm = normN(rawAtt);
+      // หาชื่อ Lark ที่ match
+      let larkName = rawAtt;
+      for (const le of larkEmps) {
+        const ln = le.norm;
+        if (ln === attNorm || ln.includes(attNorm) || attNorm.includes(ln) ||
+            (ln.length >= 4 && attNorm.includes(ln.slice(0,4))) ||
+            (attNorm.length >= 4 && ln.includes(attNorm.slice(0,4)))) {
+          larkName = le.clean; break;
+        }
+      }
       if (!attMap[date]) attMap[date] = {};
-      if (!attMap[date][name]) attMap[date][name] = [];
-      attMap[date][name].push(time);
+      if (!attMap[date][larkName]) attMap[date][larkName] = [];
+      attMap[date][larkName].push(time);
     });
 
-    res.json({ days, attMap, holidays, emps: emps.map(e => ({
-      name: (e['ชื่อ - นามสกุล']||'').split('(')[0].trim(),
-      type: (e['ประเภท']||'').includes('รายวัน') ? 'daily' : 'monthly'
+    res.json({ days, attMap, holidays, emps: larkEmps.map(e => ({
+      name: e.clean,
+      type: (e.raw['ประเภท']||'').includes('รายวัน') ? 'daily' : 'monthly'
     })), startDate, endDate, year: y, month: m });
   } catch(e) {
     console.error('/admin/attendance error:', e.message);
