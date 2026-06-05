@@ -653,19 +653,32 @@ app.get('/eslip/attendance', async (req, res) => {
 
     // ดึง รหัสพนักงาน จาก Lark
     const empId = (emp['รหัสพนักงาน'] || '').toString().trim();
+    console.log(`[Attendance] empName="${empName}" empId="${empId}" totalRows=${rows.length}`);
 
-    // กรองใหม่ด้วย ID ถ้ามี ไม่งั้นใช้ fuzzy name
-    const myRowsById = empId
-      ? rows.filter(row => (row[2]||'').toString().trim() === empId)
-      : myRows;
-    const finalRows = myRowsById.length > 0 ? myRowsById : myRows;
+    // กรองด้วย ID ก่อน (แม่นยำสุด) ถ้าไม่มีค่อย fuzzy name
+    let finalRows;
+    if (empId) {
+      finalRows = rows.filter(row => (row[2]||'').toString().trim() === empId);
+      console.log(`[Attendance] ID match: ${finalRows.length} rows`);
+    }
+    if (!finalRows || finalRows.length === 0) {
+      finalRows = myRows;
+      console.log(`[Attendance] Name match: ${finalRows.length} rows`);
+    }
 
-    // จัดกลุ่มตามวัน
+    // จัดกลุ่มตามวัน — เก็บทุก time ในวันเดียวกัน
     const byDate = {};
     finalRows.forEach(row => {
-      const date = row[0]||'', time = row[1]||'';
+      const date = (row[0]||'').trim();
+      const time = (row[1]||'').trim();
+      if (!date || !time) return;
       if (!byDate[date]) byDate[date] = [];
       byDate[date].push(time);
+    });
+    console.log(`[Attendance] byDate keys: ${Object.keys(byDate).length} วัน`);
+    // log ตัวอย่าง 3 วันแรก
+    Object.entries(byDate).slice(0,3).forEach(([d,t]) => {
+      console.log(`[Attendance]   ${d}: [${t.join(', ')}]`);
     });
 
     const toM = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
@@ -707,7 +720,34 @@ app.get('/eslip/attendance', async (req, res) => {
       return (by*10000+bm*100+bd) - (ay*10000+am*100+ad);
     });
 
-    res.json({ name: empName, position, records });
+    // คำนวณ summary รายเดือนและทั้งหมด
+    const summaryByMonth = {};
+    let totalWork = 0, totalLate = 0, totalOT = 0;
+
+    records.forEach(r => {
+      const [dd, mm, yyyy] = r.date.split('/');
+      const key = `${mm}/${yyyy}`;
+      if (!summaryByMonth[key]) {
+        summaryByMonth[key] = { month: key, work: 0, late: 0, lateMinutes: 0, ot: 0, otHours: 0 };
+      }
+      const s = summaryByMonth[key];
+      if (r.status !== 'half-am' && r.status !== 'half-pm') {
+        s.work++; totalWork++;
+      }
+      if (r.late) { s.late++; s.lateMinutes += r.lateMinutes || 0; totalLate++; }
+      if (r.ot > 0) { s.ot++; s.otHours += r.ot; totalOT += r.ot; }
+    });
+
+    const summary = {
+      total: { work: totalWork, late: totalLate, ot: totalOT },
+      byMonth: Object.values(summaryByMonth).sort((a, b) => {
+        const [am, ay] = a.month.split('/').map(Number);
+        const [bm, by] = b.month.split('/').map(Number);
+        return (by * 100 + bm) - (ay * 100 + am);
+      })
+    };
+
+    res.json({ name: empName, position, records, summary });
   } catch(e) {
     console.error('/eslip/attendance error:', e.message);
     res.status(500).json({ error: e.message });
