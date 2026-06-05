@@ -495,7 +495,6 @@ function renderSummary(){
         <span class="sum-badge sb-work">🏢 ${m.work} วัน</span>
         ${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}
         ${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}
-        ${m.leave>0?`<span class="sum-badge" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥 ลา ${m.leave} วัน</span>`:''}
       </div>
     </div>`;
   }).join('');
