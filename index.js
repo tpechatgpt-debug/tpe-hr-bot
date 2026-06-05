@@ -1256,7 +1256,7 @@ app.get('/eslip/image', async (req, res) => {
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Content-Disposition', `attachment; filename="slip_${month}.jpg"`);
     res.send(imgBuf);
-  } catch(e) { res.status(500).send(e.message); }
+  } catch(e) { console.error('[eslip/image] ERROR:', e.message); res.status(500).send(e.message); }
 });
 
 // temp image store สำหรับ Android LIFF download
