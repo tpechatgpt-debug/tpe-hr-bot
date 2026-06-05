@@ -713,11 +713,16 @@ async function loadAttAdmin(){
   const month=document.getElementById('attMonth').value;
   document.getElementById('attTableWrap').innerHTML='<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
   try{
-    const r=await fetch(`${API}/admin/attendance?password=${PASS}&year=${year}&month=${month}`);
+    const [r, lr] = await Promise.all([
+      fetch(`${API}/admin/attendance?password=${PASS}&year=${year}&month=${month}`),
+      fetch(`${API}/admin/leave-map?password=${PASS}&year=${year}&month=${month}`)
+    ]);
     const d=await r.json();
     if(d.error) throw new Error(d.error);
     attDays=d.days; attMapData=d.attMap; attHolidays=d.holidays||[]; attEmps=[...new Set(d.emps.map(e=>e.name))].sort();
     document.getElementById('attRange').textContent=`รอบ: ${d.startDate} — ${d.endDate}`;
+    // เก็บ leave map
+    try{ const ldata=await lr.json(); window._leaveMap=ldata.leaveMap||{}; }catch(e){ window._leaveMap={}; }
     renderAttTable(); renderAttStats(); renderHoliChips();
   }catch(e){
     document.getElementById('attTableWrap').innerHTML=`<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">❌ ${e.message}</div>`;
@@ -855,8 +860,24 @@ function renderAttTable(){
         }
 
         const a=recs&&recs.length?analyzeAttDay(recs):null;
+
+        // ตรวจวันลาจาก attMapData (status=leave)
+        const leaveRec=!a&&attMapData[dateStr]?.[name+'__leave'];
+
         if(!a){
-          cells+=`<div class="${cls} c-absent"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
+          // ตรวจว่ามีข้อมูลลาไหม
+          const leaveName=name+'__leave__'+dateStr;
+          const leaveInfo=window._leaveMap?.[name]?.[dateStr];
+          if(leaveInfo){
+            const lType=(leaveInfo||'ลา').replace('ลา','').slice(0,4);
+            cells+=`<div class="${cls} c-leave">
+              <div class="cal-dnum">${d}</div>
+              <div class="cal-tin" style="background:#EEF4FF;color:#1E3A5F">🏥</div>
+              <div class="cal-tout" style="background:#EEF4FF;color:#1E3A5F;font-size:7px">${lType}</div>
+            </div>`;
+          } else {
+            cells+=`<div class="${cls} c-absent"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
+          }
           continue;
         }
 
@@ -886,6 +907,7 @@ function renderAttTable(){
             <span class="ab ab-ok">${cntWork} วัน</span>
             ${cntLate>0?`<span class="ab ab-late">สาย ${cntLate}</span>`:''}
             ${cntOT>0?`<span class="ab ab-ot">OT ${cntOT} วัน</span>`:''}
+            ${(()=>{const leaveDays=attDays.filter(d=>{const[dd,mm,yyyy]=d.split('/');const isSun=new Date(yyyy,mm-1,dd).getDay()===0,isSat=new Date(yyyy,mm-1,dd).getDay()===6;const isHoli=attHolidays.some(h=>h.date===d);if(isSun||isSat||isHoli)return false;const recs=attMapData[d]?.[name];if(recs&&recs.length)return false;return window._leaveMap?.[name]?.[d];}).length;return leaveDays>0?`<span class="ab" style="background:#EEF4FF;color:#1E3A5F">🏥 ลา ${leaveDays} วัน</span>`:''})()}
           </div>
         </div>
         <div class="att-cal-grid">${cells}</div>`;
