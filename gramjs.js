@@ -140,7 +140,7 @@ async function startGramJS(sheets, spreadsheetId) {
 
     // ดึงข้อความย้อนหลังตั้งแต่ 1 มิถุนายน 2026
     try {
-      const sinceDate = new Date('2026-06-01T00:00:00+07:00');
+      const sinceDate = new Date('2026-05-26T00:00:00+07:00');
       const sinceUnix = Math.floor(sinceDate.getTime() / 1000);
       console.log('[GramJS] กำลังดึงข้อความย้อนหลังตั้งแต่ 1 มิ.ย. 2569...');
       await loadExistingKeys(sheets, spreadsheetId);
