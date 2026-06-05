@@ -747,7 +747,50 @@ app.get('/eslip/attendance', async (req, res) => {
       })
     };
 
-    res.json({ name: empName, position, records, summary });
+    // ดึงข้อมูลการลา
+    const leaveMap = await getLeaveDates(larkToken, empName, empId);
+
+    // เพิ่มข้อมูลลาในวันที่ไม่มีสแกน
+    const allDates = new Set(records.map(r => r.date));
+    const leaveRecords = Object.entries(leaveMap)
+      .filter(([date]) => !allDates.has(date))
+      .map(([date, leaveType]) => ({
+        date, time: null, timeOut: null,
+        late: false, lateMinutes: 0, status: 'leave',
+        ot: 0, leaveType
+      }));
+
+    // รวม records และ leaveRecords เรียงใหม่
+    const allRecords = [...records, ...leaveRecords].sort((a, b) => {
+      const [ad,am,ay] = a.date.split('/').map(Number);
+      const [bd,bm,by] = b.date.split('/').map(Number);
+      return (by*10000+bm*100+bd) - (ay*10000+am*100+ad);
+    });
+
+    // คำนวณ summary ใหม่รวม leave
+    const summaryByMonth2 = {};
+    let totalWork2 = 0, totalLate2 = 0, totalOT2 = 0;
+    allRecords.forEach(r => {
+      const [dd, mm, yyyy] = r.date.split('/');
+      const key = `${mm}/${yyyy}`;
+      if (!summaryByMonth2[key]) summaryByMonth2[key] = { month: key, work: 0, late: 0, lateMinutes: 0, ot: 0, otHours: 0, leave: 0 };
+      const s = summaryByMonth2[key];
+      if (r.status === 'leave') { s.leave++; return; }
+      if (r.status !== 'half-am' && r.status !== 'half-pm') { s.work++; totalWork2++; }
+      if (r.late) { s.late++; s.lateMinutes += r.lateMinutes || 0; totalLate2++; }
+      if (r.ot > 0) { s.ot++; s.otHours += r.ot; totalOT2 += r.ot; }
+    });
+
+    const summary2 = {
+      total: { work: totalWork2, late: totalLate2, ot: totalOT2 },
+      byMonth: Object.values(summaryByMonth2).sort((a, b) => {
+        const [am, ay] = a.month.split('/').map(Number);
+        const [bm, by] = b.month.split('/').map(Number);
+        return (by * 100 + bm) - (ay * 100 + am);
+      })
+    };
+
+    res.json({ name: empName, position, records: allRecords, summary: summary2 });
   } catch(e) {
     console.error('/eslip/attendance error:', e.message);
     res.status(500).json({ error: e.message });
@@ -1161,6 +1204,67 @@ app.get('/eslip/temp-image-raw/:token', (req, res) => {
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(entry.filename)}"`);
   res.send(entry.buffer);
 });
+
+// ── ดึงข้อมูลการลาจาก Lark Base ──────────────────────
+async function getLeaveDates(larkToken, empName, empId) {
+  try {
+    const axios = require('axios');
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const empNorm = normN(empName);
+
+    let allRecords = [], pageToken = '';
+    // ดึงทั้งหมด (max 500)
+    for (let i = 0; i < 5; i++) {
+      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const data = r.data?.data;
+      allRecords = allRecords.concat(data?.items || []);
+      if (!data?.has_more) break;
+      pageToken = data.page_token || '';
+    }
+
+    // กรองเฉพาะพนักงานคนนี้
+    const myLeaves = allRecords.filter(item => {
+      const f = item.fields;
+      const rawName = (f['ชื่อ-นามสกุล'] || '').split('(')[0].trim();
+      const n = normN(rawName);
+      return n === empNorm || n.includes(empNorm) || empNorm.includes(n) ||
+             (n.length >= 4 && empNorm.includes(n.slice(0, 4)));
+    });
+
+    // แปลง timestamp → วันที่ dd/mm/yyyy
+    const tsToDate = ts => {
+      const d = new Date(ts);
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    };
+
+    // สร้าง map วันที่ → ประเภทการลา
+    const leaveMap = {};
+    myLeaves.forEach(item => {
+      const f = item.fields;
+      const start = f['ลาตั้งเเต่วันที่'];
+      const end   = f['จนถึงวันที่'];
+      const type  = f['ประเภทการลา'] || 'ลา';
+      if (!start) return;
+      // วนทุกวันในช่วงลา
+      const startD = new Date(start);
+      const endD   = end ? new Date(end) : new Date(start);
+      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate()+1)) {
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const yyyy = d.getFullYear();
+        leaveMap[`${dd}/${mm}/${yyyy}`] = type;
+      }
+    });
+    return leaveMap;
+  } catch(e) {
+    console.error('getLeaveDates error:', e.message);
+    return {};
+  }
+}
 
 // Debug: ดู Leave table fields
 app.get('/eslip/debug-leave', async (req, res) => {
