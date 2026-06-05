@@ -715,8 +715,9 @@ async function saveImg(){
   if(!btn||!currentDoc||!empData)return;
   btn.textContent='⏳ กำลังสร้างรูป...';btn.classList.add('btn-dis');
   try{
-    // ดึงรูปจาก server (puppeteer) — ไม่ใช้ html2canvas
+    // ดึงรูปจาก server ทั้งสลิปและใบรับรอง
     const imgUrl=`${API}/eslip/image?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`;
+    btn.textContent='⏳ กำลังสร้างรูป...';
     const r=await fetch(imgUrl);
     if(!r.ok)throw new Error('สร้างรูปไม่สำเร็จ ('+r.status+')');
     const blob=await r.blob();
