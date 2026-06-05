@@ -180,6 +180,23 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .c-g{color:var(--green)}.c-r{color:var(--red)}.c-b{color:var(--blue)}.c-t{color:var(--text)}
 .pay-footer{background:var(--surface2);padding:14px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
+/* ── SUMMARY ── */
+.sum-wrap{margin-bottom:16px}
+.sum-total{background:linear-gradient(135deg,#1a2a4a,#0f1a33);border-radius:16px;padding:16px;border:1px solid var(--border);margin-bottom:10px}
+.sum-total-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.sum-total-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sum-total-item{text-align:center}
+.sum-total-val{font-size:24px;font-weight:800}
+.sum-total-label{font-size:10px;color:var(--muted);margin-top:2px}
+.sum-months{display:flex;flex-direction:column;gap:6px}
+.sum-month-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.sum-month-name{font-size:13px;font-weight:600;flex:1}
+.sum-badges{display:flex;gap:5px;flex-wrap:wrap}
+.sum-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px}
+.sb-work{background:rgba(6,214,160,.15);color:var(--green)}
+.sb-late{background:rgba(239,71,111,.15);color:var(--red)}
+.sb-ot{background:rgba(255,149,0,.15);color:var(--orange)}
+
 /* ── CALENDAR ── */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:var(--surface);border-radius:16px;padding:10px;border:1px solid var(--border)}
 .cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0;letter-spacing:.05em}
@@ -448,6 +465,7 @@ async function loadAttendance(){
     const d=await r.json();
     if(d.error)throw new Error(d.error);
     attData=d.records||[];
+    window._attSummary=d.summary||null;
 
     // คำนวณ stats เดือนนี้
     const now=new Date();
@@ -462,6 +480,46 @@ async function loadAttendance(){
 
     renderAttendance();
   }catch(e){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
+}
+
+function renderSummary(){
+  const s=window._attSummary;
+  if(!s) return '';
+  const MTHS={'01':'ม.ค.','02':'ก.พ.','03':'มี.ค.','04':'เม.ย.','05':'พ.ค.','06':'มิ.ย.','07':'ก.ค.','08':'ส.ค.','09':'ก.ย.','10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.'};
+  const months=s.byMonth.map(m=>{
+    const [mm,yyyy]=m.month.split('/');
+    const thY=parseInt(yyyy)+543;
+    return`<div class="sum-month-card">
+      <div class="sum-month-name">${MTHS[mm]||mm} ${thY}</div>
+      <div class="sum-badges">
+        <span class="sum-badge sb-work">🏢 ${m.work} วัน</span>
+        ${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}
+        ${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return`<div class="sum-wrap">
+    <div class="sum-total">
+      <div class="sum-total-title">📊 สรุปรวมทั้งหมด</div>
+      <div class="sum-total-grid">
+        <div class="sum-total-item">
+          <div class="sum-total-val c-g">${s.total.work}</div>
+          <div class="sum-total-label">วันทำงาน</div>
+        </div>
+        <div class="sum-total-item">
+          <div class="sum-total-val c-r">${s.total.late}</div>
+          <div class="sum-total-label">วันที่สาย</div>
+        </div>
+        <div class="sum-total-item">
+          <div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div>
+          <div class="sum-total-label">ชม. OT</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">รายเดือน</div>
+    <div class="sum-months">${months}</div>
+  </div>`;
 }
 
 function renderAttendance(){
@@ -480,8 +538,12 @@ function renderAttendance(){
 
   const years=Object.keys(byYear).sort((a,b)=>b-a);
 
+  // Summary
+  const sumHtml=renderSummary();
+
   // Year chips
   const sel=document.getElementById('yearSelect');
+  sel.parentElement.insertAdjacentHTML('beforebegin', sumHtml);
   sel.innerHTML=years.map((y,i)=>`<div class="year-chip${i===0?' active':''}" onclick="selectYear('${y}')">${parseInt(y)+543}</div>`).join('');
 
   currentYear=years[0];
