@@ -1254,7 +1254,7 @@ app.get('/eslip/image', async (req, res) => {
     if (!html) return res.status(500).send('build html failed');
     const imgBuf = await payslip.htmlToImageBuffer(html);
     res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Content-Disposition', `attachment; filename="slip_${month}.jpg"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="slip.jpg"');
     res.send(imgBuf);
   } catch(e) { console.error('[eslip/image] ERROR:', e.message); res.status(500).send(e.message); }
 });
