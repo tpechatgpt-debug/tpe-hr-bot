@@ -528,12 +528,15 @@ function renderAttendance(){
     return;
   }
 
-  // จัดกลุ่มตามปี
+  // จัดกลุ่มตามปี — parse dd/mm/yyyy จาก date string
   const byYear={};
   attData.forEach(r=>{
-    const [dd,mm,yyyy]=r.date.split('/');
+    if(!r.date) return;
+    const parts=r.date.split('/');
+    if(parts.length!==3) return;
+    const dd=parseInt(parts[0]),mm=parseInt(parts[1]),yyyy=parseInt(parts[2]);
     if(!byYear[yyyy])byYear[yyyy]=[];
-    byYear[yyyy].push({...r,dd:parseInt(dd),mm:parseInt(mm),yyyy:parseInt(yyyy)});
+    byYear[yyyy].push({...r,dd,mm,yyyy});
   });
 
   const years=Object.keys(byYear).sort((a,b)=>b-a);
@@ -576,7 +579,7 @@ function renderYear(y,byYear){
 
     // สร้าง map วัน → record
     const dayMap={};
-    mrs.forEach(r=>{ dayMap[r.dd]=r; });
+    mrs.forEach(r=>{ if(r.dd) dayMap[r.dd]=r; });
 
     // หาจำนวนวันในเดือน
     const daysInMonth=new Date(parseInt(y),m,0).getDate();
