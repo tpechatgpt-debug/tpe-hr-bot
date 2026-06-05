@@ -607,6 +607,10 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 // ════════════════════════════════════════════════════════
 // E-Slip: ดึงข้อมูลเวลาเข้า-ออกของพนักงาน
 // ════════════════════════════════════════════════════════
+// Cache สำหรับ attendance (5 นาที)
+const attCache = {};
+const LEAVE_CACHE = { data: null, ts: 0 };
+
 app.get('/eslip/attendance', async (req, res) => {
   try {
     const { lineId } = req.query;
@@ -629,12 +633,26 @@ app.get('/eslip/attendance', async (req, res) => {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
     const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    const r = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.LOG_SHEET_ID,
-      range: 'Attendance!A:F',
-    });
+    const now2 = Date.now();
+    const CACHE_TTL2 = 5 * 60 * 1000;
 
-    const rows = (r.data.values || []).slice(1); // ข้าม header
+    // ดึง Attendance + Leave พร้อมกัน
+    const [attResult, leaveData] = await Promise.all([
+      sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.LOG_SHEET_ID,
+        range: 'Attendance!A:F',
+      }),
+      (async () => {
+        if (LEAVE_CACHE.data && (now2 - LEAVE_CACHE.ts) < CACHE_TTL2) {
+          return LEAVE_CACHE.data;
+        }
+        const d = await getLeaveDates(larkToken, empName, empId).catch(() => ({}));
+        LEAVE_CACHE.data = d; LEAVE_CACHE.ts = now2;
+        return d;
+      })()
+    ]);
+
+    const rows = (attResult.data.values || []).slice(1);
 
     // กรองเฉพาะของพนักงานคนนี้ — fuzzy match
     function normalize(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
@@ -747,8 +765,8 @@ app.get('/eslip/attendance', async (req, res) => {
       })
     };
 
-    // ดึงข้อมูลการลา
-    const leaveMap = await getLeaveDates(larkToken, empName, empId);
+    // ใช้ leaveData ที่ดึงมาแล้วพร้อมกัน
+    const leaveMap = leaveData;
 
     // เพิ่มข้อมูลลาในวันที่ไม่มีสแกน
     const allDates = new Set(records.map(r => r.date));
@@ -949,13 +967,19 @@ app.get('/admin/leave-map', async (req, res) => {
       }
 
       if (!leaveMap[larkName]) leaveMap[larkName] = {};
-      const startD = new Date(start);
-      const endD   = end ? new Date(end) : new Date(start);
-      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate()+1)) {
-        const dd = String(d.getDate()).padStart(2,'0');
-        const mm = String(d.getMonth()+1).padStart(2,'0');
-        const yyyy = d.getFullYear();
+      const toTD = ts => {
+        const d = new Date(ts + 7*60*60*1000);
+        return { dd: String(d.getUTCDate()).padStart(2,'0'), mm: String(d.getUTCMonth()+1).padStart(2,'0'), yyyy: d.getUTCFullYear() };
+      };
+      const s = toTD(start), e2 = end ? toTD(end) : s;
+      const cur2 = new Date(Date.UTC(s.yyyy, parseInt(s.mm)-1, parseInt(s.dd)));
+      const fin2 = new Date(Date.UTC(e2.yyyy, parseInt(e2.mm)-1, parseInt(e2.dd)));
+      while (cur2 <= fin2) {
+        const dd = String(cur2.getUTCDate()).padStart(2,'0');
+        const mm = String(cur2.getUTCMonth()+1).padStart(2,'0');
+        const yyyy = cur2.getUTCFullYear();
         leaveMap[larkName][`${dd}/${mm}/${yyyy}`] = type;
+        cur2.setUTCDate(cur2.getUTCDate()+1);
       }
     });
 
@@ -1339,14 +1363,25 @@ async function getLeaveDates(larkToken, empName, empId) {
       const end   = f['จนถึงวันที่'];
       const type  = f['ประเภทการลา'] || 'ลา';
       if (!start) return;
-      // วนทุกวันในช่วงลา
-      const startD = new Date(start);
-      const endD   = end ? new Date(end) : new Date(start);
-      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate()+1)) {
-        const dd = String(d.getDate()).padStart(2,'0');
-        const mm = String(d.getMonth()+1).padStart(2,'0');
-        const yyyy = d.getFullYear();
+      // แปลง timestamp → วันที่ไทย (UTC+7) แล้ววนทุกวันในช่วงลา
+      const toThaiDate = ts => {
+        const d = new Date(ts + 7 * 60 * 60 * 1000); // +7 ชั่วโมง
+        const dd   = String(d.getUTCDate()).padStart(2,'0');
+        const mm   = String(d.getUTCMonth()+1).padStart(2,'0');
+        const yyyy = d.getUTCFullYear();
+        return { dd, mm, yyyy, str: `${dd}/${mm}/${yyyy}` };
+      };
+      const startTh = toThaiDate(start);
+      const endTh   = end ? toThaiDate(end) : startTh;
+      // วนทุกวัน
+      const cur = new Date(Date.UTC(parseInt(startTh.yyyy), parseInt(startTh.mm)-1, parseInt(startTh.dd)));
+      const fin = new Date(Date.UTC(parseInt(endTh.yyyy),   parseInt(endTh.mm)-1,   parseInt(endTh.dd)));
+      while (cur <= fin) {
+        const dd   = String(cur.getUTCDate()).padStart(2,'0');
+        const mm   = String(cur.getUTCMonth()+1).padStart(2,'0');
+        const yyyy = cur.getUTCFullYear();
         leaveMap[`${dd}/${mm}/${yyyy}`] = type;
+        cur.setUTCDate(cur.getUTCDate() + 1);
       }
     });
     return leaveMap;
