@@ -128,10 +128,10 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .att-tbl{border-collapse:collapse;min-width:100%;font-size:11px}
 .att-tbl th{background:var(--bg);padding:8px 6px;text-align:center;font-size:10px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0}
 .att-tbl th:first-child{text-align:left;min-width:110px;position:sticky;left:0;z-index:10;background:var(--bg)}
-.att-tbl td{padding:6px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.att-tbl td{padding:4px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:top}
 .att-tbl td:first-child{text-align:left;font-weight:600;position:sticky;left:0;background:#fff;z-index:5;padding-left:10px;border-right:1px solid var(--border);font-size:12px}
 .att-tbl tr:hover td{background:#fdf8f0}
-.att-cell{display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:54px}
+.att-cell{display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:60px;min-height:60px;justify-content:center}
 .ab{font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;white-space:nowrap}
 .ab-ok{background:#E8F5EE;color:#1B7F4E}
 .ab-late{background:#FDEEEC;color:#C0392B}
@@ -143,6 +143,22 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .att-late-min{font-size:9px;color:#C0392B}
 .day-holi{color:#92400E}
 .day-sun{color:#C0392B}
+/* ── CALENDAR VIEW ── */
+.att-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:14px}
+.att-cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0;letter-spacing:.05em}
+.att-cal-cell{border-radius:8px;padding:4px 2px;min-height:70px;display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid transparent;font-size:9px}
+.att-cal-cell.empty{background:transparent;border:none}
+.att-cal-cell.weekend{background:var(--bg)}
+.att-cal-cell.today{border:1.5px solid var(--gold)!important}
+.att-cal-cell.c-ok{background:var(--green-l);border-color:rgba(27,127,78,.2)!important}
+.att-cal-cell.c-late{background:var(--red-l);border-color:rgba(192,57,43,.2)!important}
+.att-cal-cell.c-leave{background:var(--navy-l);border-color:rgba(30,58,95,.2)!important}
+.att-cal-cell.c-absent{background:var(--bg)}
+.cal-dnum{font-size:11px;font-weight:700;color:var(--text)}
+.cal-tin{font-size:8px;font-weight:700;color:var(--green);background:var(--green-l);padding:1px 3px;border-radius:3px;min-height:12px;width:100%;text-align:center}
+.cal-tout{font-size:8px;font-weight:700;color:var(--navy);background:var(--navy-l);padding:1px 3px;border-radius:3px;min-height:12px;width:100%;text-align:center}
+.cal-ot-b{font-size:8px;font-weight:700;color:#92400E;background:#FEF3C7;padding:1px 3px;border-radius:3px;width:100%;text-align:center}
+.cal-late-b{font-size:8px;color:var(--red);font-weight:700}
 /* HOLIDAY FORM */
 .holi-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .holi-inp{padding:7px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Sarabun',sans-serif;font-size:13px;outline:none}
@@ -715,20 +731,24 @@ function analyzeAttDay(recs){
   const sorted=[...recs].sort();
   const first=sorted[0], last=sorted[sorted.length-1];
   const fm=toM(first), lm=toM(last);
-  const res={in:first,out:sorted.length>1?last:null,status:'',ot:0,lateMin:0};
-  if(fm<=toM('08:00:59')) res.status='ok';
-  else if(fm<=toM('11:59:59')){res.status='late';res.lateMin=Math.round(fm-toM('08:01:00'));}
-  else if(fm<=toM('12:00:59')) res.status='half-am';
-  else {res.status='late';res.lateMin=Math.round(fm-toM('08:01:00'));}
+  const res={in:first, out:sorted.length>1?last:null, status:'', ot:0, lateMin:0};
+
+  // สถานะเข้างาน
+  if(fm<=toM('08:00:59'))       res.status='ok';
+  else if(fm<=toM('11:59:59')) {res.status='late'; res.lateMin=Math.round(fm-toM('08:01:00'));}
+  else if(fm<=toM('12:00:59'))  res.status='half-am';
+  else                         {res.status='late'; res.lateMin=Math.round(fm-toM('08:01:00'));}
+
+  // ออกงาน / OT
   if(sorted.length>1){
-    if(lm>=toM('11:50:00')&&lm<=toM('12:30:00')) res.status='half-pm';
-    else if(lm>=toM('17:30:00')&&lm<toM('17:55:00')) res.ot=0.5;
-    else if(lm>=toM('17:55:00')&&lm<toM('18:25:00')) res.ot=1;
-    else if(lm>=toM('18:25:00')&&lm<toM('18:55:00')) res.ot=1.5;
-    else if(lm>=toM('18:55:00')&&lm<toM('19:25:00')) res.ot=2;
-    else if(lm>=toM('19:25:00')&&lm<toM('19:55:00')) res.ot=2.5;
-    else if(lm>=toM('19:55:00')&&lm<toM('20:25:00')) res.ot=3;
-    else if(lm>=toM('20:25:00')) res.ot=3.5;
+    if     (lm>=toM('11:50:00')&&lm<=toM('12:30:00')) res.status='half-pm';
+    else if(lm>=toM('17:30:00')&&lm<toM('17:55:00'))  res.ot=0.5;
+    else if(lm>=toM('17:55:00')&&lm<toM('18:25:00'))  res.ot=1;
+    else if(lm>=toM('18:25:00')&&lm<toM('18:55:00'))  res.ot=1.5;
+    else if(lm>=toM('18:55:00')&&lm<toM('19:25:00'))  res.ot=2;
+    else if(lm>=toM('19:25:00')&&lm<toM('19:55:00'))  res.ot=2.5;
+    else if(lm>=toM('19:55:00')&&lm<toM('20:25:00'))  res.ot=3;
+    else if(lm>=toM('20:25:00'))                       res.ot=3.5;
   }
   return res;
 }
@@ -738,43 +758,125 @@ function renderAttCell(date,name){
   const[dd,mm,yyyy]=date.split('/');
   const dateObj=new Date(yyyy,mm-1,dd);
   const isSun=dateObj.getDay()===0, isSat=dateObj.getDay()===6;
-  if(holi) return`<div class="att-cell"><span class="ab ab-holi">🏖️ หยุด</span><span class="att-time day-holi" style="font-size:9px">${holi.name.slice(0,5)}</span></div>`;
+  if(holi) return`<div class="att-cell"><span class="ab ab-holi">🏖️ หยุด</span><span style="font-size:9px;color:#92400E">${holi.name.slice(0,6)}</span></div>`;
   if(isSun||isSat) return`<div class="att-cell"><span class="ab ab-holi">${isSun?'อา':'ส'}.</span></div>`;
   const recs=attMapData[date]?.[name];
   if(!recs||!recs.length) return`<div class="att-cell"><span class="ab ab-absent">—</span></div>`;
   const a=analyzeAttDay(recs);
   if(!a) return`<div class="att-cell"><span class="ab ab-absent">—</span></div>`;
-  let h='';
-  if(a.status==='ok') h=`<span class="ab ab-ok">✅ ตรง</span><span class="att-time">${a.in}</span>`;
-  else if(a.status==='late') h=`<span class="ab ab-late">⚠️ สาย</span><span class="att-time">${a.in}</span><span class="att-late-min">+${a.lateMin}น.</span>`;
-  else if(a.status==='half-am') h=`<span class="ab ab-leave">🌅 ลาเช้า</span><span class="att-time">${a.in}</span>`;
-  else if(a.status==='half-pm') h=`<span class="ab ab-leave">🌆 ลาบ่าย</span><span class="att-time">${a.out}</span>`;
-  if(a.ot>0) h+=`<span class="ab ab-ot">OT ${a.ot}ชม.</span>`;
-  return`<div class="att-cell">${h}</div>`;
+
+  // status badge
+  let badge='';
+  if(a.status==='ok')      badge=`<span class="ab ab-ok">✅ ตรง</span>`;
+  else if(a.status==='late') badge=`<span class="ab ab-late">⚠️ +${a.lateMin}น.</span>`;
+  else if(a.status==='half-am') badge=`<span class="ab ab-leave">🌅 ลาเช้า</span>`;
+  else if(a.status==='half-pm') badge=`<span class="ab ab-leave">🌆 ลาบ่าย</span>`;
+
+  // เวลาเข้า-ออก
+  const timeIn=a.in?`<div style="font-size:9px;color:#1B7F4E;font-weight:600">▲ ${a.in}</div>`:'';
+  const timeOut=a.out?`<div style="font-size:9px;color:#1E3A5F;font-weight:600">▼ ${a.out}</div>`:'';
+  const otBadge=a.ot>0?`<span class="ab ab-ot">OT ${a.ot}ชม.</span>`:'';
+
+  return`<div class="att-cell">${badge}${timeIn}${timeOut}${otBadge}</div>`;
 }
 
 function renderAttTable(){
-  const html=`<table class="att-tbl">
-    <thead><tr>
-      <th>พนักงาน</th>
-      ${attDays.map(d=>{
-        const[dd,mm,yyyy]=d.split('/');
-        const dateObj=new Date(yyyy,mm-1,dd);
-        const wd=DAY_TH2[dateObj.getDay()];
-        const isSun=dateObj.getDay()===0;
+  // จัดกลุ่มวันตามเดือน
+  const byMonth={};
+  attDays.forEach(d=>{
+    const[dd,mm,yyyy]=d.split('/');
+    const key=`${yyyy}-${mm}`;
+    if(!byMonth[key])byMonth[key]={yyyy,mm,days:[]};
+    byMonth[key].days.push(d);
+  });
+
+  const MTHS=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const DNAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+  let html='';
+  Object.values(byMonth).forEach(({yyyy,mm,days})=>{
+    html+=`<div style="margin-bottom:24px">`;
+    // แต่ละพนักงาน
+    attEmps.forEach(name=>{
+      // คำนวณสถิติเดือนนี้
+      let cntWork=0,cntLate=0,cntOT=0;
+      days.forEach(d=>{
+        const recs=attMapData[d]?.[name];
+        const dateObj=new Date(...d.split('/').reverse().map(Number).map((v,i)=>i===1?v-1:v));
+        const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
         const isHoli=attHolidays.some(h=>h.date===d);
-        const cls=isHoli||isSun?'day-holi':'';
-        return`<th><div class="${cls}">${dd}</div><div style="font-size:8px;color:var(--muted)">${wd}</div></th>`;
-      }).join('')}
-    </tr></thead>
-    <tbody>
-      ${attEmps.map(name=>`<tr>
-        <td>${name}</td>
-        ${attDays.map(d=>`<td>${renderAttCell(d,name)}</td>`).join('')}
-      </tr>`).join('')}
-    </tbody>
-  </table>`;
-  document.getElementById('attTableWrap').innerHTML=html;
+        if(isSun||isSat||isHoli) return;
+        if(!recs||!recs.length) return;
+        const a=analyzeAttDay(recs);
+        if(!a) return;
+        cntWork++;
+        if(a.status==='late') cntLate++;
+        if(a.ot>0) cntOT++;
+      });
+
+      // สร้างปฏิทิน
+      const firstDay=new Date(parseInt(yyyy),parseInt(mm)-1,1).getDay();
+      const daysInMonth=new Date(parseInt(yyyy),parseInt(mm),0).getDate();
+      const today=new Date();
+
+      let cells=DNAMES.map(d=>`<div class="att-cal-hdr">${d}</div>`).join('');
+      for(let i=0;i<firstDay;i++) cells+=`<div class="att-cal-cell empty"></div>`;
+
+      for(let d=1;d<=daysInMonth;d++){
+        const dd=String(d).padStart(2,'0');
+        const dateStr=`${dd}/${mm}/${yyyy}`;
+        const dateObj=new Date(parseInt(yyyy),parseInt(mm)-1,d);
+        const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
+        const isHoli=attHolidays.some(h=>h.date===dateStr);
+        const isToday=today.getDate()===d&&today.getMonth()===parseInt(mm)-1&&today.getFullYear()===parseInt(yyyy);
+        const recs=attMapData[dateStr]?.[name];
+
+        let cls='att-cal-cell';
+        if(isSun||isSat) cls+=' weekend';
+        if(isToday) cls+=' today';
+
+        if(isHoli){
+          cells+=`<div class="${cls}"><div class="cal-dnum">${d}</div><div class="cal-ot-b" style="font-size:7px">หยุด</div></div>`;
+          continue;
+        }
+        if(isSun||isSat){
+          cells+=`<div class="${cls}"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
+          continue;
+        }
+
+        const a=recs&&recs.length?analyzeAttDay(recs):null;
+        if(!a){
+          cells+=`<div class="${cls} c-absent"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
+          continue;
+        }
+
+        if(a.status==='ok')       cls+=' c-ok';
+        else if(a.status==='late') cls+=' c-late';
+        else                       cls+=' c-leave';
+
+        cells+=`<div class="${cls}">
+          <div class="cal-dnum">${d}${a.status==='late'?'<span class="cal-late-b">!</span>':''}</div>
+          <div class="cal-tin">${a.in?a.in.slice(0,5):''}</div>
+          <div class="cal-tout">${a.out?a.out.slice(0,5):''}</div>
+          ${a.ot>0?`<div class="cal-ot-b">OT${a.ot}</div>`:''}
+        </div>`;
+      }
+
+      html+=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:700">${name} — ${MTHS[parseInt(mm)]} ${parseInt(yyyy)+543}</div>
+          <div style="display:flex;gap:6px">
+            <span class="ab ab-ok">${cntWork} วัน</span>
+            ${cntLate>0?`<span class="ab ab-late">สาย ${cntLate}</span>`:''}
+            ${cntOT>0?`<span class="ab ab-ot">OT ${cntOT} วัน</span>`:''}
+          </div>
+        </div>
+        <div class="att-cal-grid">${cells}</div>`;
+    });
+    html+=`</div>`;
+  });
+
+  document.getElementById('attTableWrap').innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--muted)">ไม่มีข้อมูล</div>';
 }
 
 function renderAttStats(){
