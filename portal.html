@@ -793,7 +793,17 @@ function renderAttTable(){
   const MTHS=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const DNAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 
+  // ── สรุปรวมทุกคน ──
+  const summaryAll={};
+  attEmps.forEach(name=>{
+    summaryAll[name]={work:0,late:0,lateMin:0,ot:0};
+  });
+
   let html='';
+
+  // ── Summary card รวม ──
+  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px" id="sumCards"></div>`;
+
   Object.values(byMonth).forEach(({yyyy,mm,days})=>{
     html+=`<div style="margin-bottom:24px">`;
     // แต่ละพนักงาน
@@ -862,6 +872,13 @@ function renderAttTable(){
         </div>`;
       }
 
+      // สะสม summary
+      if(summaryAll[name]){
+        summaryAll[name].work+=cntWork;
+        summaryAll[name].late+=cntLate;
+        summaryAll[name].ot+=cntOT;
+      }
+
       html+=`
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:13px;font-weight:700">${name} — ${MTHS[parseInt(mm)]} ${parseInt(yyyy)+543}</div>
@@ -876,7 +893,28 @@ function renderAttTable(){
     html+=`</div>`;
   });
 
-  document.getElementById('attTableWrap').innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--muted)">ไม่มีข้อมูล</div>';
+  // สร้าง summary table
+  const sumHtml=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px">
+    <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:13px;font-weight:700">📊 สรุปรวมทั้งหมด (ทุกเดือน)</div>
+    <table class="tbl">
+      <thead><tr>
+        <th>พนักงาน</th>
+        <th style="text-align:center">วันทำงาน</th>
+        <th style="text-align:center">วันที่สาย</th>
+        <th style="text-align:center">OT รวม (วัน)</th>
+      </tr></thead>
+      <tbody>
+        ${attEmps.map(name=>`<tr>
+          <td><b>${name}</b></td>
+          <td style="text-align:center"><span class="ab ab-ok">${summaryAll[name]?.work||0}</span></td>
+          <td style="text-align:center">${(summaryAll[name]?.late||0)>0?`<span class="ab ab-late">${summaryAll[name].late}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="text-align:center">${(summaryAll[name]?.ot||0)>0?`<span class="ab ab-ot">${summaryAll[name].ot}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('attTableWrap').innerHTML=(html+sumHtml)||'<div style="padding:20px;text-align:center;color:var(--muted)">ไม่มีข้อมูล</div>';
 }
 
 function renderAttStats(){
