@@ -1244,10 +1244,15 @@ app.get('/eslip/image', async (req, res) => {
     const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
     const empData = await payroll.getEmployeePayroll(empName, month, pt);
     if (!empData) return res.status(404).send('not found');
-    const pdfBuf = docType === 'payslip'
-      ? await payslip.createFromPayroll(empData)
-      : await cert.createFromPayroll(empData);
-    const imgBuf = await payslip.htmlToImageBuffer(pdfBuf._html || '');
+    // สร้าง HTML โดยตรงไม่ต้อง puppeteer 2 รอบ
+    let html;
+    if (docType === 'payslip') {
+      html = payslip.buildPayslipHtml(empData);
+    } else {
+      html = cert.buildCertHtml(empData);
+    }
+    if (!html) return res.status(500).send('build html failed');
+    const imgBuf = await payslip.htmlToImageBuffer(html);
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Content-Disposition', `attachment; filename="slip_${month}.jpg"`);
     res.send(imgBuf);
