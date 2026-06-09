@@ -1,8 +1,11 @@
 const axios = require('axios');
-const BASE_ID  = process.env.LARK_BASE_ID;
-const TABLE_ID = process.env.LARK_TABLE_ID;
-const APP_ID   = process.env.LARK_APP_ID;
-const SECRET   = process.env.LARK_APP_SECRET;
+const BASE_ID        = process.env.LARK_BASE_ID;
+const TABLE_ID       = process.env.LARK_TABLE_ID;
+const APP_ID         = process.env.LARK_APP_ID;
+const SECRET         = process.env.LARK_APP_SECRET;
+const JOB_BASE_ID    = process.env.LARK_JOB_BASE_ID;
+const ASSIGN_TABLE_ID = process.env.LARK_ASSIGN_TABLE_ID;
+
 async function getToken() {
   const r = await axios.post('https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal',
     { app_id: APP_ID, app_secret: SECRET });
@@ -41,4 +44,18 @@ async function getAllEmployees(token) {
   const items = await getRecords(token);
   return items.map(item => item.fields || item);
 }
-module.exports = { getToken, findByLineId, register, getAllEmployees };
+async function getJobsToday(token, team) {
+  const now   = Date.now();
+  const url   = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
+  const r     = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+  const items = r.data?.data?.items || [];
+  return items.filter(item => {
+    const f     = item.fields;
+    const start = f['วันที่เริ่ม']  || 0;
+    const end   = f['วันสิ้นสุด'] || 0;
+    const t     = (f['ชุด'] || '').toString();
+    return t === team && start <= now && now <= end;
+  }).map(item => item.fields);
+}
+
+module.exports = { getToken, findByLineId, register, getAllEmployees, getJobsToday };
