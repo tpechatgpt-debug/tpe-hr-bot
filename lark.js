@@ -1,9 +1,9 @@
 const axios = require('axios');
-const BASE_ID        = process.env.LARK_BASE_ID;
-const TABLE_ID       = process.env.LARK_TABLE_ID;
-const APP_ID         = process.env.LARK_APP_ID;
-const SECRET         = process.env.LARK_APP_SECRET;
-const JOB_BASE_ID    = process.env.LARK_JOB_BASE_ID;
+const BASE_ID         = process.env.LARK_BASE_ID;
+const TABLE_ID        = process.env.LARK_TABLE_ID;
+const APP_ID          = process.env.LARK_APP_ID;
+const SECRET          = process.env.LARK_APP_SECRET;
+const JOB_BASE_ID     = process.env.LARK_JOB_BASE_ID;
 const ASSIGN_TABLE_ID = process.env.LARK_ASSIGN_TABLE_ID;
 
 async function getToken() {
@@ -45,17 +45,16 @@ async function getAllEmployees(token) {
   return items.map(item => item.fields || item);
 }
 async function getJobsToday(token, team) {
-  const now   = Date.now();
-  const url   = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
-  const r     = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+  const now = Date.now();
+  const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
+  const r   = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
   const items = r.data?.data?.items || [];
   return items.filter(item => {
-    const f     = item.fields;
-    const start = f['วันที่เริ่ม']  || 0;
-    const end   = f['วันสิ้นสุด'] || 0;
+    const f       = item.fields;
+    const start   = f['วันที่เริ่ม']  || 0;
+    const end     = f['วันสิ้นสุด'] || 0;
     const rawTeam = f['ชุด'];
-    const t = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
-    return t === team && start <= now && now <= end;
+    const t       = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
     return t === team && start <= now && now <= end;
   }).map(item => item.fields);
 }
