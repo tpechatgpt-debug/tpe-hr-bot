@@ -1611,6 +1611,17 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
+app.get('/eslip/debug-jobs', async (req, res) => {
+  try {
+    const larkToken = await lark.getToken();
+    const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records?page_size=3`;
+    const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+    res.json(r.data);
+  } catch(e) {
+    res.json({ error: e.message, status: e.response?.status, data: e.response?.data });
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
