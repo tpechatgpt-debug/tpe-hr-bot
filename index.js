@@ -1552,6 +1552,65 @@ app.get('/eslip/jobs-today', async (req, res) => {
   }
 });
 
+// ── Dashboard API ──────────────────────────────────────
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    const larkToken = await lark.getToken();
+
+    // ดึง Assignments
+    let assignments = [], pageToken = '';
+    for (let i = 0; i < 10; i++) {
+      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const data = r.data?.data;
+      assignments = assignments.concat(data?.items || []);
+      if (!data?.has_more) break;
+      pageToken = data.page_token || '';
+    }
+
+    // ดึง JOB2026
+    let jobs = [], jobPageToken = '';
+    for (let i = 0; i < 10; i++) {
+      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/tblyHWAlWKVwKOz9/records?page_size=100${jobPageToken ? '&page_token=' + jobPageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const data = r.data?.data;
+      jobs = jobs.concat(data?.items || []);
+      if (!data?.has_more) break;
+      jobPageToken = data.page_token || '';
+    }
+
+    // สร้าง job map
+    const jobMap = {};
+    jobs.forEach(j => { jobMap[j.record_id] = j.fields; });
+
+    // แปลง assignments
+    const result = assignments.map(a => {
+      const f = a.fields;
+      const jobId = Array.isArray(f['JOB']) ? f['JOB'][0]?.record_id : null;
+      const jobFields = jobId ? jobMap[jobId] : null;
+      return {
+        id: a.record_id,
+        team: (f['ชุด'] || '').toString(),
+        jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
+        jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
+        company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
+        province: f['จังหวัด'] || '—',
+        startDate: f['วันที่เริ่ม'] || null,
+        endDate: f['วันสิ้นสุด'] || null,
+        status: f['สถานะ'] || 'วางแผน',
+        car: f['รถที่ใช้ออกหน้างาน'] || '—',
+        detail: f['รายละเอียดงาน'] || '—',
+        note: f['หมายเหตุ'] || '',
+      };
+    });
+
+    res.json({ ok: true, assignments: result, total: result.length });
+  } catch(e) {
+    console.error('/api/dashboard error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
