@@ -17,7 +17,6 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-/* LOADING */
 .ls{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s,visibility .4s}
 .ls.hide{opacity:0;visibility:hidden;pointer-events:none}
 .ls-logo{width:88px;height:88px;border-radius:28px;background:linear-gradient(135deg,#1a0a00,#C9952A);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:28px;animation:lp 2s ease-in-out infinite}
@@ -28,18 +27,15 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .ls-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));animation:lf 1s ease forwards}
 @keyframes lf{to{width:100%}}
 
-/* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,30,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 8px;cursor:pointer;transition:all .2s;border:none;background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:10px;gap:4px}
 .bnav-btn.active{color:var(--gold)}
 .bnav-icon{font-size:20px;transition:transform .2s}
 .bnav-btn.active .bnav-icon{transform:scale(1.2)}
 
-/* PAGES */
 .page{display:none;min-height:100vh;padding-bottom:80px}
 .page.show{display:block}
 
-/* HEADER */
 .hdr{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
 .hdr-inner{display:flex;align-items:center;gap:12px;padding:14px 18px}
 .hdr-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1a0a00,#C9952A);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
@@ -47,7 +43,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .hdr-sub{font-size:10px;color:var(--muted);margin-top:1px}
 .hdr-avatar{width:34px;height:34px;border-radius:50%;border:2px solid rgba(245,166,35,.5);object-fit:cover;flex-shrink:0}
 
-/* ── PAGE: HOME ── */
 .profile-hero{margin:16px 18px;border-radius:22px;background:linear-gradient(160deg,#1a2a4a,#0f1a33,#1a1040);padding:22px;position:relative;overflow:hidden;border:1px solid var(--border)}
 .profile-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(79,142,247,.15),transparent 70%)}
 .profile-hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,166,35,.08),transparent 70%)}
@@ -70,11 +65,11 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:all .15s;text-align:left}
 .qa-btn:active{transform:scale(.97)}
+.qa-btn.qa-job{border-color:rgba(245,166,35,.3);background:linear-gradient(135deg,rgba(245,166,35,.08),rgba(201,149,42,.05))}
 .qa-icon{font-size:24px}
 .qa-label{font-size:13px;font-weight:600;color:var(--text)}
 .qa-desc{font-size:10px;color:var(--muted)}
 
-/* ── PAGE: SLIP ── */
 .month-list-wrap{padding:14px 18px 0}
 .ml-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .ml-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
@@ -89,7 +84,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .mc-net{font-size:13px;color:var(--green);font-weight:600;margin-top:2px}
 .mc-arrow{color:var(--muted);font-size:20px}
 
-/* ── DOC VIEW ── */
 .doc-view{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column}
 .doc-view.show{display:flex}
 .dv-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
@@ -105,13 +99,47 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .btn-pdf{background:linear-gradient(135deg,#7a3500,#C9952A);color:#fff;box-shadow:0 4px 16px rgba(245,166,35,.3)}
 .btn-dis{opacity:.5;pointer-events:none}
 
-/* ── PAGE: ATTENDANCE ── */
+/* ── JOB MODAL ── */
+.job-modal{display:none;position:fixed;inset:0;z-index:300;flex-direction:column}
+.job-modal.show{display:flex}
+.jm-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}
+.jm-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-radius:28px 28px 0 0;border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);max-height:90vh;display:flex;flex-direction:column;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.jm-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin:12px auto 0}
+.jm-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.jm-title{flex:1;font-size:16px;font-weight:700}
+.jm-close{width:32px;height:32px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.jm-body{flex:1;overflow-y:auto;padding:16px 20px}
+.jm-empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.jm-empty-icon{font-size:48px;margin-bottom:12px}
+
+/* JOB CARD */
+.job-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.job-card-hero{background:linear-gradient(135deg,#1a2a4a,#0f1a33);padding:18px 20px;position:relative;overflow:hidden}
+.job-card-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(245,166,35,.15),transparent)}
+.jc-no{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.1em;margin-bottom:6px}
+.jc-name{font-size:16px;font-weight:700;color:#fff;line-height:1.3}
+.jc-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px}
+.status-plan{background:rgba(79,142,247,.2);color:var(--blue);border:1px solid rgba(79,142,247,.3)}
+.status-doing{background:rgba(245,166,35,.2);color:var(--gold);border:1px solid rgba(245,166,35,.3)}
+.status-done{background:rgba(6,214,160,.2);color:var(--green);border:1px solid rgba(6,214,160,.3)}
+
+.job-card-body{padding:16px 20px}
+.jc-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.jc-row:last-child{border-bottom:none}
+.jc-icon{font-size:16px;width:24px;flex-shrink:0;margin-top:1px}
+.jc-info{flex:1}
+.jc-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.jc-val{font-size:13px;font-weight:600;color:var(--text);margin-top:2px}
+
+.jc-map-btn{width:100%;margin-top:12px;padding:12px;border-radius:13px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#1a4a3a,#06D6A0);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.jc-map-btn:active{transform:scale(.97)}
+
 .att-wrap{padding:14px 18px 0}
 .year-select{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
 .year-select::-webkit-scrollbar{display:none}
 .year-chip{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .year-chip.active{background:var(--gold);color:#000;border-color:var(--gold)}
-
 .month-group{margin-bottom:20px}
 .mg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .mg-title{font-size:13px;font-weight:700;color:var(--text)}
@@ -119,7 +147,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .mg-stat{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
 .mg-late{background:rgba(239,71,111,.15);color:var(--red);border:1px solid rgba(239,71,111,.2)}
 .mg-ok{background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.2)}
-
 .att-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:6px}
 .att-row{display:flex;align-items:center;padding:12px 14px;gap:12px;border-bottom:1px solid rgba(255,255,255,.04)}
 .att-row:last-child{border-bottom:none}
@@ -133,15 +160,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .status-ok{color:var(--green)}
 .status-late{color:var(--red)}
 .att-late-badge{background:rgba(239,71,111,.15);color:var(--red);border:1px solid rgba(239,71,111,.2);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0}
-
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-icon{font-size:52px;margin-bottom:14px;opacity:.5}
-
 .sk{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200%;animation:sk 1.4s infinite;border-radius:14px}
 @keyframes sk{0%{background-position:200%}100%{background-position:-200%}}
 .sk-h{height:72px;margin-bottom:6px}
 
-/* CERT CARD */
 .cert-card{border-radius:20px;overflow:hidden;border:1px solid var(--border)}
 .cert-hero{background:linear-gradient(160deg,#2d1b69,#6C3483);padding:28px 22px;position:relative;overflow:hidden}
 .cert-hero::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;background:rgba(255,255,255,.06);border-radius:50%}
@@ -160,7 +184,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cert-rv{font-size:13px;font-weight:600}
 .cert-footer{background:var(--surface2);padding:14px 22px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-/* PAY CARD */
 .pay-card{border-radius:20px;overflow:hidden;border:1px solid var(--border)}
 .pay-hero{background:linear-gradient(160deg,#0a1628,#1a3a6a);padding:24px 22px;position:relative;overflow:hidden}
 .pay-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(79,142,247,.15),transparent)}
@@ -180,7 +203,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .c-g{color:var(--green)}.c-r{color:var(--red)}.c-b{color:var(--blue)}.c-t{color:var(--text)}
 .pay-footer{background:var(--surface2);padding:14px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
 
-/* ── SUMMARY ── */
 .sum-wrap{margin-bottom:16px}
 .sum-total{background:linear-gradient(135deg,#1a2a4a,#0f1a33);border-radius:16px;padding:16px;border:1px solid var(--border);margin-bottom:10px}
 .sum-total-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
@@ -197,7 +219,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .sb-late{background:rgba(239,71,111,.15);color:var(--red)}
 .sb-ot{background:rgba(255,149,0,.15);color:var(--orange)}
 
-/* ── CALENDAR ── */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:var(--surface);border-radius:16px;padding:10px;border:1px solid var(--border)}
 .cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0;letter-spacing:.05em}
 .cal-cell{border-radius:10px;padding:5px 3px;min-height:64px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;border:1px solid transparent}
@@ -214,7 +235,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-ot{font-size:8px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.15);padding:1px 4px;border-radius:4px}
 .cal-late-dot{font-size:8px;color:var(--red);font-weight:700}
 
-/* TOAST */
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -230,9 +250,23 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 
 <div class="toast" id="toast"></div>
 
+<!-- JOB MODAL -->
+<div class="job-modal" id="jobModal">
+  <div class="jm-overlay" onclick="closeJobModal()"></div>
+  <div class="jm-sheet">
+    <div class="jm-handle"></div>
+    <div class="jm-header">
+      <div class="jm-title" id="jmTitle">🔧 งานวันนี้</div>
+      <div class="jm-close" onclick="closeJobModal()">✕</div>
+    </div>
+    <div class="jm-body" id="jmBody">
+      <div class="sk sk-h"></div><div class="sk sk-h"></div>
+    </div>
+  </div>
+</div>
+
 <div id="app" style="display:none">
 
-  <!-- BOTTOM NAV -->
   <div class="bnav">
     <button class="bnav-btn active" id="nav-home" onclick="showPage('home')">
       <span class="bnav-icon">🏠</span>หน้าหลัก
@@ -245,7 +279,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </button>
   </div>
 
-  <!-- ── PAGE: HOME ── -->
+  <!-- PAGE: HOME -->
   <div class="page show" id="page-home">
     <div class="hdr">
       <div class="hdr-inner">
@@ -300,16 +334,16 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="qa-label">เวลาเข้างาน</div>
           <div class="qa-desc">ประวัติการสแกน</div>
         </div>
-        <div class="qa-btn" onclick="showToast('🚧 เร็วๆ นี้')">
-          <div class="qa-icon">📊</div>
-          <div class="qa-label">สรุปรายเดือน</div>
-          <div class="qa-desc">เร็วๆ นี้</div>
+        <div class="qa-btn qa-job" onclick="openJobModal()">
+          <div class="qa-icon">🔧</div>
+          <div class="qa-label">งานวันนี้</div>
+          <div class="qa-desc" id="qaJobDesc">ดูงานที่ได้รับมอบหมาย</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── PAGE: SLIP ── -->
+  <!-- PAGE: SLIP -->
   <div class="page" id="page-slip">
     <div class="hdr">
       <div class="hdr-inner">
@@ -321,16 +355,14 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
       </div>
     </div>
     <div class="month-list-wrap">
-      <div class="ml-header">
-        <div class="ml-title">เลือกเดือน</div>
-      </div>
+      <div class="ml-header"><div class="ml-title">เลือกเดือน</div></div>
       <div id="monthList">
         <div class="sk sk-h"></div><div class="sk sk-h"></div><div class="sk sk-h"></div>
       </div>
     </div>
   </div>
 
-  <!-- ── PAGE: ATTENDANCE ── -->
+  <!-- PAGE: ATTENDANCE -->
   <div class="page" id="page-att">
     <div class="hdr">
       <div class="hdr-inner">
@@ -347,7 +379,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
-  <!-- ── DOC VIEW ── -->
+  <!-- DOC VIEW -->
   <div class="doc-view" id="docView">
     <div class="dv-topbar">
       <div class="dv-back" onclick="closeDoc()">←</div>
@@ -370,7 +402,6 @@ const API='https://tpe-hr-bot.onrender.com';
 const LIFF_ID='2010255039-6dQLsh35';
 let empData=null, attData=[], currentDoc=null, currentYear=null;
 
-// ── INIT ──
 async function init(){
   const t=setTimeout(()=>{hide();document.getElementById('phName').textContent='โหลดช้า กรุณารีเฟรช';},10000);
   try{
@@ -398,7 +429,106 @@ async function loadEmp(lineId){
     b.className='ph-badge '+(d.payType==='daily'?'badge-d':'badge-m');
     loadSlipMonths();
     loadAttendance();
+    preloadJobDesc();
   }catch(e){}
+}
+
+// ── PRELOAD JOB DESC ──
+async function preloadJobDesc(){
+  if(!empData)return;
+  try{
+    const r=await fetch(`${API}/eslip/jobs-today?lineId=${empData.lineId}`);
+    const d=await r.json();
+    const desc=document.getElementById('qaJobDesc');
+    if(d.jobs&&d.jobs.length>0){
+      desc.textContent=`${d.team} · ${d.jobs.length} งาน`;
+      desc.style.color='var(--gold)';
+    } else if(d.team){
+      desc.textContent=`${d.team} · ว่างวันนี้`;
+    }
+  }catch(e){}
+}
+
+// ── JOB MODAL ──
+async function openJobModal(){
+  const modal=document.getElementById('jobModal');
+  const body=document.getElementById('jmBody');
+  modal.classList.add('show');
+  body.innerHTML='<div class="sk sk-h"></div><div class="sk sk-h"></div>';
+  if(!empData){body.innerHTML='<div class="jm-empty"><div class="jm-empty-icon">⚠️</div><p>ยังไม่ได้ล็อกอิน</p></div>';return;}
+  try{
+    const r=await fetch(`${API}/eslip/jobs-today?lineId=${empData.lineId}`);
+    const d=await r.json();
+    document.getElementById('jmTitle').textContent=`🔧 งานวันนี้${d.team?' · '+d.team:''}`;
+    if(!d.jobs||!d.jobs.length){
+      body.innerHTML=`<div class="jm-empty"><div class="jm-empty-icon">📋</div><p style="font-size:15px;font-weight:600;margin-bottom:6px">ไม่มีงานวันนี้</p><p style="font-size:13px;color:var(--muted)">${d.team||'ยังไม่ได้กำหนดชุด'}</p></div>`;
+      return;
+    }
+    body.innerHTML=d.jobs.map(j=>renderJobCard(j)).join('');
+  }catch(e){
+    body.innerHTML='<div class="jm-empty"><div class="jm-empty-icon">❌</div><p>โหลดไม่สำเร็จ</p></div>';
+  }
+}
+
+function closeJobModal(){
+  document.getElementById('jobModal').classList.remove('show');
+}
+
+function renderJobCard(j){
+  const statusMap={
+    'วางแผน':'status-plan',
+    'กำลังทำ':'status-doing',
+    'เสร็จแล้ว':'status-done',
+  };
+  const statusCls=statusMap[j['สถานะ']]||'status-plan';
+  const jobNo=Array.isArray(j['JOB'])?j['JOB'].map(x=>x.value||x).join(', '):(j['JOB']||'');
+  const company=j['บริษัท']||'—';
+  const province=j['จังหวัด']||'';
+  const detail=j['รายละเอียดงาน']||'';
+  const car=j['รถที่ใช้ออกหน้างาน']||'—';
+  const status=j['สถานะ']||'วางแผน';
+
+  // format date
+  const fmtDate=ts=>{if(!ts)return'—';const d=new Date(ts+7*3600000);return`${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`;};
+  const startStr=fmtDate(j['วันที่เริ่ม']);
+  const endStr=fmtDate(j['วันสิ้นสุด']);
+
+  // Google Maps URL
+  const mapQuery=encodeURIComponent((company+' '+province).trim());
+  const mapUrl=`https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+
+  return`<div class="job-card">
+    <div class="job-card-hero">
+      <div class="jc-no">🔧 ${jobNo}</div>
+      <div class="jc-name">${detail||company}</div>
+      <div class="jc-status ${statusCls}">● ${status}</div>
+    </div>
+    <div class="job-card-body">
+      <div class="jc-row">
+        <div class="jc-icon">🏭</div>
+        <div class="jc-info"><div class="jc-label">บริษัท</div><div class="jc-val">${company}</div></div>
+      </div>
+      ${province?`<div class="jc-row">
+        <div class="jc-icon">📍</div>
+        <div class="jc-info"><div class="jc-label">จังหวัด</div><div class="jc-val">${province}</div></div>
+      </div>`:''}
+      <div class="jc-row">
+        <div class="jc-icon">📅</div>
+        <div class="jc-info"><div class="jc-label">ช่วงงาน</div><div class="jc-val">${startStr} – ${endStr}</div></div>
+      </div>
+      <div class="jc-row">
+        <div class="jc-icon">🚗</div>
+        <div class="jc-info"><div class="jc-label">รถที่ใช้</div><div class="jc-val">${car}</div></div>
+      </div>
+      ${detail?`<div class="jc-row">
+        <div class="jc-icon">📝</div>
+        <div class="jc-info"><div class="jc-label">รายละเอียด</div><div class="jc-val">${detail}</div></div>
+      </div>`:''}
+      <button class="jc-map-btn" onclick="window.open('${mapUrl}','_blank')">
+        🗺️ เปิด Google Maps · ${province||company}
+      </button>
+    </div>
+  </div>`;
 }
 
 // ── PAGES ──
@@ -466,25 +596,22 @@ async function loadAttendance(){
     if(d.error)throw new Error(d.error);
     attData=d.records||[];
     window._attSummary=d.summary||null;
-
-    // คำนวณ stats เดือนนี้
     const now=new Date();
     const thisMonth=String(now.getMonth()+1).padStart(2,'0');
     const thisYear=now.getFullYear();
     const thisMonthRecs=attData.filter(r=>{
       const [dd,mm,yyyy]=r.date.split('/');
-      return parseInt(yyyy)===thisYear && mm===thisMonth;
+      return parseInt(yyyy)===thisYear&&mm===thisMonth;
     });
     document.getElementById('statDays').textContent=thisMonthRecs.length;
     document.getElementById('statLate').textContent=thisMonthRecs.filter(r=>r.late).length;
-
     renderAttendance();
   }catch(e){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
 }
 
 function renderSummary(){
   const s=window._attSummary;
-  if(!s) return '';
+  if(!s)return'';
   const MTHS={'01':'ม.ค.','02':'ก.พ.','03':'มี.ค.','04':'เม.ย.','05':'พ.ค.','06':'มิ.ย.','07':'ก.ค.','08':'ส.ค.','09':'ก.ย.','10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.'};
   const months=s.byMonth.map(m=>{
     const [mm,yyyy]=m.month.split('/');
@@ -498,23 +625,13 @@ function renderSummary(){
       </div>
     </div>`;
   }).join('');
-
   return`<div class="sum-wrap">
     <div class="sum-total">
       <div class="sum-total-title">📊 สรุปรวมทั้งหมด</div>
       <div class="sum-total-grid">
-        <div class="sum-total-item">
-          <div class="sum-total-val c-g">${s.total.work}</div>
-          <div class="sum-total-label">วันทำงาน</div>
-        </div>
-        <div class="sum-total-item">
-          <div class="sum-total-val c-r">${s.total.late}</div>
-          <div class="sum-total-label">วันที่สาย</div>
-        </div>
-        <div class="sum-total-item">
-          <div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div>
-          <div class="sum-total-label">ชม. OT</div>
-        </div>
+        <div class="sum-total-item"><div class="sum-total-val c-g">${s.total.work}</div><div class="sum-total-label">วันทำงาน</div></div>
+        <div class="sum-total-item"><div class="sum-total-val c-r">${s.total.late}</div><div class="sum-total-label">วันที่สาย</div></div>
+        <div class="sum-total-item"><div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div><div class="sum-total-label">ชม. OT</div></div>
       </div>
     </div>
     <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">รายเดือน</div>
@@ -523,115 +640,73 @@ function renderSummary(){
 }
 
 function renderAttendance(){
-  if(!attData.length){
-    document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติ</p></div>';
-    return;
-  }
-
-  // จัดกลุ่มตามปี — parse dd/mm/yyyy จาก date string
+  if(!attData.length){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติ</p></div>';return;}
   const byYear={};
   attData.forEach(r=>{
-    if(!r.date) return;
+    if(!r.date)return;
     const parts=r.date.split('/');
-    if(parts.length!==3) return;
+    if(parts.length!==3)return;
     const dd=parseInt(parts[0]),mm=parseInt(parts[1]),yyyy=parseInt(parts[2]);
     if(!byYear[yyyy])byYear[yyyy]=[];
     byYear[yyyy].push({...r,dd,mm,yyyy});
   });
-
   const years=Object.keys(byYear).sort((a,b)=>b-a);
-
-  // Summary
   const sumHtml=renderSummary();
-
-  // Year chips
   const sel=document.getElementById('yearSelect');
-  sel.parentElement.insertAdjacentHTML('beforebegin', sumHtml);
+  sel.parentElement.insertAdjacentHTML('beforebegin',sumHtml);
   sel.innerHTML=years.map((y,i)=>`<div class="year-chip${i===0?' active':''}" onclick="selectYear('${y}')">${parseInt(y)+543}</div>`).join('');
-
   currentYear=years[0];
   renderYear(currentYear,byYear);
-
   window._attByYear=byYear;
 }
 
 function selectYear(y){
   currentYear=y;
-  document.querySelectorAll('.year-chip').forEach(c=>{
-    c.classList.toggle('active',c.textContent==parseInt(y)+543);
-  });
+  document.querySelectorAll('.year-chip').forEach(c=>{c.classList.toggle('active',c.textContent==parseInt(y)+543);});
   renderYear(y,window._attByYear);
 }
 
 const MONTH_NAMES=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 
 function renderYear(y,byYear){
   const recs=byYear[y]||[];
   const byMonth={};
   recs.forEach(r=>{if(!byMonth[r.mm])byMonth[r.mm]=[];byMonth[r.mm].push(r);});
   const months=Object.keys(byMonth).map(Number).sort((a,b)=>b-a);
-
   const html=months.map(m=>{
     const mrs=byMonth[m];
     const lateCount=mrs.filter(r=>r.late).length;
     const otCount=mrs.filter(r=>r.ot>0).length;
-
-    // สร้าง map วัน → record
     const dayMap={};
-    mrs.forEach(r=>{ if(r.dd) dayMap[r.dd]=r; });
-
-    // หาจำนวนวันในเดือน
+    mrs.forEach(r=>{if(r.dd)dayMap[r.dd]=r;});
     const daysInMonth=new Date(parseInt(y),m,0).getDate();
-    // วันแรกของเดือนตกวันอะไร
     const firstDay=new Date(parseInt(y),m-1,1).getDay();
-
-    // สร้าง calendar grid
     const cells=[];
-    // header วัน
     const dayHeaders=['อา','จ','อ','พ','พฤ','ศ','ส'];
-
-    // blank cells ก่อนวันที่ 1
-    for(let i=0;i<firstDay;i++) cells.push(`<div class="cal-cell empty"></div>`);
-
+    for(let i=0;i<firstDay;i++)cells.push(`<div class="cal-cell empty"></div>`);
     for(let d=1;d<=daysInMonth;d++){
       const rec=dayMap[d];
       const dateObj=new Date(parseInt(y),m-1,d);
       const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
       const isToday=new Date().getDate()===d&&new Date().getMonth()===m-1&&new Date().getFullYear()===parseInt(y);
-
       let cls='cal-cell';
-      if(isSun||isSat) cls+=' cal-weekend';
-      if(isToday) cls+=' cal-today';
-      if(!rec&&!isSun&&!isSat) cls+=' cal-absent';
-      if(rec&&rec.late) cls+=' cal-late';
-      else if(rec&&rec.status==='ok') cls+=' cal-ok';
-      else if(rec&&rec.status==='leave') cls+=' cal-leave';
-      else if(rec&&(rec.status==='half-am'||rec.status==='half-pm')) cls+=' cal-leave';
-
+      if(isSun||isSat)cls+=' cal-weekend';
+      if(isToday)cls+=' cal-today';
+      if(!rec&&!isSun&&!isSat)cls+=' cal-absent';
+      if(rec&&rec.late)cls+=' cal-late';
+      else if(rec&&rec.status==='ok')cls+=' cal-ok';
+      else if(rec&&(rec.status==='leave'||rec.status==='half-am'||rec.status==='half-pm'))cls+=' cal-leave';
       const timeIn=rec&&rec.time?rec.time:'';
       const timeOut=rec&&rec.timeOut?rec.timeOut:'';
       const otBadge=rec&&rec.ot>0?`<div class="cal-ot">OT${rec.ot}</div>`:'';
       const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
-
-      // วันลา
       if(rec&&rec.status==='leave'){
         const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);
-        cells.push(`<div class="${cls}">
-          <div class="cal-day-num">${d}</div>
-          <div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div>
-          <div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div>
-        </div>`);
-      } else {
-        cells.push(`<div class="${cls}">
-          <div class="cal-day-num">${d}${lateBadge}</div>
-          <div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div>
-          <div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>
-          ${otBadge}
-        </div>`);
+        cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div><div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div></div>`);
+      }else{
+        cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);
       }
     }
-
     return`<div class="month-group">
       <div class="mg-header">
         <div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)+543}</div>
@@ -641,18 +716,12 @@ function renderYear(y,byYear){
           ${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}
         </div>
       </div>
-      <div class="cal-grid">
-        ${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}
-        ${cells.join('')}
-      </div>
+      <div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div>
     </div>`;
   }).join('');
-
   document.getElementById('attContent').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div><p>ไม่มีข้อมูลในปีนี้</p></div>';
 }
 
-
-// ── RENDER CARDS ──
 function fmt(n){return(Math.round((parseFloat(n)||0)*100)/100).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 function renderCert(d,month){
@@ -661,21 +730,9 @@ function renderCert(d,month){
   const thM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const ds=`${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
   return`<div class="cert-card">
-    <div class="cert-hero">
-      <div class="cert-tag">📋 ใบรับรองเงินเดือน</div>
-      <div class="cert-name">${d.name||'—'}</div>
-      <div class="cert-pos">${d.position||'—'}</div>
-      <div class="cert-month">📅 ${month}</div>
-    </div>
-    <div class="cert-salary">
-      <div class="cert-s-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div>
-      <div class="cert-s-amount">฿${fmt(salary)}</div>
-      <div class="cert-s-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div>
-    </div>
-    <div class="cert-info">
-      <div class="cert-row"><span class="cert-rl">ตำแหน่ง</span><span class="cert-rv">${d.position||'—'}</span></div>
-      <div class="cert-row"><span class="cert-rl">ประเภท</span><span class="cert-rv">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div>
-    </div>
+    <div class="cert-hero"><div class="cert-tag">📋 ใบรับรองเงินเดือน</div><div class="cert-name">${d.name||'—'}</div><div class="cert-pos">${d.position||'—'}</div><div class="cert-month">📅 ${month}</div></div>
+    <div class="cert-salary"><div class="cert-s-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div><div class="cert-s-amount">฿${fmt(salary)}</div><div class="cert-s-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div></div>
+    <div class="cert-info"><div class="cert-row"><span class="cert-rl">ตำแหน่ง</span><span class="cert-rv">${d.position||'—'}</span></div><div class="cert-row"><span class="cert-rl">ประเภท</span><span class="cert-rv">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div></div>
     <div class="cert-footer">ออกให้ ณ วันที่ ${ds} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   </div>`;
 }
@@ -683,12 +740,7 @@ function renderCert(d,month){
 function renderPay(d,month){
   const row=(l,v,c)=>{const n=parseFloat(v)||0;if(!n)return'';return`<div class="pay-row"><span class="pay-rl">${l}</span><span class="pay-rv ${c}">${fmt(Math.abs(n))}</span></div>`;};
   return`<div class="pay-card">
-    <div class="pay-hero">
-      <div class="pay-tag">💰 สลิปเงินเดือน</div>
-      <div class="pay-name">${d.name||'—'}</div>
-      <div class="pay-pos">${d.position||'—'}</div>
-      <div class="pay-month">📅 ${month}</div>
-    </div>
+    <div class="pay-hero"><div class="pay-tag">💰 สลิปเงินเดือน</div><div class="pay-name">${d.name||'—'}</div><div class="pay-pos">${d.position||'—'}</div><div class="pay-month">📅 ${month}</div></div>
     <div class="pay-net"><div class="pay-nl">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div>
     <div class="pay-body">
       <div class="pay-st">สถิติการทำงาน</div>
@@ -700,14 +752,11 @@ function renderPay(d,month){
       ${row('ประกันสังคม',d.soc,'c-r')}${row('ภาษี ณ ที่จ่าย',d.tax,'c-r')}${row('หักล่วงหน้า',d.advance,'c-r')}${row('กยศ.',d.kot,'c-r')}${row('รายการหักอื่นๆ',d.otherDed,'c-r')}
       <div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมหัก</span><span class="pay-rv c-r">฿${fmt(d.totalDed)}</span></div>
     </div>
-    <div class="pay-net" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)">
-      <div class="pay-nl" style="color:var(--green)">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div>
-    </div>
+    <div class="pay-net" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)"><div class="pay-nl" style="color:var(--green)">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div>
     <div class="pay-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
   </div>`;
 }
 
-// ── SAVE IMAGE ──
 async function logErr(s,m){try{await fetch(`${API}/eslip/log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:s,message:m,ua:navigator.userAgent,lineId:empData?.lineId||'?',time:new Date().toISOString()})});}catch(e){}}
 
 async function saveImg(){
@@ -715,49 +764,23 @@ async function saveImg(){
   if(!btn||!currentDoc||!empData)return;
   btn.textContent='⏳ กำลังสร้างรูป...';btn.classList.add('btn-dis');
   try{
-    // ดึงรูปจาก server ทั้งสลิปและใบรับรอง
     const imgUrl=`${API}/eslip/image?lineId=${empData.lineId}&docType=${currentDoc.docType}&month=${encodeURIComponent(currentDoc.month)}`;
-    btn.textContent='⏳ กำลังสร้างรูป...';
     const r=await fetch(imgUrl);
     if(!r.ok)throw new Error('สร้างรูปไม่สำเร็จ ('+r.status+')');
     const blob=await r.blob();
     const filename='สลิป_'+currentDoc.month+'.jpg';
     const file=new File([blob],filename,{type:'image/jpeg'});
-
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({files:[file],title:filename});
-      showToast('✅ บันทึกรูปสำเร็จ');return;
-    }
-
+    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});showToast('✅ บันทึกรูปสำเร็จ');return;}
     const isLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
-    if(isLiff){
-      // Android LIFF — upload ให้ server แล้วเปิด Chrome
-      const fd=new FormData();fd.append('file',blob,filename);
-      const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});
-      const ud=await up.json();
-      if(!ud.url)throw new Error('upload failed');
-      liff.openWindow({url:ud.url,external:true});
-      showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;
-    }
-
-    // Desktop / Chrome
-    const objUrl=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=objUrl;a.download=filename;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(objUrl),3000);
-    showToast('✅ บันทึกรูปสำเร็จ');
-
-  }catch(e){
-    await logErr('saveImage_ERROR',e.name+': '+e.message);
-    if(e.name==='AbortError')showToast('ยกเลิก');
-    else showToast('❌ '+e.message);
-  }finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-dis');}
+    if(isLiff){const fd=new FormData();fd.append('file',blob,filename);const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});const ud=await up.json();if(!ud.url)throw new Error('upload failed');liff.openWindow({url:ud.url,external:true});showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;}
+    const objUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objUrl;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(objUrl),3000);showToast('✅ บันทึกรูปสำเร็จ');
+  }catch(e){await logErr('saveImage_ERROR',e.name+': '+e.message);if(e.name==='AbortError')showToast('ยกเลิก');else showToast('❌ '+e.message);}
+  finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-dis');}
 }
 
 async function dlPdf(){
   if(!currentDoc||!empData)return;
-  // ใบรับรองไม่มี PDF
   if(currentDoc.docType==='certificate'){showToast('📋 ใบรับรองไม่มี PDF');return;}
   const btn=document.getElementById('btnPdf');
   btn.textContent='⏳...';btn.classList.add('btn-dis');
@@ -770,7 +793,6 @@ async function dlPdf(){
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
-// ── START ──
 const up=new URLSearchParams(window.location.search);
 const did=up.get('lineId');
 if(up.get('debug')==='1'&&did){hide();empData={lineId:did};loadEmp(did);}
