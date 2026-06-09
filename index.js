@@ -1535,6 +1535,24 @@ async function initBackgroundServices() {
   }
 }
 
+// ── Job Queue: ดึงงานวันนี้ของช่าง ──────────────────────
+app.get('/eslip/jobs-today', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+    const larkToken = await lark.getToken();
+    const emp = await lark.findByLineId(larkToken, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const team = (emp['ชุด'] || '').toString().trim();
+    if (!team) return res.json({ team: '', jobs: [] });
+    const jobs = await lark.getJobsToday(larkToken, team);
+    res.json({ team, jobs });
+  } catch(e) {
+    console.error('/eslip/jobs-today error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
