@@ -139,13 +139,12 @@ app.post('/webhook', async (req, res) => {
                   { type: 'button', style: 'secondary', action: { type: 'message', label: '📅 เช็ควันลา', text: 'เช็ควันลา' }},
                   { type: 'button', style: 'primary', color: '#C9A227', action: { type: 'message', label: '🔧 งานวันนี้', text: 'งานวันนี้' }},
                 ]}
-                  
-                ]}
               ]
             }
           }
         });
       }
+      
     } else {
       // ลงทะเบียน — ตรวจสอบ ลงเทียน ซ้ำ
       if (msg.length < 2) { await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
