@@ -53,7 +53,9 @@ async function getJobsToday(token, team) {
     const f     = item.fields;
     const start = f['วันที่เริ่ม']  || 0;
     const end   = f['วันสิ้นสุด'] || 0;
-    const t     = (f['ชุด'] || '').toString();
+    const rawTeam = f['ชุด'];
+    const t = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
+    return t === team && start <= now && now <= end;
     return t === team && start <= now && now <= end;
   }).map(item => item.fields);
 }
