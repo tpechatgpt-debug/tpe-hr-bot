@@ -71,6 +71,56 @@ app.post('/webhook', async (req, res) => {
 
     if (employee) {
       // ตรวจว่าพิมพ์ "เช็ควันลา" ตรงๆ เท่านั้น
+      if (msg === 'งานวันนี้') {
+        const team = (employee['ชุด'] || '').toString().trim();
+        if (!team) {
+          await reply(replyToken, '⚠️ ยังไม่ได้กำหนดชุดให้คุณ กรุณาติดต่อหัวหน้าครับ');
+          return;
+        }
+        const jobs = await lark.getJobsToday(larkToken, team);
+        if (!jobs.length) {
+          await reply(replyToken, `📋 ${team} — วันนี้ไม่มีงานที่ได้รับมอบหมายครับ`);
+          return;
+        }
+        const bubbles = jobs.map(j => ({
+          type: 'bubble',
+          header: {
+            type: 'box', layout: 'vertical',
+            backgroundColor: '#1E3A5F', paddingAll: '14px',
+            contents: [{ type: 'text', text: `🔧 ${team}`, color: '#C9A227', weight: 'bold', size: 'md' }]
+          },
+          body: {
+            type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+            contents: [
+              { type: 'text', text: (j['JOB'] || '—'), weight: 'bold', wrap: true, size: 'sm', color: '#1E3A5F' },
+              { type: 'separator', margin: 'sm' },
+              { type: 'box', layout: 'horizontal', margin: 'sm', contents: [
+                { type: 'text', text: '🏭', flex: 0, size: 'sm' },
+                { type: 'text', text: (j['บริษัท'] || '—'), size: 'sm', color: '#555555', wrap: true, margin: 'sm' }
+              ]},
+              { type: 'box', layout: 'horizontal', contents: [
+                { type: 'text', text: '📍', flex: 0, size: 'sm' },
+                { type: 'text', text: (j['จังหวัด'] || '—'), size: 'sm', color: '#555555', margin: 'sm' }
+              ]},
+              { type: 'box', layout: 'horizontal', contents: [
+                { type: 'text', text: '📝', flex: 0, size: 'sm' },
+                { type: 'text', text: (j['รายละเอียดงาน'] || '—'), size: 'sm', color: '#888888', wrap: true, margin: 'sm' }
+              ]},
+              { type: 'box', layout: 'horizontal', contents: [
+                { type: 'text', text: '🚗', flex: 0, size: 'sm' },
+                { type: 'text', text: (j['รถที่ใช้ออกหน้างาน'] || '—'), size: 'sm', color: '#888888', margin: 'sm' }
+              ]},
+              { type: 'separator', margin: 'sm' },
+              { type: 'text', text: '🔖 ' + (j['สถานะ'] || '—'), size: 'xs', color: '#888888', margin: 'sm' },
+            ]
+          }
+        }));
+        await reply(replyToken, {
+          type: 'flex', altText: `งานวันนี้ ${team}`,
+          contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles }
+        });
+        return;
+      }
       if (msg === 'เช็ควันลา') {
         await reply(replyToken, createLeaveCard(employee, imgUrl));
       } else {
@@ -87,6 +137,9 @@ app.post('/webhook', async (req, res) => {
                   { type: 'button', style: 'primary', color: '#1E3A5F', action: { type: 'message', label: '💰 ขอสลิปเงินเดือน', text: 'ขอสลิปเงินเดือน' }},
                   { type: 'button', style: 'secondary', action: { type: 'message', label: '📋 ขอใบรับรองเงินเดือน', text: 'ขอใบรับรองเงินเดือน' }},
                   { type: 'button', style: 'secondary', action: { type: 'message', label: '📅 เช็ควันลา', text: 'เช็ควันลา' }},
+                  { type: 'button', style: 'primary', color: '#C9A227', action: { type: 'message', label: '🔧 งานวันนี้', text: 'งานวันนี้' }},
+                ]}
+                  
                 ]}
               ]
             }
