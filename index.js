@@ -1633,7 +1633,8 @@ app.get('/eslip/debug-jobs', async (req, res) => {
 app.post('/notify-assignment', async (req, res) => {
   res.json({ ok: true });
   try {
-    const { recordId } = req.body;
+    const rawId = req.body.recordId || '';
+    const recordId = rawId.replace(/[\[\]]/g, '').trim();
     if (!recordId) { console.error('[notify] missing recordId'); return; }
 
     const larkToken = await lark.getToken();
