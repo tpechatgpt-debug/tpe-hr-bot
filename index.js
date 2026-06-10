@@ -1629,6 +1629,105 @@ app.get('/eslip/debug-jobs', async (req, res) => {
   }
 });
 
+// ── แจ้งเตือน Assignment ใหม่ ──────────────────────────
+app.post('/notify-assignment', async (req, res) => {
+  res.json({ ok: true });
+  try {
+    const { team, jobNo, company, province, detail, startDate, endDate, car } = req.body;
+    const larkToken = await lark.getToken();
+    const emps = await lark.getAllEmployees(larkToken);
+
+    // แจ้งเสมอทุก Assignment
+    const ALWAYS_NOTIFY = [
+      'เจ้าหน้าที่กราฟฟิคและฐานข้อมูล',
+    ];
+
+    // แจ้งเฉพาะเมื่อ Assignment ใช้ชุดนั้น
+    const TEAM_ROLES = {
+      'ฝ่ายติดตั้ง':  ['ผู้จัดการฝ่ายติดตั้ง'],
+      'ฝ่ายบอยเลอร์': ['หัวหน้าบอยเลอร์'],
+      'ฝ่ายผลิต A':   ['หัวหน้าผลิต A'],
+      'ฝ่ายผลิต B':   ['หัวหน้าผลิต B'],
+    };
+
+    const rolesForThisTeam = [
+      ...ALWAYS_NOTIFY,
+      ...(TEAM_ROLES[team] || []),
+    ];
+
+    const targets = emps.filter(e => {
+      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+      const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      if (!lid) return false;
+      return rolesForThisTeam.some(r => pos === r);
+    });
+
+    const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+    const msg = {
+      type: 'flex',
+      altText: `📋 งานใหม่ ${jobNo} → ${team}`,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box', layout: 'vertical',
+          backgroundColor: '#1E3A5F', paddingAll: '16px',
+          contents: [
+            { type: 'text', text: '📋 มอบหมายงานใหม่', color: '#ffffff', weight: 'bold', size: 'md' },
+            { type: 'text', text: team || '—', color: '#C9A227', size: 'sm', margin: 'xs', weight: 'bold' },
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+          contents: [
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: jobNo || '—', size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'บริษัท', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: company || '—', size: 'sm', flex: 5, wrap: true }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'จังหวัด', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: province || '—', size: 'sm', flex: 5 }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'รายละเอียด', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: detail || '—', size: 'sm', flex: 5, wrap: true }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'ช่วงงาน', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: `${startDate || '—'} – ${endDate || '—'}`, size: 'sm', flex: 5 }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'รถ', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: car || '—', size: 'sm', flex: 5 }
+            ]},
+          ]
+        },
+        footer: {
+          type: 'box', layout: 'vertical', paddingAll: '10px',
+          contents: [{
+            type: 'text',
+            text: `TPE Job Queue · ${now}`,
+            size: 'xxs', color: '#AAAAAA', align: 'center'
+          }]
+        }
+      }
+    };
+
+    for (const emp of targets) {
+      const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
+      if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
+    }
+
+    console.log(`[notify] ${jobNo} → ${team} → ส่ง ${targets.length} คน`);
+  } catch(e) {
+    console.error('/notify-assignment error:', e.message);
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
