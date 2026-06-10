@@ -1633,16 +1633,33 @@ app.get('/eslip/debug-jobs', async (req, res) => {
 app.post('/notify-assignment', async (req, res) => {
   res.json({ ok: true });
   try {
-    const { team, jobNo, company, province, detail, startDate, endDate, car } = req.body;
+    const { recordId } = req.body;
+    if (!recordId) { console.error('[notify] missing recordId'); return; }
+
     const larkToken = await lark.getToken();
+
+    // ดึงข้อมูล Assignment จาก Lark
+    const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records/${recordId}`;
+    const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+    const f = r.data?.data?.record?.fields || {};
+
+    const team      = Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '—');
+    const jobNo     = f['JOB'] || '—';
+    const company   = f['บริษัท'] || '—';
+    const province  = f['จังหวัด'] || '—';
+    const detail    = f['รายละเอียดงาน'] || '—';
+    const car       = f['รถที่ใช้ออกหน้างาน'] || '—';
+    const fmtDate   = ts => { if (!ts) return '—'; const d = new Date(ts + 7 * 3600000); return `${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`; };
+    const startDate = fmtDate(f['วันที่เริ่ม']);
+    const endDate   = fmtDate(f['วันสิ้นสุด']);
+
+    // ดึงพนักงานจาก HR Base
     const emps = await lark.getAllEmployees(larkToken);
 
-    // แจ้งเสมอทุก Assignment
     const ALWAYS_NOTIFY = [
       'เจ้าหน้าที่กราฟฟิคและฐานข้อมูล',
     ];
 
-    // แจ้งเฉพาะเมื่อ Assignment ใช้ชุดนั้น
     const TEAM_ROLES = {
       'ฝ่ายติดตั้ง':  ['ผู้จัดการฝ่ายติดตั้ง'],
       'ฝ่ายบอยเลอร์': ['หัวหน้าบอยเลอร์'],
@@ -1674,35 +1691,35 @@ app.post('/notify-assignment', async (req, res) => {
           backgroundColor: '#1E3A5F', paddingAll: '16px',
           contents: [
             { type: 'text', text: '📋 มอบหมายงานใหม่', color: '#ffffff', weight: 'bold', size: 'md' },
-            { type: 'text', text: team || '—', color: '#C9A227', size: 'sm', margin: 'xs', weight: 'bold' },
+            { type: 'text', text: team, color: '#C9A227', size: 'sm', margin: 'xs', weight: 'bold' },
           ]
         },
         body: {
           type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
           contents: [
             { type: 'box', layout: 'horizontal', contents: [
-              { type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: jobNo || '—', size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }
+              { type: 'text', text: 'JOB',        size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: jobNo,         size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
-              { type: 'text', text: 'บริษัท', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: company || '—', size: 'sm', flex: 5, wrap: true }
+              { type: 'text', text: 'บริษัท',     size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: company,       size: 'sm', flex: 5, wrap: true }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
-              { type: 'text', text: 'จังหวัด', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: province || '—', size: 'sm', flex: 5 }
+              { type: 'text', text: 'จังหวัด',    size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: province,      size: 'sm', flex: 5 }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
               { type: 'text', text: 'รายละเอียด', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: detail || '—', size: 'sm', flex: 5, wrap: true }
+              { type: 'text', text: detail,        size: 'sm', flex: 5, wrap: true }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
-              { type: 'text', text: 'ช่วงงาน', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: `${startDate || '—'} – ${endDate || '—'}`, size: 'sm', flex: 5 }
+              { type: 'text', text: 'ช่วงงาน',    size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: `${startDate} – ${endDate}`, size: 'sm', flex: 5 }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
-              { type: 'text', text: 'รถ', size: 'sm', color: '#888888', flex: 3 },
-              { type: 'text', text: car || '—', size: 'sm', flex: 5 }
+              { type: 'text', text: 'รถ',          size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: car,            size: 'sm', flex: 5 }
             ]},
           ]
         },
