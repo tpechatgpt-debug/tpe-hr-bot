@@ -1642,6 +1642,8 @@ app.post('/notify-assignment', async (req, res) => {
     const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records/${recordId}`;
     const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
     const f = r.data?.data?.record?.fields || {};
+    console.log('[notify] recordId:', recordId);
+    console.log('[notify] fields:', JSON.stringify(f));
 
     const team      = Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '—');
     const jobNo     = f['JOB'] || '—';
