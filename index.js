@@ -1741,12 +1741,28 @@ app.post('/notify-assignment', async (req, res) => {
       }
     };
 
-    for (const emp of targets) {
+const DASHBOARD_URL = 'https://index-553din8t1-tpe-dashboard-s-projects.vercel.app/';
+
+    // ส่ง Lark Group (ALWAYS_NOTIFY)
+    await axios.post(process.env.LARK_WEBHOOK_URL, {
+      msg_type: 'text',
+      content: {
+        text: `📋 มอบหมายงานใหม่\nทีม: ${team}\nJOB: ${jobNo}\nบริษัท: ${company}\nจังหวัด: ${province}\nรายละเอียด: ${detail}\nช่วงงาน: ${startDate} – ${endDate}\nรถ: ${car}\n📊 Dashboard: ${DASHBOARD_URL}`
+      }
+    }).catch(e => console.error('lark webhook error:', e.message));
+
+    // ส่ง LINE เฉพาะ TEAM_ROLES
+    const teamTargets = targets.filter(e => {
+      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+      return !ALWAYS_NOTIFY.some(r => pos === r);
+    });
+
+    for (const emp of teamTargets) {
       const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
       if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
     }
 
-    console.log(`[notify] ${jobNo} → ${team} → ส่ง ${targets.length} คน`);
+    console.log(`[notify] ${jobNo} → ${team} → Lark group + LINE ${teamTargets.length} คน`);
   } catch(e) {
     console.error('/notify-assignment error:', e.message);
   }
