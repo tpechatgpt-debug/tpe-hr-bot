@@ -1755,22 +1755,45 @@ app.post('/notify-assignment', async (req, res) => {
 app.get('/my-lark-id', async (req, res) => {
   try {
     const token = await lark.getToken();
-    // ดึง user list จาก Lark
-    const r = await axios.get(
-      'https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id',
+    // ดึง department list ก่อน
+    const deptR = await axios.get(
+      'https://open.larksuite.com/open-apis/contact/v3/departments/children?department_id=0&user_id_type=user_id&page_size=50',
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    const users = r.data?.data?.items || [];
-    res.json(users.map(u => ({
+    const depts = deptR.data?.data?.items || [];
+    const deptIds = ['0', ...depts.map(d => d.department_id)];
+
+    // ดึง users จากทุก department
+    let allUsers = [];
+    for (const deptId of deptIds) {
+      try {
+        const r = await axios.get(
+          `https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id&department_id=${deptId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const users = r.data?.data?.items || [];
+        allUsers = allUsers.concat(users);
+      } catch(e) {}
+    }
+
+    // dedup
+    const seen = new Set();
+    allUsers = allUsers.filter(u => {
+      if (seen.has(u.user_id)) return false;
+      seen.add(u.user_id);
+      return true;
+    });
+
+    res.json(allUsers.map(u => ({
       name: u.name,
+      en_name: u.en_name || '',
       user_id: u.user_id,
       email: u.email || '',
     })));
   } catch(e) {
-    res.json({ error: e.message });
+    res.json({ error: e.message, detail: e.response?.data });
   }
 });
-
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
