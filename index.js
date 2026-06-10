@@ -1661,7 +1661,10 @@ app.post('/notify-assignment', async (req, res) => {
     const emps = await lark.getAllEmployees(larkToken);
 
     const ALWAYS_NOTIFY = [
-      'เจ้าหน้าที่กราฟฟิคและฐานข้อมูล',
+      'ผู้บริหาร',
+      'เจ้าหน้าที่ฝ่ายขาย',
+      'ผู้จัดการฝ่ายผลิต',
+      'เจ้าหน้าที่ทรัพยากรมนุษย์',
     ];
 
     const TEAM_ROLES = {
@@ -1746,6 +1749,25 @@ app.post('/notify-assignment', async (req, res) => {
     console.log(`[notify] ${jobNo} → ${team} → ส่ง ${targets.length} คน`);
   } catch(e) {
     console.error('/notify-assignment error:', e.message);
+  }
+});
+
+app.get('/my-lark-id', async (req, res) => {
+  try {
+    const token = await lark.getToken();
+    // ดึง user list จาก Lark
+    const r = await axios.get(
+      'https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const users = r.data?.data?.items || [];
+    res.json(users.map(u => ({
+      name: u.name,
+      user_id: u.user_id,
+      email: u.email || '',
+    })));
+  } catch(e) {
+    res.json({ error: e.message });
   }
 });
 
