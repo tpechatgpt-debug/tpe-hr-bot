@@ -1746,7 +1746,7 @@ app.post('/notify-assignment', async (req, res) => {
       }
     };
 
-const DASHBOARD_URL = 'https://index-553din8t1-tpe-dashboard-s-projects.vercel.app/';
+const DASHBOARD_URL = 'https://tpe-hr-bot.onrender.com/dashboard';
 
     // ส่ง Lark Group (ALWAYS_NOTIFY)
     await axios.post(process.env.LARK_WEBHOOK_URL, {
@@ -1815,6 +1815,10 @@ app.get('/my-lark-id', async (req, res) => {
     res.json({ error: e.message, detail: e.response?.data });
   }
 });
+
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'tpe-dashboard.html')));
+app.get('/fieldwork', (req, res) => res.sendFile(path.join(__dirname, 'fieldwork.html')));
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
