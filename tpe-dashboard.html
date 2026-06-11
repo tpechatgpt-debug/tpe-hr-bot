@@ -189,6 +189,13 @@ let ganttYear=new Date().getFullYear();
 let ganttMonth=new Date().getMonth();
 const TEAM_COLORS=['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706'];
 
+// ── แยกสีตามชุด ──
+function getTeamColor(team){
+  const teams=[...new Set(allData.map(a=>a.team).filter(Boolean))].sort();
+  const idx=teams.indexOf(team);
+  return TEAM_COLORS[idx%TEAM_COLORS.length]||'#6B7280';
+}
+
 function updateClock(){
   const now=new Date();
   document.getElementById('clock').textContent=now.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});
@@ -347,7 +354,7 @@ function renderTable(){
   const bc={'วางแผน':'badge-plan','กำลังทำ':'badge-doing','เสร็จแล้ว':'badge-done'};
   document.getElementById('tableBody').innerHTML=filtered.map(a=>`
     <tr>
-      <td><span class="badge badge-team">${a.team||'—'}</span></td>
+      <td><span class="badge badge-team" style="border-left:3px solid ${getTeamColor(a.team)};padding-left:8px">${a.team||'—'}</span></td>
       <td class="td-job">${a.jobNo||'—'}</td>
       <td class="td-company">${a.company||'—'}</td>
       <td>${a.province||'—'}</td>
