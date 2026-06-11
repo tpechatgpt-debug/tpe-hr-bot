@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TPE Fieldwork — HR Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F6F8;--surface:#FFF;--border:#E4E7EC;--border2:#CDD2DB;
+  --navy:#1A3358;--gold:#C9952A;--gold2:#F5B945;--green:#16A765;--green-bg:#EAF7F0;
+  --amber:#D97706;--amber-bg:#FEF3C7;--red:#DC2626;--blue:#2563EB;--blue-bg:#EFF6FF;
+  --text:#111827;--text2:#374151;--text3:#6B7280;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:15px}
+.topbar-name{font-size:15px;font-weight:700;color:#fff}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(255,255,255,.5)}
+.btn-topbar{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 14px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-topbar:hover{background:rgba(255,255,255,.18)}
+.btn-topbar.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.main{padding:20px 24px 32px;max-width:1440px;margin:0 auto}
+.section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* SUMMARY CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.cards-grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.card-out::before{background:var(--amber)}
+.card-avail::before{background:var(--green)}
+.card-jobs::before{background:var(--blue)}
+.card-people::before{background:var(--navy)}
+.card-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.card-val{font-size:32px;font-weight:700;line-height:1;color:var(--text)}
+.card-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.card-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:26px;opacity:.12}
+
+/* TODAY SECTION */
+.today-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden}
+.today-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.today-title{font-size:14px;font-weight:700;color:var(--navy)}
+.today-date{font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.today-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border)}
+
+.team-card{background:var(--surface);padding:16px 20px}
+.team-card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.team-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.team-card-name{font-size:13px;font-weight:700;color:var(--text)}
+.team-card-status{margin-left:auto}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.badge-out{background:var(--amber-bg);color:var(--amber)}
+.badge-free{background:var(--green-bg);color:var(--green)}
+.badge-plan{background:var(--blue-bg);color:var(--blue)}
+.badge-doing{background:var(--amber-bg);color:var(--amber)}
+.badge-done{background:var(--green-bg);color:var(--green)}
+.badge-team{background:var(--bg);border:1px solid var(--border2);color:var(--text2)}
+
+.job-item{background:var(--bg);border-radius:8px;padding:10px 12px;margin-top:8px}
+.job-item-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.job-no{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--navy)}
+.job-company{font-size:12px;color:var(--text2);font-weight:500}
+.job-province{font-size:11px;color:var(--text3)}
+.job-members{font-size:11px;color:var(--text3);margin-top:4px;display:flex;align-items:flex-start;gap:4px}
+.job-car{font-size:11px;color:var(--text3);margin-top:2px}
+.free-label{font-size:12px;color:var(--text3);font-style:italic;padding:8px 0}
+
+/* FILTER BAR */
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.filter-bar label{font-size:12px;font-weight:600;color:var(--text3)}
+.filter-input{border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
+.filter-input:focus{border-color:var(--navy)}
+.filter-select{border:1px solid var(--border2);border-radius:8px;padding:7px 10px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;color:var(--text);background:var(--bg);outline:none;cursor:pointer}
+.btn-export{display:flex;align-items:center;gap:6px;background:var(--navy);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-left:auto}
+.btn-export:hover{background:var(--navy2,#24497A)}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg);padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(26,51,88,.02)}
+.td-job{font-weight:600;color:var(--navy);font-family:'IBM Plex Mono',monospace;font-size:12px}
+.td-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap}
+.td-members{font-size:12px;max-width:200px}
+.member-chip{display:inline-block;background:var(--blue-bg);color:var(--blue);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px 2px 2px 0}
+.member-chip.whole{background:var(--bg);color:var(--text3);border:1px solid var(--border2)}
+
+.loading-wrap{display:flex;align-items:center;justify-content:center;min-height:120px;gap:10px;color:var(--text3);font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
+.empty-wrap{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:.4}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">👷</div>
+    <div>
+      <div class="topbar-name">TPE Fieldwork</div>
+      <div class="topbar-sub">ระบบติดตามการออกหน้างาน — HR Portal</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-time" id="clock">—</div>
+    <a href="https://index-553din8t1-tpe-dashboard-s-projects.vercel.app/" class="btn-topbar" target="_blank">📊 Dashboard</a>
+    <button class="btn-topbar" id="btnRefresh" onclick="loadData()">
+      <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/>
+      </svg>
+      รีเฟรช
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SUMMARY CARDS -->
+  <div class="section-title">สรุปวันนี้</div>
+  <div class="cards-grid">
+    <div class="card card-out"><div class="card-label">ออกหน้างานวันนี้</div><div class="card-val" id="cOut">—</div><div class="card-sub">ชุด</div><div class="card-icon">🚐</div></div>
+    <div class="card card-avail"><div class="card-label">ว่างวันนี้</div><div class="card-val" id="cAvail">—</div><div class="card-sub">ชุด</div><div class="card-icon">🏠</div></div>
+    <div class="card card-jobs"><div class="card-label">งานวันนี้</div><div class="card-val" id="cJobs">—</div><div class="card-sub">รายการ</div><div class="card-icon">📋</div></div>
+    <div class="card card-people"><div class="card-label">สมาชิกออกหน้างาน</div><div class="card-val" id="cPeople">—</div><div class="card-sub">คน (ระบุชื่อ)</div><div class="card-icon">👷</div></div>
+  </div>
+
+  <!-- TODAY OVERVIEW -->
+  <div class="section-title">ภาพรวมวันนี้ แยกตามชุด</div>
+  <div class="today-wrap">
+    <div class="today-header">
+      <div class="today-title">📅 สถานะการออกหน้างาน</div>
+      <div class="today-date" id="todayLabel">—</div>
+    </div>
+    <div class="today-grid" id="todayGrid">
+      <div class="loading-wrap"><div class="spinner"></div> กำลังโหลด...</div>
+    </div>
+  </div>
+
+  <!-- FILTER -->
+  <div class="section-title">รายการงานทั้งหมด</div>
+  <div class="filter-bar">
+    <label>ค้นหา</label>
+    <input class="filter-input" id="searchInput" placeholder="ชื่อช่าง, JOB, บริษัท, จังหวัด..." oninput="renderTable()" style="flex:1;min-width:160px">
+    <label>ชุด</label>
+    <select class="filter-select" id="filterTeam" onchange="renderTable()">
+      <option value="">ทุกชุด</option>
+    </select>
+    <label>สถานะ</label>
+    <select class="filter-select" id="filterStatus" onchange="renderTable()">
+      <option value="">ทุกสถานะ</option>
+      <option value="วางแผน">วางแผน</option>
+      <option value="กำลังทำ">กำลังทำ</option>
+      <option value="เสร็จแล้ว">เสร็จแล้ว</option>
+    </select>
+    <label>ช่วงเวลา</label>
+    <select class="filter-select" id="filterPeriod" onchange="renderTable()">
+      <option value="all">ทั้งหมด</option>
+      <option value="today">วันนี้</option>
+      <option value="week">สัปดาห์นี้</option>
+      <option value="month">เดือนนี้</option>
+    </select>
+    <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ชุด</th>
+            <th>JOB No.</th>
+            <th>บริษัท / ลูกค้า</th>
+            <th>จังหวัด</th>
+            <th>รายละเอียด</th>
+            <th>วันเริ่ม</th>
+            <th>วันสิ้นสุด</th>
+            <th>👥 สมาชิก</th>
+            <th>รถ</th>
+            <th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="10"><div class="loading-wrap"><div class="spinner"></div> กำลังโหลด...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'https://tpe-hr-bot.onrender.com';
+let allData = [];
+
+const TEAM_COLORS = ['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706'];
+const teamColorMap = {};
+
+function getTeamColor(team) {
+  if (!teamColorMap[team]) {
+    const teams = [...new Set(allData.map(a => a.team).filter(Boolean))].sort();
+    teams.forEach((t, i) => { teamColorMap[t] = TEAM_COLORS[i % TEAM_COLORS.length]; });
+  }
+  return teamColorMap[team] || '#6B7280';
+}
+
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('th-TH', {
+    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short'
+  });
+}
+setInterval(updateClock, 1000); updateClock();
+
+function tsToDate(ts) {
+  if (!ts) return null;
+  const d = new Date(ts + 7 * 3600000);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = tsToDate(ts);
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()+543}`;
+}
+function todayMs() {
+  const s = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  return new Date(s).getTime();
+}
+function isActiveToday(a) {
+  if (!a.startDate || !a.endDate) return false;
+  const t = todayMs();
+  return a.startDate <= t && t <= a.endDate + 86400000;
+}
+
+async function loadData() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  try {
+    const r = await fetch(`${API}/api/dashboard`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'error');
+    allData = d.assignments || [];
+    // build color map
+    const teams = [...new Set(allData.map(a => a.team).filter(Boolean))].sort();
+    teams.forEach((t, i) => { teamColorMap[t] = TEAM_COLORS[i % TEAM_COLORS.length]; });
+    updateCards();
+    renderTodayGrid();
+    renderTable();
+    updateTeamFilter();
+  } catch(e) {
+    document.getElementById('todayGrid').innerHTML = `<div class="empty-wrap"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ: ${e.message}</p></div>`;
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+function updateCards() {
+  const t = todayMs();
+  const tomorrow = t + 86400000;
+  const todayJobs = allData.filter(a => a.startDate <= t && t <= a.endDate + 86400000);
+  const teams = [...new Set(allData.map(a => a.team).filter(Boolean))];
+  let out = 0, avail = 0;
+  teams.forEach(team => {
+    const active = allData.filter(a => a.team === team).some(a => isActiveToday(a));
+    if (active) out++; else avail++;
+  });
+  // นับสมาชิกที่ระบุชื่อ (ไม่ซ้ำ)
+  const allMembers = new Set();
+  todayJobs.forEach(a => {
+    if (a.members) {
+      a.members.split(/[,،\n]+/).map(m => m.trim()).filter(Boolean).forEach(m => allMembers.add(m));
+    }
+  });
+
+  // วันนี้ภาษาไทย
+  const thDate = new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('todayLabel').textContent = thDate;
+
+  document.getElementById('cOut').textContent = out;
+  document.getElementById('cAvail').textContent = avail;
+  document.getElementById('cJobs').textContent = todayJobs.length;
+  document.getElementById('cPeople').textContent = allMembers.size;
+}
+
+function renderTodayGrid() {
+  const teams = [...new Set(allData.map(a => a.team).filter(Boolean))].sort();
+  if (!teams.length) {
+    document.getElementById('todayGrid').innerHTML = '<div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่มีข้อมูล</p></div>';
+    return;
+  }
+  document.getElementById('todayGrid').innerHTML = teams.map(team => {
+    const color = teamColorMap[team] || '#6B7280';
+    const todayJobs = allData.filter(a => a.team === team && isActiveToday(a));
+    const isOut = todayJobs.length > 0;
+    let jobsHtml = '';
+    if (isOut) {
+      jobsHtml = todayJobs.map(j => `
+        <div class="job-item">
+          <div class="job-item-top">
+            <span class="job-no">${j.jobNo || '—'}</span>
+            <span class="badge ${j.status==='กำลังทำ'?'badge-doing':j.status==='เสร็จแล้ว'?'badge-done':'badge-plan'}" style="font-size:10px;padding:2px 7px">${j.status||'วางแผน'}</span>
+          </div>
+          <div class="job-company">${j.company || '—'}</div>
+          <div class="job-province">📍 ${j.province || '—'} &nbsp;|&nbsp; 📅 ${fmtDate(j.startDate)} – ${fmtDate(j.endDate)}</div>
+          ${j.members ? `<div class="job-members">👥 <span>${j.members}</span></div>` : '<div class="job-members" style="color:var(--border2)">👥 ทั้งชุด</div>'}
+          ${j.car ? `<div class="job-car">🚗 ${j.car}</div>` : ''}
+        </div>`).join('');
+    } else {
+      jobsHtml = '<div class="free-label">— ไม่มีงานวันนี้</div>';
+    }
+    return `<div class="team-card">
+      <div class="team-card-header">
+        <div class="team-dot" style="background:${color}"></div>
+        <div class="team-card-name">${team}</div>
+        <div class="team-card-status">
+          <span class="badge ${isOut ? 'badge-out' : 'badge-free'}">${isOut ? '🚐 ออกหน้างาน' : '🏠 ว่าง'}</span>
+        </div>
+      </div>
+      ${jobsHtml}
+    </div>`;
+  }).join('');
+}
+
+function updateTeamFilter() {
+  const teams = [...new Set(allData.map(a => a.team).filter(Boolean))].sort();
+  const sel = document.getElementById('filterTeam');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">ทุกชุด</option>' + teams.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+}
+
+function getFilteredData() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const teamF = document.getElementById('filterTeam').value;
+  const statusF = document.getElementById('filterStatus').value;
+  const period = document.getElementById('filterPeriod').value;
+  const t = todayMs();
+
+  return allData.filter(a => {
+    if (teamF && a.team !== teamF) return false;
+    if (statusF && a.status !== statusF) return false;
+    if (period === 'today' && !isActiveToday(a)) return false;
+    if (period === 'week') {
+      const weekEnd = t + 7 * 86400000;
+      if (!a.startDate || a.startDate > weekEnd || (a.endDate && a.endDate + 86400000 < t)) return false;
+    }
+    if (period === 'month') {
+      const monthEnd = t + 30 * 86400000;
+      if (!a.startDate || a.startDate > monthEnd || (a.endDate && a.endDate + 86400000 < t)) return false;
+    }
+    if (q) {
+      const hay = [a.jobNo, a.jobName, a.company, a.province, a.detail, a.team, a.members, a.car].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderMemberChips(members) {
+  if (!members || !members.trim()) return '<span class="member-chip whole">ทั้งชุด</span>';
+  return members.split(/[,،\n]+/).map(m => m.trim()).filter(Boolean)
+    .map(m => `<span class="member-chip">${m}</span>`).join('');
+}
+
+function renderTable() {
+  const filtered = getFilteredData();
+  const bc = { 'วางแผน':'badge-plan', 'กำลังทำ':'badge-doing', 'เสร็จแล้ว':'badge-done' };
+  if (!filtered.length) {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div></td></tr>`;
+    return;
+  }
+  // เรียงตาม startDate ใหม่สุดก่อน
+  const sorted = [...filtered].sort((a, b) => (b.startDate || 0) - (a.startDate || 0));
+  document.getElementById('tableBody').innerHTML = sorted.map(a => `
+    <tr>
+      <td><span class="badge badge-team" style="border-left:3px solid ${teamColorMap[a.team]||'#ccc'}">${a.team||'—'}</span></td>
+      <td class="td-job">${a.jobNo||'—'}</td>
+      <td style="font-weight:500">${a.company||'—'}</td>
+      <td>${a.province||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.detail||''}">${a.detail||'—'}</td>
+      <td class="td-date">${fmtDate(a.startDate)}</td>
+      <td class="td-date">${fmtDate(a.endDate)}</td>
+      <td class="td-members">${renderMemberChips(a.members)}</td>
+      <td style="font-size:12px;color:var(--text3)">${a.car||'—'}</td>
+      <td><span class="badge ${bc[a.status]||'badge-plan'}">${a.status||'วางแผน'}</span></td>
+    </tr>`).join('');
+}
+
+function exportCSV() {
+  const filtered = getFilteredData();
+  const headers = ['ชุด','JOB No.','บริษัท','จังหวัด','รายละเอียด','วันเริ่ม','วันสิ้นสุด','สมาชิก','รถ','สถานะ'];
+  const rows = filtered.map(a => [
+    a.team||'', a.jobNo||'', a.company||'', a.province||'',
+    a.detail||'', fmtDate(a.startDate), fmtDate(a.endDate),
+    a.members||'ทั้งชุด', a.car||'', a.status||''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `TPE_Fieldwork_${new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'})}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+setInterval(loadData, 5 * 60 * 1000);
+loadData();
+</script>
+</body>
+</html>
