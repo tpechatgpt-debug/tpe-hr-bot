@@ -1823,7 +1823,8 @@ app.get('/my-lark-id', async (req, res) => {
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'tpe-dashboard.html')));
 app.get('/fieldwork', (req, res) => res.sendFile(path.join(__dirname, 'fieldwork.html')));
 
-// ── Payroll Summary: ดึงทั้งเดือนทีเดียว ──────────────────
+// ── เพิ่มใน index.js ก่อน startServer(PORT) ──────────────────
+// Payroll Summary: ดึงทั้งเดือนทีเดียว (เร็วกว่าทีละคนมาก)
 app.get('/api/payroll-summary', async (req, res) => {
   try {
     const { month } = req.query;
@@ -1843,23 +1844,73 @@ app.get('/api/payroll-summary', async (req, res) => {
       spreadsheetId: process.env.LOG_SHEET_ID,
       range: `'${sheetName}'!A:AM`,
     });
-    const rows = (r.data.values || []).slice(1);
+    const rows = (r.data.values || []).slice(1); // skip header
     const toN = v => parseFloat(v) || 0;
 
+    // monthly: basePay=col13(N), otPay=col15(P), totalInc=col18, totalDed=col26, netPay=col27
+    // daily:   basePay=col11(L), otPay=col12(M), totalInc=col19, totalDed=col26, netPay=col27
     const data = rows
-      .filter(row => row[0] && row[0].trim() && row[0] !== '0.0')
+      .filter(row => row[0] && row[0].toString().trim() && row[0] !== '0.0')
       .map(row => ({
-        name: row[0],
-        basePay: toN(row[payType === 'daily' ? 11 : 13]),
-        otPay:   toN(row[payType === 'daily' ? 12 : 15]),
-        totalInc: toN(row[payType === 'daily' ? 19 : 18]),
-        totalDed: toN(row[payType === 'daily' ? 26 : 26]),
-        netPay:  toN(row[payType === 'daily' ? 27 : 27]),
+        name:     (row[0] || '').toString().trim(),
+        position: (row[1] || '').toString().trim(),
+        basePay:  payType === 'daily' ? toN(row[11]) : toN(row[13]),
+        otPay:    payType === 'daily' ? toN(row[12]) : toN(row[15]),
+        totalInc: payType === 'daily' ? toN(row[19]) : toN(row[18]),
+        totalDed: toN(row[26]),
+        netPay:   toN(row[27]),
         payType,
       }));
 
     res.json({ ok: true, month: cleanMonth, payType, data });
   } catch(e) {
+    console.error('/api/payroll-summary error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Payroll All Months Summary (สำหรับ chart ทั้งปี) ────────
+app.get('/api/payroll-yearly', async (req, res) => {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sheetId = process.env.LOG_SHEET_ID;
+
+    // ดึง sheet list
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+    const paySheets = (meta.data.sheets || [])
+      .map(s => s.properties.title)
+      .filter(t => t.startsWith('เงินเดือน_') || t.startsWith('เงินเดือนรายวัน_'));
+
+    // ดึงทุก sheet พร้อมกัน (parallel)
+    const results = await Promise.all(paySheets.map(async sheetName => {
+      try {
+        const isDaily = sheetName.startsWith('เงินเดือนรายวัน_');
+        const month = sheetName.replace(isDaily ? 'เงินเดือนรายวัน_' : 'เงินเดือน_', '');
+        const r = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheetId,
+          range: `'${sheetName}'!A:AM`,
+        });
+        const rows = (r.data.values || []).slice(1);
+        const toN = v => parseFloat(v) || 0;
+        let totalBase = 0, totalOT = 0, totalNet = 0;
+        rows.filter(row => row[0] && row[0].toString().trim() && row[0] !== '0.0')
+          .forEach(row => {
+            totalBase += isDaily ? toN(row[11]) : toN(row[13]);
+            totalOT   += isDaily ? toN(row[12]) : toN(row[15]);
+            totalNet  += toN(row[27]);
+          });
+        return { month, payType: isDaily ? 'daily' : 'monthly', totalBase, totalOT, totalNet };
+      } catch(e) { return null; }
+    }));
+
+    res.json({ ok: true, data: results.filter(Boolean) });
+  } catch(e) {
+    console.error('/api/payroll-yearly error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
