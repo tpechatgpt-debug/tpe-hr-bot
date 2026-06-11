@@ -1551,7 +1551,9 @@ app.get('/eslip/jobs-today', async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'not found' });
     const team = (emp['ชุด'] || '').toString().trim();
     if (!team) return res.json({ team: '', jobs: [] });
-    const jobs = await lark.getJobsToday(larkToken, team);
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = rawName.split('(')[0].trim();
+    const jobs = await lark.getJobsToday(larkToken, team, empName);
     res.json({ team, jobs });
   } catch(e) {
     console.error('/eslip/jobs-today error:', e.message);
@@ -1597,7 +1599,8 @@ app.get('/api/dashboard', async (req, res) => {
       const jobFields = jobId ? jobMap[jobId] : null;
       return {
         id: a.record_id,
-        team: (f['ชุด'] || '').toString(),
+        team: Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '').toString(),
+        members: (f['สมาชิก'] || '').toString(),
         jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
         jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
         company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
