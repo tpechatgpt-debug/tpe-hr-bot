@@ -1601,8 +1601,12 @@ app.get('/api/dashboard', async (req, res) => {
       const jobFields = jobId ? jobMap[jobId] : null;
       return {
         id: a.record_id,
-        team: Array.isArray(f['ชุด']) ? f['ชุด'].join(', ') : (f['ชุด'] || '').toString(),
-        members: Array.isArray(f['สมาชิก']) ? f['สมาชิก'].join(', ') : (f['สมาชิก'] || '').toString(),
+        team: Array.isArray(f['ชุด'])
+        ? f['ชุด'].map(t => typeof t === 'object' ? (t.text||t.value||'') : t.toString()).filter(Boolean).join('||')
+        : (f['ชุด'] || '').toString(),
+        members: Array.isArray(f['สมาชิก'])
+        ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean).join(', ')
+        : (f['สมาชิก'] || '').toString(),
         jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
         jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
         company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
