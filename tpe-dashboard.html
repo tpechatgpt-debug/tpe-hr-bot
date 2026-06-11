@@ -57,17 +57,17 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .gantt-day-hdr{flex:1;text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px 0;border-right:1px solid var(--border);min-width:28px}
 .gantt-day-hdr.today{color:var(--navy);font-weight:700;background:rgba(26,51,88,.05)}
 .gantt-day-hdr.weekend{color:var(--red);background:rgba(220,38,38,.03)}
-.gantt-row{display:flex;border-bottom:1px solid var(--border);min-height:44px}
+.gantt-row{display:flex;border-bottom:1px solid var(--border)}
 .gantt-row:last-child{border-bottom:none}
 .gantt-row:hover{background:rgba(26,51,88,.02)}
-.gantt-team-label{width:160px;flex-shrink:0;padding:6px 16px;border-right:1px solid var(--border);display:flex;align-items:flex-start;flex-direction:column;gap:3px;justify-content:center}
+.gantt-team-label{width:160px;flex-shrink:0;padding:8px 16px;border-right:1px solid var(--border);display:flex;align-items:center}
 .team-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .team-name{font-size:12px;font-weight:600;color:var(--text)}
 .gantt-cells{flex:1;display:flex;position:relative}
 .gantt-cell{flex:1;min-width:28px;border-right:1px solid var(--border);position:relative}
 .gantt-cell.weekend{background:rgba(220,38,38,.03)}
 .gantt-cell.today{background:rgba(26,51,88,.05)}
-.gantt-bar{position:absolute;top:6px;bottom:6px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;cursor:pointer;transition:opacity .15s;z-index:2}
+.gantt-bar{position:absolute;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;cursor:pointer;transition:opacity .15s;z-index:2}
 .gantt-bar:hover{opacity:.85}
 .gantt-empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
@@ -88,10 +88,8 @@ tbody tr:hover td{background:rgba(26,51,88,.02)}
 .badge-plan{background:var(--blue-bg);color:var(--blue)}
 .badge-doing{background:var(--amber-bg);color:var(--amber)}
 .badge-done{background:var(--green-bg);color:var(--green)}
-/* team badges แยกสีตามชุด */
 .team-badges{display:flex;flex-wrap:wrap;gap:4px}
 .team-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
-/* members แสดงเต็ม */
 .members-list{display:flex;flex-direction:column;gap:2px}
 .member-item{font-size:11px;color:var(--text2);white-space:nowrap}
 .tooltip{position:fixed;z-index:999;background:var(--navy);color:#fff;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;box-shadow:var(--shadow-md);pointer-events:none;opacity:0;transition:opacity .15s;max-width:300px}
@@ -179,7 +177,7 @@ tbody tr:hover td{background:rgba(26,51,88,.02)}
             <th>วันเริ่ม</th>
             <th>วันสิ้นสุด</th>
             <th>สถานะ</th>
-            <th style="min-width:180px">👥 สมาชิก</th>
+            <th style="min-width:200px">👥 สมาชิก</th>
             <th>รถ</th>
           </tr>
         </thead>
@@ -194,240 +192,263 @@ tbody tr:hover td{background:rgba(26,51,88,.02)}
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-const API='https://tpe-hr-bot.onrender.com';
-let allData=[];
-let ganttYear=new Date().getFullYear();
-let ganttMonth=new Date().getMonth();
-const TEAM_COLORS=['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706','#059669','#9333EA'];
-const teamColorCache={};
+const API = 'https://tpe-hr-bot.onrender.com';
+let allData = [];
+let ganttYear = new Date().getFullYear();
+let ganttMonth = new Date().getMonth();
+const TEAM_COLORS = ['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706','#059669','#9333EA'];
+const teamColorCache = {};
 
-// แปลง team string (คั่นด้วย ||) → array
-function parseTeams(teamStr){
-  if(!teamStr) return [];
-  return teamStr.split('||').map(t=>t.trim()).filter(Boolean);
+function parseTeams(teamStr) {
+  if (!teamStr) return [];
+  return teamStr.split('||').map(t => t.trim()).filter(Boolean);
 }
 
-// แปลง members string (คั่นด้วย ,) → array
-function parseMembers(memberStr){
-  if(!memberStr) return [];
-  return memberStr.split(',').map(m=>m.trim()).filter(Boolean);
+function parseMembers(memberStr) {
+  if (!memberStr) return [];
+  return memberStr.split(',').map(m => m.trim()).filter(Boolean);
 }
 
-// ดึงสีของชุด (consistent)
-function getTeamColor(team){
-  if(!teamColorCache[team]){
-    const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
-    allTeams.forEach((t,i)=>{ if(!teamColorCache[t]) teamColorCache[t]=TEAM_COLORS[i%TEAM_COLORS.length]; });
-  }
-  return teamColorCache[team]||'#6B7280';
+function getTeamColor(team) {
+  return teamColorCache[team] || '#6B7280';
 }
 
-// render team badges
-function renderTeamBadges(teamStr){
-  const teams=parseTeams(teamStr);
-  if(!teams.length) return '<span style="color:var(--border2)">—</span>';
-  return `<div class="team-badges">${teams.map(t=>{
-    const c=getTeamColor(t);
+function buildColorCache() {
+  const allTeams = [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  allTeams.forEach((t, i) => { teamColorCache[t] = TEAM_COLORS[i % TEAM_COLORS.length]; });
+}
+
+function renderTeamBadges(teamStr) {
+  const teams = parseTeams(teamStr);
+  if (!teams.length) return '<span style="color:var(--border2)">—</span>';
+  return `<div class="team-badges">${teams.map(t => {
+    const c = getTeamColor(t);
     return `<span class="team-badge" style="background:${c}20;color:${c};border:1px solid ${c}50">${t}</span>`;
   }).join('')}</div>`;
 }
 
-// render members list
-function renderMembers(memberStr){
-  const members=parseMembers(memberStr);
-  if(!members.length) return '<span style="color:var(--border2);font-size:11px">ทั้งชุด</span>';
-  return `<div class="members-list">${members.map(m=>`<div class="member-item">• ${m}</div>`).join('')}</div>`;
+function renderMembers(memberStr) {
+  const members = parseMembers(memberStr);
+  if (!members.length) return '<span style="color:var(--border2);font-size:11px">ทั้งชุด</span>';
+  return `<div class="members-list">${members.map(m => `<div class="member-item">• ${m}</div>`).join('')}</div>`;
 }
 
-function updateClock(){
-  document.getElementById('clock').textContent=new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});
-}
-setInterval(updateClock,1000);updateClock();
-
-function tsToDate(ts){
-  if(!ts) return null;
-  const d=new Date(ts+7*3600000);
-  return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
-}
-function fmtDate(ts){
-  if(!ts) return'—';
-  const d=tsToDate(ts);
-  return`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()+543}`;
-}
-function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
-function isWeekend(y,m,d){const day=new Date(y,m,d).getDay();return day===0||day===6}
-
-async function loadData(){
-  const btn=document.getElementById('btnRefresh');
-  btn.classList.add('spinning');
-  try{
-    const r=await fetch(`${API}/api/dashboard`);
-    const d=await r.json();
-    if(!d.ok) throw new Error(d.error||'error');
-    allData=d.assignments||[];
-    // build color cache
-    const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
-    allTeams.forEach((t,i)=>{ teamColorCache[t]=TEAM_COLORS[i%TEAM_COLORS.length]; });
-    updateCards();renderGantt();renderTable();updateTeamFilter();
-  }catch(e){
-    document.getElementById('ganttInner').innerHTML=`<div class="empty-wrap"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ: ${e.message}</p></div>`;
-    document.getElementById('tableBody').innerHTML=`<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">⚠️</div><p>${e.message}</p></div></td></tr>`;
-  }finally{btn.classList.remove('spinning')}
-}
-
-function updateCards(){
-  const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
-  const todayMs=new Date(todayStr).getTime();
-  const tomorrowMs=todayMs+86400000;
-  // รวบรวมทุกชุดที่มีในระบบ
-  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))];
-  let busy=0,free=0,queue=0;
-  allTeams.forEach(team=>{
-    const teamJobs=allData.filter(a=>parseTeams(a.team).includes(team));
-    const activeToday=teamJobs.some(a=>{
-      if(!a.startDate||!a.endDate) return false;
-      return a.startDate<=todayMs && tomorrowMs<=a.endDate+86400000;
-    });
-    if(activeToday) busy++; else free++;
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('th-TH', {
+    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short'
   });
-  queue=allData.filter(a=>a.startDate&&a.startDate>tomorrowMs).length;
-  document.getElementById('cBusy').textContent=busy;
-  document.getElementById('cFree').textContent=free;
-  document.getElementById('cQueue').textContent=queue;
-  document.getElementById('cTotal').textContent=allData.length;
+}
+setInterval(updateClock, 1000); updateClock();
+
+function tsToDate(ts) {
+  if (!ts) return null;
+  const d = new Date(ts + 7 * 3600000);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = tsToDate(ts);
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()+543}`;
+}
+function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function isWeekend(y, m, d) { const day = new Date(y, m, d).getDay(); return day === 0 || day === 6; }
+
+async function loadData() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  try {
+    const r = await fetch(`${API}/api/dashboard`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'error');
+    allData = d.assignments || [];
+    buildColorCache();
+    updateCards(); renderGantt(); renderTable(); updateTeamFilter();
+  } catch(e) {
+    document.getElementById('ganttInner').innerHTML = `<div class="empty-wrap"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ: ${e.message}</p></div>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">⚠️</div><p>${e.message}</p></div></td></tr>`;
+  } finally { btn.classList.remove('spinning'); }
 }
 
-function shiftMonth(delta){
-  ganttMonth+=delta;
-  if(ganttMonth>11){ganttMonth=0;ganttYear++}
-  if(ganttMonth<0){ganttMonth=11;ganttYear--}
+function updateCards() {
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  const todayMs = new Date(todayStr).getTime();
+  const tomorrowMs = todayMs + 86400000;
+  const allTeams = [...new Set(allData.flatMap(a => parseTeams(a.team)))];
+  let busy = 0, free = 0, queue = 0;
+  allTeams.forEach(team => {
+    const activeToday = allData.filter(a => parseTeams(a.team).includes(team)).some(a => {
+      if (!a.startDate || !a.endDate) return false;
+      return a.startDate <= todayMs && tomorrowMs <= a.endDate + 86400000;
+    });
+    if (activeToday) busy++; else free++;
+  });
+  queue = allData.filter(a => a.startDate && a.startDate > tomorrowMs).length;
+  document.getElementById('cBusy').textContent = busy;
+  document.getElementById('cFree').textContent = free;
+  document.getElementById('cQueue').textContent = queue;
+  document.getElementById('cTotal').textContent = allData.length;
+}
+
+function shiftMonth(delta) {
+  ganttMonth += delta;
+  if (ganttMonth > 11) { ganttMonth = 0; ganttYear++; }
+  if (ganttMonth < 0) { ganttMonth = 11; ganttYear--; }
   renderGantt();
 }
-function goToday(){ganttYear=new Date().getFullYear();ganttMonth=new Date().getMonth();renderGantt()}
+function goToday() { ganttYear = new Date().getFullYear(); ganttMonth = new Date().getMonth(); renderGantt(); }
 
-function renderGantt(){
-  const thMonths=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  document.getElementById('ganttMonthLabel').textContent=`${thMonths[ganttMonth]} ${ganttYear+543}`;
-  const days=daysInMonth(ganttYear,ganttMonth);
-  const today=new Date();
-  // รวบรวมทุกชุด
-  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
-  if(!allTeams.length){document.getElementById('ganttInner').innerHTML='<div class="gantt-empty">ยังไม่มีข้อมูลการมอบหมายงาน</div>';return}
-  let daysHtml='';
-  for(let d=1;d<=days;d++){
-    const isWE=isWeekend(ganttYear,ganttMonth,d);
-    const isTd=today.getDate()===d&&today.getMonth()===ganttMonth&&today.getFullYear()===ganttYear;
-    daysHtml+=`<div class="gantt-day-hdr${isWE?' weekend':''}${isTd?' today':''}">${d}</div>`;
+function renderGantt() {
+  const thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  document.getElementById('ganttMonthLabel').textContent = `${thMonths[ganttMonth]} ${ganttYear+543}`;
+  const days = daysInMonth(ganttYear, ganttMonth);
+  const today = new Date();
+  const allTeams = [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  if (!allTeams.length) { document.getElementById('ganttInner').innerHTML = '<div class="gantt-empty">ยังไม่มีข้อมูลการมอบหมายงาน</div>'; return; }
+
+  let daysHtml = '';
+  for (let d = 1; d <= days; d++) {
+    const isWE = isWeekend(ganttYear, ganttMonth, d);
+    const isTd = today.getDate() === d && today.getMonth() === ganttMonth && today.getFullYear() === ganttYear;
+    daysHtml += `<div class="gantt-day-hdr${isWE?' weekend':''}${isTd?' today':''}">${d}</div>`;
   }
-  document.getElementById('ganttLegend').innerHTML=allTeams.map(t=>`
-    <div class="legend-item"><div class="legend-dot" style="background:${getTeamColor(t)}"></div>${t}</div>`).join('');
-  const rowsHtml=allTeams.map(team=>{
-    const color=getTeamColor(team);
-    // งานที่มีชุดนี้
-    const teamJobs=allData.filter(a=>parseTeams(a.team).includes(team));
-    let cellsHtml='';
-    for(let d=1;d<=days;d++){
-      const isWE=isWeekend(ganttYear,ganttMonth,d);
-      const isTd=today.getDate()===d&&today.getMonth()===ganttMonth&&today.getFullYear()===ganttYear;
-      cellsHtml+=`<div class="gantt-cell${isWE?' weekend':''}${isTd?' today':''}"></div>`;
+
+  document.getElementById('ganttLegend').innerHTML = allTeams.map(t =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${getTeamColor(t)}"></div>${t}</div>`
+  ).join('');
+
+  const ROW_H = 30, ROW_GAP = 4, PAD = 6;
+
+  const rowsHtml = allTeams.map(team => {
+    const color = getTeamColor(team);
+    const teamJobs = allData.filter(a => parseTeams(a.team).includes(team));
+
+    // สร้าง cell background
+    let cellsHtml = '';
+    for (let d = 1; d <= days; d++) {
+      const isWE = isWeekend(ganttYear, ganttMonth, d);
+      const isTd = today.getDate() === d && today.getMonth() === ganttMonth && today.getFullYear() === ganttYear;
+      cellsHtml += `<div class="gantt-cell${isWE?' weekend':''}${isTd?' today':''}"></div>`;
     }
-    const barsHtml=teamJobs.map(job=>{
-      const s=tsToDate(job.startDate);
-      const e=tsToDate(job.endDate);
-      if(!s||!e) return'';
-      const monthStart=new Date(Date.UTC(ganttYear,ganttMonth,1));
-      const monthEnd=new Date(Date.UTC(ganttYear,ganttMonth,days));
-      if(e<monthStart||s>monthEnd) return'';
-      const sInMonth=s<monthStart?monthStart:s;
-      const eInMonth=e>monthEnd?monthEnd:e;
-      const startDay=sInMonth.getUTCDate();
-      const endDay=eInMonth.getUTCDate();
-      const left=((startDay-1)/days)*100;
-      const width=((endDay-startDay+1)/days)*100;
-      const opacity=job.status==='เสร็จแล้ว'?'opacity:.5':job.status==='วางแผน'?'opacity:.75':'';
-      const members=parseMembers(job.members);
-      const tip=encodeURIComponent(JSON.stringify({
-        job:job.jobNo,company:job.company,province:job.province,
-        start:fmtDate(job.startDate),end:fmtDate(job.endDate),
-        status:job.status,members:members.join(', ')||'ทั้งชุด'
+
+    // จัดงานเป็น rows ไม่ทับกัน
+    const rows = [];
+    teamJobs.forEach(job => {
+      const s = tsToDate(job.startDate);
+      const e = tsToDate(job.endDate);
+      if (!s || !e) return;
+      const monthStart = new Date(Date.UTC(ganttYear, ganttMonth, 1));
+      const monthEnd = new Date(Date.UTC(ganttYear, ganttMonth, days));
+      if (e < monthStart || s > monthEnd) return;
+      const sInMonth = s < monthStart ? monthStart : s;
+      const eInMonth = e > monthEnd ? monthEnd : e;
+      const startDay = sInMonth.getUTCDate();
+      const endDay = eInMonth.getUTCDate();
+      // หา row ที่ว่าง
+      let placed = false;
+      for (const row of rows) {
+        const overlap = row.some(r => !(endDay < r.startDay || startDay > r.endDay));
+        if (!overlap) { row.push({ job, startDay, endDay }); placed = true; break; }
+      }
+      if (!placed) rows.push([{ job, startDay, endDay }]);
+    });
+
+    const totalH = rows.length > 0 ? PAD + rows.length * (ROW_H + ROW_GAP) + PAD : 44;
+
+    const barsHtml = rows.flatMap((row, ri) => row.map(({ job, startDay, endDay }) => {
+      const left = ((startDay - 1) / days) * 100;
+      const width = ((endDay - startDay + 1) / days) * 100;
+      const top = PAD + ri * (ROW_H + ROW_GAP);
+      const opacity = job.status === 'เสร็จแล้ว' ? 'opacity:.5' : job.status === 'วางแผน' ? 'opacity:.75' : '';
+      const members = parseMembers(job.members);
+      const tip = encodeURIComponent(JSON.stringify({
+        job: job.jobNo, company: job.company, province: job.province,
+        start: fmtDate(job.startDate), end: fmtDate(job.endDate),
+        status: job.status, members: members.join(', ') || 'ทั้งชุด'
       }));
-      return`<div class="gantt-bar" style="left:${left}%;width:calc(${width}% - 2px);background:${color};${opacity}" data-tip="${tip}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">${job.jobNo||job.company||''}</div>`;
-    }).join('');
-    return`<div class="gantt-row">
-      <div class="gantt-team-label">
+      return `<div class="gantt-bar" style="left:${left}%;width:calc(${width}% - 2px);top:${top}px;height:${ROW_H}px;background:${color};${opacity}" data-tip="${tip}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">${job.jobNo || job.company || ''}</div>`;
+    })).join('');
+
+    return `<div class="gantt-row" style="min-height:${totalH}px">
+      <div class="gantt-team-label" style="min-height:${totalH}px">
         <div style="display:flex;align-items:center;gap:6px">
           <div class="team-dot" style="background:${color}"></div>
           <div class="team-name">${team}</div>
         </div>
       </div>
-      <div class="gantt-cells" style="position:relative">${cellsHtml}<div style="position:absolute;inset:0;pointer-events:none">${barsHtml}</div></div>
+      <div class="gantt-cells" style="position:relative;min-height:${totalH}px">
+        ${cellsHtml}
+        <div style="position:absolute;inset:0;pointer-events:none">${barsHtml}</div>
+      </div>
     </div>`;
   }).join('');
-  document.getElementById('ganttInner').innerHTML=`
+
+  document.getElementById('ganttInner').innerHTML = `
     <div class="gantt-header"><div class="gantt-team-col">ชุด</div><div class="gantt-days">${daysHtml}</div></div>
     ${rowsHtml}`;
 }
 
-function showTip(e,el){
-  const tip=document.getElementById('tooltip');
-  try{
-    const d=JSON.parse(decodeURIComponent(el.dataset.tip));
-    tip.innerHTML=`
+function showTip(e, el) {
+  const tip = document.getElementById('tooltip');
+  try {
+    const d = JSON.parse(decodeURIComponent(el.dataset.tip));
+    tip.innerHTML = `
       <div class="tooltip-title">${d.job}</div>
       <div>${d.company}</div>
-      ${d.province?`<div>📍 ${d.province}</div>`:''}
+      ${d.province ? `<div>📍 ${d.province}</div>` : ''}
       <div>📅 ${d.start} – ${d.end}</div>
       <div>🔖 ${d.status}</div>
-      ${d.members?`<div>👥 ${d.members}</div>`:''}
+      ${d.members ? `<div>👥 ${d.members}</div>` : ''}
     `;
-  }catch{tip.innerHTML=el.dataset.tip}
-  tip.style.left=Math.min(e.clientX+12,window.innerWidth-320)+'px';
-  tip.style.top=e.clientY+12+'px';
+  } catch { tip.innerHTML = el.dataset.tip; }
+  tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 320) + 'px';
+  tip.style.top = e.clientY + 12 + 'px';
   tip.classList.add('show');
 }
-function hideTip(){document.getElementById('tooltip').classList.remove('show')}
+function hideTip() { document.getElementById('tooltip').classList.remove('show'); }
 
-function updateTeamFilter(){
-  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
-  const sel=document.getElementById('filterTeam');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">ทุกชุด</option>'+allTeams.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+function updateTeamFilter() {
+  const allTeams = [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  const sel = document.getElementById('filterTeam');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">ทุกชุด</option>' + allTeams.map(t =>
+    `<option value="${t}"${t === cur ? ' selected' : ''}>${t}</option>`
+  ).join('');
 }
 
-function renderTable(){
-  const q=document.getElementById('searchInput').value.toLowerCase();
-  const teamF=document.getElementById('filterTeam').value;
-  const statusF=document.getElementById('filterStatus').value;
-  const filtered=allData.filter(a=>{
-    if(teamF && !parseTeams(a.team).includes(teamF)) return false;
-    if(statusF && a.status!==statusF) return false;
-    if(q){
-      const hay=[a.jobNo,a.jobName,a.company,a.province,a.detail,a.team,a.members].join(' ').toLowerCase();
-      if(!hay.includes(q)) return false;
+function renderTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const teamF = document.getElementById('filterTeam').value;
+  const statusF = document.getElementById('filterStatus').value;
+  const filtered = allData.filter(a => {
+    if (teamF && !parseTeams(a.team).includes(teamF)) return false;
+    if (statusF && a.status !== statusF) return false;
+    if (q) {
+      const hay = [a.jobNo, a.jobName, a.company, a.province, a.detail, a.team, a.members].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
     }
     return true;
   });
-  if(!filtered.length){
-    document.getElementById('tableBody').innerHTML=`<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div></td></tr>`;
+  if (!filtered.length) {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div></td></tr>`;
     return;
   }
-  const bc={'วางแผน':'badge-plan','กำลังทำ':'badge-doing','เสร็จแล้ว':'badge-done'};
-  document.getElementById('tableBody').innerHTML=filtered.map(a=>`
+  const bc = { 'วางแผน':'badge-plan', 'กำลังทำ':'badge-doing', 'เสร็จแล้ว':'badge-done' };
+  document.getElementById('tableBody').innerHTML = filtered.map(a => `
     <tr>
       <td>${renderTeamBadges(a.team)}</td>
-      <td class="td-job">${a.jobNo||'—'}</td>
-      <td class="td-company">${a.company||'—'}</td>
-      <td>${a.province||'—'}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.detail||''}">${a.detail||'—'}</td>
+      <td class="td-job">${a.jobNo || '—'}</td>
+      <td class="td-company">${a.company || '—'}</td>
+      <td>${a.province || '—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.detail || ''}">${a.detail || '—'}</td>
       <td class="td-date">${fmtDate(a.startDate)}</td>
       <td class="td-date">${fmtDate(a.endDate)}</td>
-      <td><span class="badge ${bc[a.status]||'badge-plan'}">${a.status||'วางแผน'}</span></td>
+      <td><span class="badge ${bc[a.status] || 'badge-plan'}">${a.status || 'วางแผน'}</span></td>
       <td>${renderMembers(a.members)}</td>
-      <td style="font-size:12px;color:var(--text3);white-space:nowrap">${a.car||'—'}</td>
+      <td style="font-size:12px;color:var(--text3);white-space:nowrap">${a.car || '—'}</td>
     </tr>`).join('');
 }
 
-setInterval(loadData,5*60*1000);
+setInterval(loadData, 5 * 60 * 1000);
 loadData();
 </script>
 </body>
