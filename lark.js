@@ -11,11 +11,13 @@ async function getToken() {
     { app_id: APP_ID, app_secret: SECRET });
   return r.data.tenant_access_token;
 }
+
 async function getRecords(token) {
   const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records?page_size=100`;
   const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
   return r.data.data.items || [];
 }
+
 async function findByLineId(token, lineId) {
   const items = await getRecords(token);
   for (const item of items) {
@@ -48,12 +50,20 @@ async function register(token, nameToFind, lineId) {
   }
   return `❌ ไม่พบชื่อ "${nameToFind}" ครับ\nลองพิมพ์ชื่อจริงใหม่อีกครั้งนะครับ`;
 }
+
 async function getAllEmployees(token) {
   const items = await getRecords(token);
   return items.map(item => item.fields || item);
 }
 
-// ── getJobsToday: รองรับ สมาชิก (Text) ──────────────────
+// ── helper: แปลง Lark field (single/multi select หรือ text) → array of strings ──
+function toStringArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map(v => typeof v === 'object' ? (v.text || v.value || '') : v.toString()).filter(Boolean);
+  return [val.toString()].filter(Boolean);
+}
+
+// ── getJobsToday: รองรับ ชุด และ สมาชิก แบบ Multiple select ──────────────────
 async function getJobsToday(token, team, empName) {
   const now = Date.now();
   const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
@@ -69,22 +79,25 @@ async function getJobsToday(token, team, empName) {
     const end   = f['วันสิ้นสุด'] || 0;
     if (start > now || now > end + 86400000) return false;
 
-    const rawTeam = f['ชุด'];
-    const t = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
+    // ชุด → Multiple select → Array
+    const teams = toStringArray(f['ชุด']);
 
-    const members = (f['สมาชิก'] || '').toString().trim();
+    // สมาชิก → Multiple select → Array
+    const members = toStringArray(f['สมาชิก']);
 
     // ถ้ามี สมาชิก → เช็คว่าชื่อช่างอยู่ใน list ไหม
-    if (members && empNorm) {
-      const memberList = members.split(/[,،،\n]+/).map(m => normN(m.trim()));
-      const inList = memberList.some(m => m && (m.includes(empNorm) || empNorm.includes(m)));
+    if (members.length && empNorm) {
+      const inList = members.some(m => {
+        const mn = normN(m);
+        return mn && (mn.includes(empNorm) || empNorm.includes(mn));
+      });
       if (inList) return true;
-      // ถ้ามี สมาชิก แต่ชื่อไม่อยู่ใน list → ไม่แสดง
+      // มี สมาชิก แต่ชื่อไม่อยู่ใน list → ไม่แสดง
       return false;
     }
 
-    // ถ้าไม่มี สมาชิก → fallback ใช้ ชุด เหมือนเดิม
-    return t === team;
+    // ถ้าไม่มี สมาชิก → fallback เช็ค ชุด (รองรับหลายชุด)
+    return teams.some(t => normN(t) === normN(team));
   }).map(item => item.fields);
 }
 
