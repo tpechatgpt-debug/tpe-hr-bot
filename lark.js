@@ -25,6 +25,14 @@ async function findByLineId(token, lineId) {
   }
   return null;
 }
+
+// ── ดึง records พร้อม record_id ──────────────────────────
+async function getRecordsWithId(token) {
+  const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records?page_size=100`;
+  const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+  return r.data.data.items || [];
+}
+
 async function register(token, nameToFind, lineId) {
   const items = await getRecords(token);
   for (const item of items) {
@@ -44,19 +52,40 @@ async function getAllEmployees(token) {
   const items = await getRecords(token);
   return items.map(item => item.fields || item);
 }
-async function getJobsToday(token, team) {
+
+// ── getJobsToday: รองรับ สมาชิก (Text) ──────────────────
+async function getJobsToday(token, team, empName) {
   const now = Date.now();
   const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
   const r   = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
   const items = r.data?.data?.items || [];
+
+  const normN = s => (s || '').replace(/\s+/g, '').toLowerCase();
+  const empNorm = empName ? normN(empName) : '';
+
   return items.filter(item => {
-    const f       = item.fields;
-    const start   = f['วันที่เริ่ม']  || 0;
-    const end     = f['วันสิ้นสุด'] || 0;
+    const f     = item.fields;
+    const start = f['วันที่เริ่ม'] || 0;
+    const end   = f['วันสิ้นสุด'] || 0;
+    if (start > now || now > end + 86400000) return false;
+
     const rawTeam = f['ชุด'];
-    const t       = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
-    return t === team && start <= now && now <= end;
+    const t = Array.isArray(rawTeam) ? rawTeam[0] : (rawTeam || '').toString();
+
+    const members = (f['สมาชิก'] || '').toString().trim();
+
+    // ถ้ามี สมาชิก → เช็คว่าชื่อช่างอยู่ใน list ไหม
+    if (members && empNorm) {
+      const memberList = members.split(/[,،،\n]+/).map(m => normN(m.trim()));
+      const inList = memberList.some(m => m && (m.includes(empNorm) || empNorm.includes(m)));
+      if (inList) return true;
+      // ถ้ามี สมาชิก แต่ชื่อไม่อยู่ใน list → ไม่แสดง
+      return false;
+    }
+
+    // ถ้าไม่มี สมาชิก → fallback ใช้ ชุด เหมือนเดิม
+    return t === team;
   }).map(item => item.fields);
 }
 
-module.exports = { getToken, findByLineId, register, getAllEmployees, getJobsToday };
+module.exports = { getToken, findByLineId, register, getAllEmployees, getJobsToday, getRecordsWithId };
