@@ -84,7 +84,9 @@ app.post('/webhook', async (req, res) => {
           await reply(replyToken, '⚠️ ยังไม่ได้กำหนดชุดให้คุณ กรุณาติดต่อหัวหน้าครับ');
           return;
         }
-        const jobs = await lark.getJobsToday(larkToken, team);
+        const rawName = employee['ชื่อ - นามสกุล'] || employee['ชื่อ-นามสกุล'] || '';
+        const empName = rawName.split('(')[0].trim();
+        const jobs = await lark.getJobsToday(larkToken, team, empName);
         if (!jobs.length) {
           await reply(replyToken, `📋 ${team} — วันนี้ไม่มีงานที่ได้รับมอบหมายครับ`);
           return;
