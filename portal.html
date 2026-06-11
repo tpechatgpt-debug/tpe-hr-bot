@@ -33,6 +33,16 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .av{width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600}
 .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:5px 12px;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:12px;cursor:pointer}
 .btn-logout:hover{background:rgba(255,255,255,.2)}
+
+/* ── TAB BAR ── */
+.tab-bar{background:var(--navy);border-bottom:1px solid rgba(255,255,255,.1);display:flex;padding:0 20px;gap:4px}
+.tab-btn{display:flex;align-items:center;gap:6px;padding:10px 18px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.55);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:rgba(255,255,255,.85)}
+.tab-btn.active{color:#fff;border-bottom-color:var(--gold)}
+.tab-content{display:none;flex:1;flex-direction:column}
+.tab-content.active{display:flex}
+.tab-iframe{flex:1;border:none;width:100%;height:calc(100vh - 100px)}
+
 .body{display:flex;flex:1}
 .sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;flex-shrink:0}
 .nav-sep{font-size:10px;color:var(--muted);font-weight:500;padding:8px 10px 4px;letter-spacing:.05em}
@@ -103,7 +113,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .month-pill:hover{border-color:var(--navy)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* ── PENDING NOTIFY (เพิ่มใหม่) ── */
 .alert-bar{background:#FDEEEC;border:1px solid rgba(192,57,43,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:none}
 .alert-bar.show{display:block}
 .alert-bar-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -111,8 +120,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .approve-btn:hover{background:#166040}
 .reject-btn{background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:12px;cursor:pointer}
 .reject-btn:hover{background:#a93226}
-
-/* ── ATTENDANCE ADMIN ── */
 .att-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .att-sel{padding:7px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Sarabun',sans-serif;font-size:13px;outline:none;background:#fff}
 .att-sel:focus{border-color:var(--gold)}
@@ -143,7 +150,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .att-late-min{font-size:9px;color:#C0392B}
 .day-holi{color:#92400E}
 .day-sun{color:#C0392B}
-/* ── CALENDAR VIEW ── */
 .att-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:14px}
 .att-cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0;letter-spacing:.05em}
 .att-cal-cell{border-radius:8px;padding:4px 2px;min-height:70px;display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid transparent;font-size:9px}
@@ -159,7 +165,6 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-tout{font-size:8px;font-weight:700;color:var(--navy);background:var(--navy-l);padding:1px 3px;border-radius:3px;min-height:12px;width:100%;text-align:center}
 .cal-ot-b{font-size:8px;font-weight:700;color:#92400E;background:#FEF3C7;padding:1px 3px;border-radius:3px;width:100%;text-align:center}
 .cal-late-b{font-size:8px;color:var(--red);font-weight:700}
-/* HOLIDAY FORM */
 .holi-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .holi-inp{padding:7px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'Sarabun',sans-serif;font-size:13px;outline:none}
 .holi-inp:focus{border-color:var(--gold)}
@@ -174,7 +179,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <div class="login-logo">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwAAADsABataJCQAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAVVJREFUeAHtmkEKwkAMRdu6du8BPIIHcO/Oo3gB8QAeQD2B4MKF+/+B4EIEQbBS0EWLqJAm8xLSJiRZ+GRmkiaTvBASgiAIgiAIgiAIggAAvPcRgDMAIBQBAAAAAElFTkSuQmCC" style="width:34px;height:34px;object-fit:contain;border-radius:7px">
+      <div style="width:34px;height:34px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🏗</div>
       <div class="login-title">TPE HR Portal</div>
     </div>
     <p class="login-sub">เข้าสู่ระบบสำหรับ HR Admin</p>
@@ -191,7 +196,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <div class="app" id="app">
   <div class="topbar">
     <div class="topbar-left">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwAAADsABataJCQAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAVVJREFUeAHtmkEKwkAMRdu6du8BPIIHcO/Oo3gB8QAeQD2B4MKF+/+B4EIEQbBS0EWLqJAm8xLSJiRZ+GRmkiaTvBASgiAIgiAIgiAIggAAvPcRgDMAIBQBAAAAAElFTkSuQmCC" style="width:34px;height:34px;object-fit:contain;border-radius:7px">
+      <div style="width:34px;height:34px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🏗</div>
       <div class="topbar-title">TPE <span>HR Portal</span></div>
     </div>
     <div class="topbar-right">
@@ -200,213 +205,183 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
-  <div class="body">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <div class="nav-sep">เมนูหลัก</div>
-      <button class="nav-item on" onclick="gotoPage('overview',this)"><span class="ni">⊞</span> ภาพรวม</button>
-      <button class="nav-item" onclick="gotoPage('upload',this)"><span class="ni">↑</span> อัปโหลดเงินเดือน</button>
-      <button class="nav-item" onclick="gotoPage('employees',this)"><span class="ni">◎</span> รายการพนักงาน</button>
-      <button class="nav-item" onclick="gotoPage('requests',this)"><span class="ni">◷</span> ประวัติคำขอ</button>
-      <!-- ── nav pending (เพิ่มใหม่) ── -->
-      <button class="nav-item" id="nav-pending" onclick="gotoPage('pending',this)">
-        <span class="ni">🔔</span> คำขอรอ HR
-        <span id="pending-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:20px;padding:1px 6px;font-size:11px;margin-left:auto"></span>
-      </button>
-      <div class="nav-sep">จัดการ</div>
-      <button class="nav-item" onclick="gotoPage('months',this)"><span class="ni">📅</span> ข้อมูลเดือน</button>
-      <button class="nav-item" onclick="gotoPage('attendance',this)"><span class="ni">🕐</span> เวลาเข้างาน</button>
-    </div>
+  <!-- ── TAB BAR ── -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('hr',this)">👤 HR Portal</button>
+    <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Job Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('fieldwork',this)">🚐 Fieldwork</button>
+  </div>
 
-    <!-- MAIN -->
-    <div class="main">
+  <!-- ── TAB: HR PORTAL ── -->
+  <div class="tab-content active" id="tab-hr">
+    <div class="body">
+      <div class="sidebar">
+        <div class="nav-sep">เมนูหลัก</div>
+        <button class="nav-item on" onclick="gotoPage('overview',this)"><span class="ni">⊞</span> ภาพรวม</button>
+        <button class="nav-item" onclick="gotoPage('upload',this)"><span class="ni">↑</span> อัปโหลดเงินเดือน</button>
+        <button class="nav-item" onclick="gotoPage('employees',this)"><span class="ni">◎</span> รายการพนักงาน</button>
+        <button class="nav-item" onclick="gotoPage('requests',this)"><span class="ni">◷</span> ประวัติคำขอ</button>
+        <button class="nav-item" id="nav-pending" onclick="gotoPage('pending',this)">
+          <span class="ni">🔔</span> คำขอรอ HR
+          <span id="pending-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:20px;padding:1px 6px;font-size:11px;margin-left:auto"></span>
+        </button>
+        <div class="nav-sep">จัดการ</div>
+        <button class="nav-item" onclick="gotoPage('months',this)"><span class="ni">📅</span> ข้อมูลเดือน</button>
+        <button class="nav-item" onclick="gotoPage('attendance',this)"><span class="ni">🕐</span> เวลาเข้างาน</button>
+      </div>
 
-      <!-- PAGE: OVERVIEW -->
-      <div class="page on" id="page-overview">
-        <div class="stats">
-          <div class="stat-card">
-            <div class="stat-label">พนักงานทั้งหมด</div>
-            <div class="stat-val" id="statEmp">—</div>
-            <div class="stat-sub">คน</div>
+      <div class="main">
+        <!-- PAGE: OVERVIEW -->
+        <div class="page on" id="page-overview">
+          <div class="stats">
+            <div class="stat-card"><div class="stat-label">พนักงานทั้งหมด</div><div class="stat-val" id="statEmp">—</div><div class="stat-sub">คน</div></div>
+            <div class="stat-card"><div class="stat-label">คำขอค้างอยู่</div><div class="stat-val" id="statPend">—</div><div class="stat-sub">รายการ</div></div>
+            <div class="stat-card"><div class="stat-label">ข้อมูลล่าสุด</div><div class="stat-val" id="statMonth" style="font-size:15px;padding-top:6px">—</div><div class="stat-sub">ในระบบ</div></div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">คำขอค้างอยู่</div>
-            <div class="stat-val" id="statPend">—</div>
-            <div class="stat-sub">รายการ</div>
+          <div class="alert-bar" id="alertBar">
+            <div class="alert-bar-title">
+              <span>⚠️ มีคำขอรอ HR อนุมัติ — LINE quota หมด
+                <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:6px" id="alert-count">0</span>
+              </span>
+              <button class="btn btn-sm" style="border:1px solid var(--red);color:var(--red);background:transparent;cursor:pointer" onclick="showPendingPage()">ดูคำขอ →</button>
+            </div>
+            <div style="font-size:12px;color:#888">กรุณาอนุมัติผ่านหน้าเว็บนี้แทน LINE</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">ข้อมูลล่าสุด</div>
-            <div class="stat-val" id="statMonth" style="font-size:15px;padding-top:6px">—</div>
-            <div class="stat-sub">ในระบบ</div>
+          <div class="two-col">
+            <div class="card">
+              <div class="card-title">อัปโหลดไฟล์เงินเดือน</div>
+              <div id="uploadZone2" class="upload-zone" onclick="document.getElementById('fileInput2').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'2')">
+                <div class="upload-icon">📁</div>
+                <div class="upload-label">ลากไฟล์มาวาง หรือเลือกไฟล์</div>
+                <div class="upload-sub">รองรับ .xls และ .xlsx</div>
+                <select id="payType2" onclick="event.stopPropagation()" style="margin-top:10px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:13px;outline:none">
+                  <option value="monthly">พนักงานรายเดือน</option>
+                  <option value="daily">พนักงานรายวัน</option>
+                </select>
+                <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput2').click()">เลือกไฟล์</button>
+              </div>
+              <input type="file" id="fileInput2" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'2')">
+              <div class="upload-progress" id="prog2"><div class="prog-bar"><div class="prog-fill" id="progFill2"></div></div><div class="prog-label" id="progLabel2">กำลังอัปโหลด...</div></div>
+              <div class="upload-result" id="result2"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">คำขอล่าสุด</div>
+              <div id="recentList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+            </div>
           </div>
         </div>
 
-        <!-- ── Alert bar quota หมด (เพิ่มใหม่) ── -->
-        <div class="alert-bar" id="alertBar">
-          <div class="alert-bar-title">
-            <span>⚠️ มีคำขอรอ HR อนุมัติ — LINE quota หมด
-              <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:6px" id="alert-count">0</span>
-            </span>
-            <button class="btn btn-sm" style="border:1px solid var(--red);color:var(--red);background:transparent;cursor:pointer" onclick="showPendingPage()">ดูคำขอ →</button>
-          </div>
-          <div style="font-size:12px;color:#888">กรุณาอนุมัติผ่านหน้าเว็บนี้แทน LINE</div>
-        </div>
-
-        <div class="two-col">
+        <!-- PAGE: UPLOAD -->
+        <div class="page" id="page-upload">
           <div class="card">
             <div class="card-title">อัปโหลดไฟล์เงินเดือน</div>
-            <div id="uploadZone2" class="upload-zone" onclick="document.getElementById('fileInput2').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'2')">
-              <div class="upload-icon">📁</div>
-              <div class="upload-label">ลากไฟล์มาวาง หรือเลือกไฟล์</div>
+            <div class="notice">ระบบจะอ่าน Sheet "ค่าแรง" จากไฟล์ Excel แล้วบันทึกลง Google Sheets อัตโนมัติ</div>
+            <div id="uploadZone1" class="upload-zone" onclick="document.getElementById('fileInput1').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'1')">
+              <div class="upload-icon">📊</div>
+              <div class="upload-label">ลากไฟล์ Excel มาวางที่นี่</div>
               <div class="upload-sub">รองรับ .xls และ .xlsx</div>
-              <select id="payType2" onclick="event.stopPropagation()" style="margin-top:10px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:13px;outline:none">
+              <select id="payType1" onclick="event.stopPropagation()" style="margin-top:10px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:13px;outline:none">
                 <option value="monthly">พนักงานรายเดือน</option>
                 <option value="daily">พนักงานรายวัน</option>
               </select>
-              <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput2').click()">เลือกไฟล์</button>
+              <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput1').click()">เลือกไฟล์</button>
             </div>
-            <input type="file" id="fileInput2" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'2')">
-            <div class="upload-progress" id="prog2"><div class="prog-bar"><div class="prog-fill" id="progFill2"></div></div><div class="prog-label" id="progLabel2">กำลังอัปโหลด...</div></div>
-            <div class="upload-result" id="result2"></div>
+            <input type="file" id="fileInput1" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'1')">
+            <div class="upload-progress" id="prog1"><div class="prog-bar"><div class="prog-fill" id="progFill1"></div></div><div class="prog-label" id="progLabel1">กำลังอัปโหลด...</div></div>
+            <div class="upload-result" id="result1"></div>
+          </div>
+        </div>
+
+        <!-- PAGE: EMPLOYEES -->
+        <div class="page" id="page-employees">
+          <div class="card">
+            <div class="card-title">
+              รายการพนักงานทั้งหมด
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="empSearch" placeholder="ค้นหาชื่อ..." style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:12px;outline:none;width:160px" oninput="filterEmp()">
+                <button class="btn btn-primary btn-sm" onclick="loadEmployees()">รีโหลด</button>
+              </div>
+            </div>
+            <div id="empTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGE: REQUESTS -->
+        <div class="page" id="page-requests">
+          <div class="card">
+            <div class="card-title">ประวัติคำขอเอกสาร<button class="btn btn-primary btn-sm" onclick="loadRequests()">รีโหลด</button></div>
+            <div id="reqTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGE: PENDING NOTIFY -->
+        <div class="page" id="page-pending">
+          <div class="card">
+            <div class="card-title">คำขอรอการอนุมัติ <span id="pending-count-title" style="color:var(--red);font-size:13px;font-weight:400"></span><button class="btn btn-primary btn-sm" onclick="loadPendingNotify()">รีโหลด</button></div>
+            <div class="notice" style="background:var(--red-l);color:#7B1A12;border-color:rgba(192,57,43,.2)">⚠️ คำขอเหล่านี้เกิดขึ้นเมื่อ LINE push message quota หมด — HR สามารถอนุมัติได้จากที่นี่แทน</div>
+            <div id="pdfReadySection" style="display:none;margin-bottom:16px">
+              <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">📥 PDF ที่รอ HR นำส่งให้พนักงาน</div>
+              <table class="tbl" id="pdfReadyTable"><thead><tr><th>พนักงาน</th><th>ประเภทเอกสาร</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">ดำเนินการ</th></tr></thead><tbody id="pdfReadyTbody"></tbody></table>
+            </div>
+            <div class="notice" id="pending-empty" style="display:none;background:var(--green-l);color:var(--green);border-color:rgba(27,127,78,.2)">✅ ไม่มีคำขอค้างอยู่ในขณะนี้</div>
+            <div id="pending-table-wrap"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGE: MONTHS -->
+        <div class="page" id="page-months">
+          <div class="card">
+            <div class="card-title">ข้อมูลเงินเดือนในระบบ<button class="btn btn-primary btn-sm" onclick="loadMonths()">รีโหลด</button></div>
+            <div class="notice">แต่ละเดือนที่อัปโหลดจะเก็บในแท็บแยกของ Google Sheets</div>
+            <div id="monthList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGE: ATTENDANCE -->
+        <div class="page" id="page-attendance">
+          <div class="card">
+            <div class="card-title">เวลาเข้า-ออกงาน (Admin)<button class="btn btn-primary btn-sm" onclick="loadAttAdmin()">🔄 โหลด</button></div>
+            <div class="att-toolbar">
+              <span style="font-size:12px;color:var(--muted);font-weight:600">รอบเดือน:</span>
+              <select class="att-sel" id="attYear"></select>
+              <select class="att-sel" id="attMonth"></select>
+              <button class="btn btn-gold btn-sm" onclick="loadAttAdmin()">ดูข้อมูล</button>
+              <span class="att-range" id="attRange"></span>
+            </div>
+            <div class="att-legend">
+              <div class="leg"><div class="leg-dot" style="background:#1B7F4E"></div>ตรงเวลา</div>
+              <div class="leg"><div class="leg-dot" style="background:#C0392B"></div>สาย</div>
+              <div class="leg"><div class="leg-dot" style="background:#92400E"></div>OT</div>
+              <div class="leg"><div class="leg-dot" style="background:#1E3A5F"></div>ลา</div>
+              <div class="leg"><div class="leg-dot" style="background:#7A7368"></div>ขาด/ไม่มีข้อมูล</div>
+            </div>
+            <div class="att-stats" id="attStats"></div>
+            <div class="att-table-wrap" id="attTableWrap"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
           </div>
           <div class="card">
-            <div class="card-title">คำขอล่าสุด</div>
-            <div id="recentList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PAGE: UPLOAD -->
-      <div class="page" id="page-upload">
-        <div class="card">
-          <div class="card-title">อัปโหลดไฟล์เงินเดือน</div>
-          <div class="notice">ระบบจะอ่าน Sheet "ค่าแรง" จากไฟล์ Excel แล้วบันทึกลง Google Sheets อัตโนมัติ</div>
-          <div id="uploadZone1" class="upload-zone" onclick="document.getElementById('fileInput1').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'1')">
-            <div class="upload-icon">📊</div>
-            <div class="upload-label">ลากไฟล์ Excel มาวางที่นี่</div>
-            <div class="upload-sub">รองรับ .xls และ .xlsx</div>
-            <select id="payType1" onclick="event.stopPropagation()" style="margin-top:10px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:13px;outline:none">
-              <option value="monthly">พนักงานรายเดือน</option>
-              <option value="daily">พนักงานรายวัน</option>
-            </select>
-            <button class="btn-pick" onclick="event.stopPropagation();document.getElementById('fileInput1').click()">เลือกไฟล์</button>
-          </div>
-          <input type="file" id="fileInput1" accept=".xls,.xlsx" style="display:none" onchange="uploadFile(this,'1')">
-          <div class="upload-progress" id="prog1"><div class="prog-bar"><div class="prog-fill" id="progFill1"></div></div><div class="prog-label" id="progLabel1">กำลังอัปโหลด...</div></div>
-          <div class="upload-result" id="result1"></div>
-        </div>
-      </div>
-
-      <!-- PAGE: EMPLOYEES -->
-      <div class="page" id="page-employees">
-        <div class="card">
-          <div class="card-title">
-            รายการพนักงานทั้งหมด
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" id="empSearch" placeholder="ค้นหาชื่อ..." style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:Sarabun,sans-serif;font-size:12px;outline:none;width:160px" oninput="filterEmp()">
-              <button class="btn btn-primary btn-sm" onclick="loadEmployees()">รีโหลด</button>
+            <div class="card-title">🏖️ วันหยุดบริษัท (Holidays sheet)</div>
+            <div class="holi-form">
+              <input class="holi-inp" id="holiDate" placeholder="dd/mm/yyyy เช่น 05/06/2026" style="width:180px">
+              <input class="holi-inp" id="holiName" placeholder="ชื่อวันหยุด" style="width:200px">
+              <button class="btn btn-gold btn-sm" onclick="addHoliday()">+ เพิ่มวันหยุด</button>
             </div>
-          </div>
-          <div id="empTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
-        </div>
-      </div>
-
-      <!-- PAGE: REQUESTS -->
-      <div class="page" id="page-requests">
-        <div class="card">
-          <div class="card-title">
-            ประวัติคำขอเอกสาร
-            <button class="btn btn-primary btn-sm" onclick="loadRequests()">รีโหลด</button>
-          </div>
-          <div id="reqTable"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
-        </div>
-      </div>
-
-      <!-- ── PAGE: PENDING NOTIFY (เพิ่มใหม่) ── -->
-      <div class="page" id="page-pending">
-        <div class="card">
-          <div class="card-title">
-            คำขอรอการอนุมัติ <span id="pending-count-title" style="color:var(--red);font-size:13px;font-weight:400"></span>
-            <button class="btn btn-primary btn-sm" onclick="loadPendingNotify()">รีโหลด</button>
-          </div>
-          <div class="notice" style="background:var(--red-l);color:#7B1A12;border-color:rgba(192,57,43,.2)">
-            ⚠️ คำขอเหล่านี้เกิดขึ้นเมื่อ LINE push message quota หมด — HR สามารถอนุมัติได้จากที่นี่แทน
-          </div>
-
-          <!-- PDF รอ HR download และส่งให้พนักงานเอง -->
-          <div id="pdfReadySection" style="display:none;margin-bottom:16px">
-            <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">
-              📥 PDF ที่รอ HR นำส่งให้พนักงาน (quota หมด — ดาวน์โหลดแล้วส่งให้พนักงานด้วยตนเอง)
-            </div>
-            <table class="tbl" id="pdfReadyTable">
-              <thead><tr>
-                <th>พนักงาน</th><th>ประเภทเอกสาร</th><th>เดือน</th><th>เวลา</th>
-                <th style="text-align:right">ดำเนินการ</th>
-              </tr></thead>
-              <tbody id="pdfReadyTbody"></tbody>
-            </table>
-          </div>
-          <div class="notice" id="pending-empty" style="display:none;background:var(--green-l);color:var(--green);border-color:rgba(27,127,78,.2)">
-            ✅ ไม่มีคำขอค้างอยู่ในขณะนี้
-          </div>
-          <div id="pending-table-wrap">
-            <div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>
+            <div class="holi-chips" id="holiChips"><span style="font-size:12px;color:var(--muted)">ยังไม่มีวันหยุด</span></div>
           </div>
         </div>
       </div>
-
-      <!-- PAGE: MONTHS -->
-      <div class="page" id="page-months">
-        <div class="card">
-          <div class="card-title">
-            ข้อมูลเงินเดือนในระบบ
-            <button class="btn btn-primary btn-sm" onclick="loadMonths()">รีโหลด</button>
-          </div>
-          <div class="notice">แต่ละเดือนที่อัปโหลดจะเก็บในแท็บแยกของ Google Sheets</div>
-          <div id="monthList"><div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div></div>
-        </div>
-      </div>
-
-      <!-- PAGE: ATTENDANCE -->
-      <div class="page" id="page-attendance">
-        <div class="card">
-          <div class="card-title">
-            เวลาเข้า-ออกงาน (Admin)
-            <button class="btn btn-primary btn-sm" onclick="loadAttAdmin()">🔄 โหลด</button>
-          </div>
-          <div class="att-toolbar">
-            <span style="font-size:12px;color:var(--muted);font-weight:600">รอบเดือน:</span>
-            <select class="att-sel" id="attYear"></select>
-            <select class="att-sel" id="attMonth"></select>
-            <button class="btn btn-gold btn-sm" onclick="loadAttAdmin()">ดูข้อมูล</button>
-            <span class="att-range" id="attRange"></span>
-          </div>
-          <div class="att-legend">
-            <div class="leg"><div class="leg-dot" style="background:#1B7F4E"></div>ตรงเวลา</div>
-            <div class="leg"><div class="leg-dot" style="background:#C0392B"></div>สาย</div>
-            <div class="leg"><div class="leg-dot" style="background:#92400E"></div>OT</div>
-            <div class="leg"><div class="leg-dot" style="background:#1E3A5F"></div>ลา</div>
-            <div class="leg"><div class="leg-dot" style="background:#7A7368"></div>ขาด/ไม่มีข้อมูล</div>
-          </div>
-          <div class="att-stats" id="attStats"></div>
-          <div class="att-table-wrap" id="attTableWrap">
-            <div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>
-          </div>
-        </div>
-        <!-- วันหยุดบริษัท -->
-        <div class="card">
-          <div class="card-title">🏖️ วันหยุดบริษัท (Holidays sheet)</div>
-          <div class="holi-form">
-            <input class="holi-inp" id="holiDate" placeholder="dd/mm/yyyy เช่น 05/06/2026" style="width:180px">
-            <input class="holi-inp" id="holiName" placeholder="ชื่อวันหยุด" style="width:200px">
-            <button class="btn btn-gold btn-sm" onclick="addHoliday()">+ เพิ่มวันหยุด</button>
-          </div>
-          <div class="holi-chips" id="holiChips"><span style="font-size:12px;color:var(--muted)">ยังไม่มีวันหยุด</span></div>
-        </div>
-      </div>
-
     </div>
   </div>
+
+  <!-- ── TAB: DASHBOARD ── -->
+  <div class="tab-content" id="tab-dashboard">
+    <iframe class="tab-iframe" id="iframe-dashboard" src="about:blank"></iframe>
+  </div>
+
+  <!-- ── TAB: FIELDWORK ── -->
+  <div class="tab-content" id="tab-fieldwork">
+    <iframe class="tab-iframe" id="iframe-fieldwork" src="about:blank"></iframe>
+  </div>
+
 </div>
 
 <script>
@@ -414,7 +389,24 @@ const API  = 'https://tpe-hr-bot.onrender.com';
 const PASS = 'tpe2569';
 let allEmployees = [];
 
-// ── LOGIN ────────────────────────────────────────
+// ── TAB SWITCHING ─────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  // โหลด iframe ครั้งแรกที่กด
+  if (tab === 'dashboard') {
+    const f = document.getElementById('iframe-dashboard');
+    if (f.src === 'about:blank') f.src = API + '/dashboard';
+  }
+  if (tab === 'fieldwork') {
+    const f = document.getElementById('iframe-fieldwork');
+    if (f.src === 'about:blank') f.src = API + '/fieldwork';
+  }
+}
+
+// ── LOGIN ─────────────────────────────────────────
 function doLogin() {
   const pw = document.getElementById('pwInput').value;
   if (pw === PASS) {
@@ -435,15 +427,10 @@ window.onload = function() {
   }
 };
 
-// ── INIT ─────────────────────────────────────────
 function initApp() {
-  loadStats();
-  loadRecent();
-  loadPendingNotify(); // ตรวจ quota ทันทีตอนเปิด
-  loadPdfReady();
+  loadStats(); loadRecent(); loadPendingNotify(); loadPdfReady();
 }
 
-// ── PAGE NAV ──────────────────────────────────────
 function gotoPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('on'));
@@ -459,7 +446,6 @@ function showPendingPage() {
   if (btn) btn.click();
 }
 
-// ── LOAD STATS ────────────────────────────────────
 async function loadStats() {
   try {
     const r = await fetch(API + '/portal/stats');
@@ -478,17 +464,11 @@ async function loadRecent() {
   }
 }
 function renderRecent(list) {
-  if (!list || !list.length) {
-    document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ยังไม่มีคำขอ</div>';
-    return;
-  }
+  if (!list || !list.length) { document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ยังไม่มีคำขอ</div>'; return; }
   document.getElementById('recentList').innerHTML = list.map(r =>
     `<div class="req-item">
       <div class="req-av">${(r.name||'?').charAt(0)}</div>
-      <div>
-        <div class="req-name">${r.name||'—'}</div>
-        <div class="req-meta">${r.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรอง'} · ${r.month||''}</div>
-      </div>
+      <div><div class="req-name">${r.name||'—'}</div><div class="req-meta">${r.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรอง'} · ${r.month||''}</div></div>
       <div class="badge ${r.status==='sent'?'badge-ok':r.status==='rejected'?'badge-rej':'badge-pend'}">${r.status==='sent'?'ส่งแล้ว':r.status==='rejected'?'ปฏิเสธ':'รออนุมัติ'}</div>
       ${r.status==='pending'?`<button onclick="retryApprove('${r.requestId}')" style="background:#1B7F4E;color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🔄 ลองใหม่</button>`:''}
       <button onclick="deleteRequest('${r.requestId}')" style="background:#C0392B;color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑 ลบ</button>
@@ -496,15 +476,12 @@ function renderRecent(list) {
   ).join('');
 }
 
-// ── EMPLOYEES ─────────────────────────────────────
 async function loadEmployees() {
   document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
   try {
     allEmployees = await (await fetch(API + '/portal/employees')).json();
     renderEmployees(allEmployees);
-  } catch(e) {
-    document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>';
-  }
+  } catch(e) { document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>'; }
 }
 function renderEmployees(list) {
   if (!list || !list.length) { document.getElementById('empTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">ไม่มีข้อมูล</div>'; return; }
@@ -515,7 +492,6 @@ function filterEmp() {
   renderEmployees(allEmployees.filter(e => (e.name||'').toLowerCase().includes(q)||(e.position||'').toLowerCase().includes(q)));
 }
 
-// ── REQUESTS ──────────────────────────────────────
 async function loadRequests() {
   document.getElementById('reqTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
   try {
@@ -525,7 +501,6 @@ async function loadRequests() {
   } catch(e) { document.getElementById('reqTable').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>'; }
 }
 
-// ── MONTHS ────────────────────────────────────────
 async function loadMonths() {
   document.getElementById('monthList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
   try {
@@ -535,7 +510,6 @@ async function loadMonths() {
   } catch(e) { document.getElementById('monthList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0">โหลดไม่สำเร็จ</div>'; }
 }
 
-// ── UPLOAD ────────────────────────────────────────
 function onDrag(e, over) { e.preventDefault(); e.currentTarget.classList.toggle('drag', over); }
 function onDrop(e, suffix) { e.preventDefault(); document.getElementById('uploadZone'+suffix).classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) doUpload(f,suffix); }
 function uploadFile(input, suffix) { if(input.files[0]) doUpload(input.files[0],suffix); }
@@ -554,149 +528,75 @@ async function doUpload(file, suffix) {
   }
 }
 
-// ════════════════════════════════════════════════════════
-// ── PENDING NOTIFY (fallback เมื่อ LINE quota หมด) ──────
-// ════════════════════════════════════════════════════════
 async function loadPdfReady() {
   try {
-    const r    = await fetch(API + '/portal/pdf-ready');
-    const list = await r.json();
-    const sec  = document.getElementById('pdfReadySection');
-    const tbody = document.getElementById('pdfReadyTbody');
-    if (!sec || !tbody) return;
-    sec.style.display = list.length ? 'block' : 'none';
-    tbody.innerHTML = list.map(p => `<tr>
-      <td><b>${p.empName}</b></td>
-      <td>${p.label}</td>
-      <td>${p.month}</td>
-      <td style="font-size:11px;color:var(--muted)">${p.time}</td>
-      <td style="text-align:right">
-        <a href="${p.url}" target="_blank" download="${p.empName}_${p.month}.pdf"
-           style="background:var(--navy);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px">
-          📥 ดาวน์โหลด
-        </a>
-        <button onclick="markPdfSent('${p.token}')"
-          style="background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer">
-          ✅ ส่งแล้ว
-        </button>
-      </td>
-    </tr>`).join('');
-  } catch(e) { console.error('loadPdfReady:', e); }
+    const r=await fetch(API+'/portal/pdf-ready'); const list=await r.json();
+    const sec=document.getElementById('pdfReadySection'); const tbody=document.getElementById('pdfReadyTbody');
+    if(!sec||!tbody) return;
+    sec.style.display=list.length?'block':'none';
+    tbody.innerHTML=list.map(p=>`<tr><td><b>${p.empName}</b></td><td>${p.label}</td><td>${p.month}</td><td style="font-size:11px;color:var(--muted)">${p.time}</td><td style="text-align:right"><a href="${p.url}" target="_blank" download="${p.empName}_${p.month}.pdf" style="background:var(--navy);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px">📥 ดาวน์โหลด</a><button onclick="markPdfSent('${p.token}')" style="background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer">✅ ส่งแล้ว</button></td></tr>`).join('');
+  } catch(e) {}
 }
-
 async function markPdfSent(token) {
-  if (!confirm('ยืนยันว่าส่งไฟล์ให้พนักงานแล้ว?')) return;
-  await fetch(API + '/portal/pdf-ready/' + token, { method: 'DELETE' });
-  loadPdfReady();
+  if(!confirm('ยืนยันว่าส่งไฟล์ให้พนักงานแล้ว?')) return;
+  await fetch(API+'/portal/pdf-ready/'+token,{method:'DELETE'}); loadPdfReady();
 }
 
 async function loadPendingNotify() {
   try {
-    const r    = await fetch(API + '/portal/pending-notify');
-    const list = await r.json();
-    const badge      = document.getElementById('pending-badge');
-    const countTitle = document.getElementById('pending-count-title');
-    const alertBar   = document.getElementById('alertBar');
-    const alertCount = document.getElementById('alert-count');
-    const emptyMsg   = document.getElementById('pending-empty');
-    const tableWrap  = document.getElementById('pending-table-wrap');
-
-    // badge ใน nav
-    if (badge) { badge.textContent = list.length || ''; badge.style.display = list.length ? 'inline' : 'none'; }
-    // alert bar ใน overview
-    if (alertBar) { alertBar.classList.toggle('show', list.length > 0); if (alertCount) alertCount.textContent = list.length; }
-
-    if (!tableWrap) return;
-
-    if (!list.length) {
-      if (emptyMsg) emptyMsg.style.display = 'block';
-      tableWrap.innerHTML = '';
-      if (countTitle) countTitle.textContent = '';
-      return;
-    }
-    if (emptyMsg) emptyMsg.style.display = 'none';
-    if (countTitle) countTitle.textContent = `(${list.length} รายการ)`;
-
-    tableWrap.innerHTML = `
-      <table class="tbl">
-        <thead><tr>
-          <th>ชื่อพนักงาน</th><th>ประเภทเอกสาร</th><th>เดือน</th><th>เวลาขอ</th>
-          <th style="text-align:right">ดำเนินการ</th>
-        </tr></thead>
-        <tbody>${list.map(n => `<tr>
-          <td><b>${n.empName}</b></td>
-          <td>${n.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน'}</td>
-          <td>${n.month}</td>
-          <td style="font-size:11px;color:var(--muted)">${n.time}</td>
-          <td style="text-align:right">
-            <button class="approve-btn" onclick="portalApprove('${n.requestId}','approve')">✅ อนุมัติ</button>
-            <button class="reject-btn"  onclick="portalApprove('${n.requestId}','reject')">❌ ปฏิเสธ</button>
-          </td>
-        </tr>`).join('')}</tbody>
-      </table>`;
-  } catch(e) { console.error('loadPendingNotify:', e); }
+    const r=await fetch(API+'/portal/pending-notify'); const list=await r.json();
+    const badge=document.getElementById('pending-badge');
+    const countTitle=document.getElementById('pending-count-title');
+    const alertBar=document.getElementById('alertBar');
+    const alertCount=document.getElementById('alert-count');
+    const emptyMsg=document.getElementById('pending-empty');
+    const tableWrap=document.getElementById('pending-table-wrap');
+    if(badge){badge.textContent=list.length||'';badge.style.display=list.length?'inline':'none';}
+    if(alertBar){alertBar.classList.toggle('show',list.length>0);if(alertCount)alertCount.textContent=list.length;}
+    if(!tableWrap) return;
+    if(!list.length){if(emptyMsg)emptyMsg.style.display='block';tableWrap.innerHTML='';if(countTitle)countTitle.textContent='';return;}
+    if(emptyMsg)emptyMsg.style.display='none';
+    if(countTitle)countTitle.textContent=`(${list.length} รายการ)`;
+    tableWrap.innerHTML=`<table class="tbl"><thead><tr><th>ชื่อพนักงาน</th><th>ประเภทเอกสาร</th><th>เดือน</th><th>เวลาขอ</th><th style="text-align:right">ดำเนินการ</th></tr></thead><tbody>${list.map(n=>`<tr><td><b>${n.empName}</b></td><td>${n.docType==='payslip'?'สลิปเงินเดือน':'ใบรับรองเงินเดือน'}</td><td>${n.month}</td><td style="font-size:11px;color:var(--muted)">${n.time}</td><td style="text-align:right"><button class="approve-btn" onclick="portalApprove('${n.requestId}','approve')">✅ อนุมัติ</button><button class="reject-btn" onclick="portalApprove('${n.requestId}','reject')">❌ ปฏิเสธ</button></td></tr>`).join('')}</tbody></table>`;
+  } catch(e) {}
 }
 
 async function portalApprove(requestId, action) {
-  const label = action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
-  if (!confirm(`ยืนยัน${label}คำขอนี้?`)) return;
+  const label=action==='approve'?'อนุมัติ':'ปฏิเสธ';
+  if(!confirm(`ยืนยัน${label}คำขอนี้?`)) return;
   try {
-    const r = await fetch(API + '/portal/approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestId, action }),
-    });
-    const data = await r.json();
-    if (data.ok) {
-      alert(`${label}สำเร็จ` + (data.pushOk === false ? '\n⚠️ ส่ง LINE ไม่ได้ (quota หมด)\nกรุณาแจ้งพนักงานด้วยตนเอง' : ''));
-      loadPendingNotify();
-      loadRequests();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (data.error || 'unknown'));
-    }
-  } catch(e) { alert('Error: ' + e.message); }
+    const r=await fetch(API+'/portal/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,action})});
+    const data=await r.json();
+    if(data.ok){alert(`${label}สำเร็จ`+(data.pushOk===false?'\n⚠️ ส่ง LINE ไม่ได้ (quota หมด)\nกรุณาแจ้งพนักงานด้วยตนเอง':''));loadPendingNotify();loadRequests();}
+    else alert('เกิดข้อผิดพลาด: '+(data.error||'unknown'));
+  } catch(e){alert('Error: '+e.message);}
 }
 
-// poll ทุก 30 วินาที
-// ── deleteRequest ────────────────────────────────────────
 async function deleteRequest(requestId) {
-  if (!confirm('ลบรายการคำขอนี้ออกจากประวัติ?')) return;
+  if(!confirm('ลบรายการคำขอนี้ออกจากประวัติ?')) return;
   try {
-    const r = await fetch(API + '/portal/request/' + requestId, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) { loadRequests(); loadStats(); }
-    else alert('ลบไม่สำเร็จ: ' + (d.error || 'unknown'));
-  } catch(e) { alert('Error: ' + e.message); }
+    const r=await fetch(API+'/portal/request/'+requestId,{method:'DELETE'});
+    const d=await r.json();
+    if(d.ok){loadRequests();loadStats();}else alert('ลบไม่สำเร็จ: '+(d.error||'unknown'));
+  } catch(e){alert('Error: '+e.message);}
 }
 
-// ── retryApprove ─────────────────────────────────────────
 async function retryApprove(requestId) {
-  if (!confirm('อนุมัติและสร้าง PDF อีกครั้ง?')) return;
+  if(!confirm('อนุมัติและสร้าง PDF อีกครั้ง?')) return;
   try {
-    const r = await fetch(API + '/portal/retry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestId }),
-    });
-    const d = await r.json();
-    if (d.ok) {
-      alert('อนุมัติสำเร็จ' + (d.pushOk === false ? '\n⚠️ ส่ง LINE ไม่ได้ — ดาวน์โหลดได้ที่ Portal' : ''));
-      loadRequests(); loadPendingNotify(); loadPdfReady();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (d.error || 'unknown'));
-    }
-  } catch(e) { alert('Error: ' + e.message); }
+    const r=await fetch(API+'/portal/retry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId})});
+    const d=await r.json();
+    if(d.ok){alert('อนุมัติสำเร็จ'+(d.pushOk===false?'\n⚠️ ส่ง LINE ไม่ได้ — ดาวน์โหลดได้ที่ Portal':''));loadRequests();loadPendingNotify();loadPdfReady();}
+    else alert('เกิดข้อผิดพลาด: '+(d.error||'unknown'));
+  } catch(e){alert('Error: '+e.message);}
 }
 
-setInterval(loadPendingNotify, 30000);
-setInterval(loadPdfReady, 30000);
+setInterval(loadPendingNotify,30000);
+setInterval(loadPdfReady,30000);
 
-// ════════════════════════════════════════════════════════
-// ATTENDANCE ADMIN
-// ════════════════════════════════════════════════════════
-let attDays=[], attMapData={}, attHolidays=[], attEmps=[];
+// ── ATTENDANCE ADMIN ──────────────────────────────
+let attDays=[],attMapData={},attHolidays=[],attEmps=[];
 const MONTH_TH2=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const DAY_TH2=['อา','จ','อ','พ','พฤ','ศ','ส'];
 
 function initAttSelectors(){
   const now=new Date();
@@ -713,17 +613,16 @@ async function loadAttAdmin(){
   const month=document.getElementById('attMonth').value;
   document.getElementById('attTableWrap').innerHTML='<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center"><span class="spinner"></span>กำลังโหลด...</div>';
   try{
-    const [r, lr] = await Promise.all([
+    const[r,lr]=await Promise.all([
       fetch(`${API}/admin/attendance?password=${PASS}&year=${year}&month=${month}`),
       fetch(`${API}/admin/leave-map?password=${PASS}&year=${year}&month=${month}`)
     ]);
     const d=await r.json();
     if(d.error) throw new Error(d.error);
-    attDays=d.days; attMapData=d.attMap; attHolidays=d.holidays||[]; attEmps=[...new Set(d.emps.map(e=>e.name))].sort();
+    attDays=d.days;attMapData=d.attMap;attHolidays=d.holidays||[];attEmps=[...new Set(d.emps.map(e=>e.name))].sort();
     document.getElementById('attRange').textContent=`รอบ: ${d.startDate} — ${d.endDate}`;
-    // เก็บ leave map
-    try{ const ldata=await lr.json(); window._leaveMap=ldata.leaveMap||{}; }catch(e){ window._leaveMap={}; }
-    renderAttTable(); renderAttStats(); renderHoliChips();
+    try{const ldata=await lr.json();window._leaveMap=ldata.leaveMap||{};}catch(e){window._leaveMap={};}
+    renderAttTable();renderAttStats();renderHoliChips();
   }catch(e){
     document.getElementById('attTableWrap').innerHTML=`<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">❌ ${e.message}</div>`;
   }
@@ -734,19 +633,15 @@ function toM(t){const[h,m,s]=(t||'00:00:00').split(':').map(Number);return h*60+
 function analyzeAttDay(recs){
   if(!recs||!recs.length) return null;
   const sorted=[...recs].sort();
-  const first=sorted[0], last=sorted[sorted.length-1];
-  const fm=toM(first), lm=toM(last);
-  const res={in:first, out:sorted.length>1?last:null, status:'', ot:0, lateMin:0};
-
-  // สถานะเข้างาน
+  const first=sorted[0],last=sorted[sorted.length-1];
+  const fm=toM(first),lm=toM(last);
+  const res={in:first,out:sorted.length>1?last:null,status:'',ot:0,lateMin:0};
   if(fm<=toM('08:00:59'))       res.status='ok';
-  else if(fm<=toM('11:59:59')) {res.status='late'; res.lateMin=Math.round(fm-toM('08:01:00'));}
+  else if(fm<=toM('11:59:59')){res.status='late';res.lateMin=Math.round(fm-toM('08:01:00'));}
   else if(fm<=toM('12:00:59'))  res.status='half-am';
-  else                         {res.status='late'; res.lateMin=Math.round(fm-toM('08:01:00'));}
-
-  // ออกงาน / OT
+  else                         {res.status='late';res.lateMin=Math.round(fm-toM('08:01:00'));}
   if(sorted.length>1){
-    if     (lm>=toM('11:50:00')&&lm<=toM('12:30:00')) res.status='half-pm';
+    if(lm>=toM('11:50:00')&&lm<=toM('12:30:00'))      res.status='half-pm';
     else if(lm>=toM('17:30:00')&&lm<toM('17:55:00'))  res.ot=0.5;
     else if(lm>=toM('17:55:00')&&lm<toM('18:25:00'))  res.ot=1;
     else if(lm>=toM('18:25:00')&&lm<toM('18:55:00'))  res.ot=1.5;
@@ -758,85 +653,35 @@ function analyzeAttDay(recs){
   return res;
 }
 
-function renderAttCell(date,name){
-  const holi=attHolidays.find(h=>h.date===date);
-  const[dd,mm,yyyy]=date.split('/');
-  const dateObj=new Date(yyyy,mm-1,dd);
-  const isSun=dateObj.getDay()===0, isSat=dateObj.getDay()===6;
-  if(holi) return`<div class="att-cell"><span class="ab ab-holi">🏖️ หยุด</span><span style="font-size:9px;color:#92400E">${holi.name.slice(0,6)}</span></div>`;
-  if(isSun||isSat) return`<div class="att-cell"><span class="ab ab-holi">${isSun?'อา':'ส'}.</span></div>`;
-  const recs=attMapData[date]?.[name];
-  if(!recs||!recs.length) return`<div class="att-cell"><span class="ab ab-absent">—</span></div>`;
-  const a=analyzeAttDay(recs);
-  if(!a) return`<div class="att-cell"><span class="ab ab-absent">—</span></div>`;
-
-  // status badge
-  let badge='';
-  if(a.status==='ok')      badge=`<span class="ab ab-ok">✅ ตรง</span>`;
-  else if(a.status==='late') badge=`<span class="ab ab-late">⚠️ +${a.lateMin}น.</span>`;
-  else if(a.status==='half-am') badge=`<span class="ab ab-leave">🌅 ลาเช้า</span>`;
-  else if(a.status==='half-pm') badge=`<span class="ab ab-leave">🌆 ลาบ่าย</span>`;
-
-  // เวลาเข้า-ออก
-  const timeIn=a.in?`<div style="font-size:9px;color:#1B7F4E;font-weight:600">▲ ${a.in}</div>`:'';
-  const timeOut=a.out?`<div style="font-size:9px;color:#1E3A5F;font-weight:600">▼ ${a.out}</div>`:'';
-  const otBadge=a.ot>0?`<span class="ab ab-ot">OT ${a.ot}ชม.</span>`:'';
-
-  return`<div class="att-cell">${badge}${timeIn}${timeOut}${otBadge}</div>`;
-}
-
 function renderAttTable(){
-  // จัดกลุ่มวันตามเดือน
   const byMonth={};
-  attDays.forEach(d=>{
-    const[dd,mm,yyyy]=d.split('/');
-    const key=`${yyyy}-${mm}`;
-    if(!byMonth[key])byMonth[key]={yyyy,mm,days:[]};
-    byMonth[key].days.push(d);
-  });
-
+  attDays.forEach(d=>{const[dd,mm,yyyy]=d.split('/');const key=`${yyyy}-${mm}`;if(!byMonth[key])byMonth[key]={yyyy,mm,days:[]};byMonth[key].days.push(d);});
   const MTHS=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const DNAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
-
-  // ── สรุปรวมทุกคน ──
   const summaryAll={};
-  attEmps.forEach(name=>{
-    summaryAll[name]={work:0,late:0,lateMin:0,ot:0};
-  });
-
+  attEmps.forEach(name=>{summaryAll[name]={work:0,late:0,lateMin:0,ot:0};});
   let html='';
-
-  // ── Summary card รวม ──
-  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px" id="sumCards"></div>`;
-
   Object.values(byMonth).forEach(({yyyy,mm,days})=>{
     html+=`<div style="margin-bottom:24px">`;
-    // แต่ละพนักงาน
     attEmps.forEach(name=>{
-      // คำนวณสถิติเดือนนี้
       let cntWork=0,cntLate=0,cntOT=0;
       days.forEach(d=>{
-        const recs=attMapData[d]?.[name];
-        const dateObj=new Date(...d.split('/').reverse().map(Number).map((v,i)=>i===1?v-1:v));
+        const[dd,mm2,yyyy2]=d.split('/');
+        const dateObj=new Date(yyyy2,mm2-1,dd);
         const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
         const isHoli=attHolidays.some(h=>h.date===d);
         if(isSun||isSat||isHoli) return;
+        const recs=attMapData[d]?.[name];
         if(!recs||!recs.length) return;
         const a=analyzeAttDay(recs);
         if(!a) return;
-        cntWork++;
-        if(a.status==='late') cntLate++;
-        if(a.ot>0) cntOT++;
+        cntWork++;if(a.status==='late')cntLate++;if(a.ot>0)cntOT++;
       });
-
-      // สร้างปฏิทิน
       const firstDay=new Date(parseInt(yyyy),parseInt(mm)-1,1).getDay();
       const daysInMonth=new Date(parseInt(yyyy),parseInt(mm),0).getDate();
       const today=new Date();
-
       let cells=DNAMES.map(d=>`<div class="att-cal-hdr">${d}</div>`).join('');
       for(let i=0;i<firstDay;i++) cells+=`<div class="att-cal-cell empty"></div>`;
-
       for(let d=1;d<=daysInMonth;d++){
         const dd=String(d).padStart(2,'0');
         const dateStr=`${dd}/${mm}/${yyyy}`;
@@ -845,97 +690,30 @@ function renderAttTable(){
         const isHoli=attHolidays.some(h=>h.date===dateStr);
         const isToday=today.getDate()===d&&today.getMonth()===parseInt(mm)-1&&today.getFullYear()===parseInt(yyyy);
         const recs=attMapData[dateStr]?.[name];
-
         let cls='att-cal-cell';
         if(isSun||isSat) cls+=' weekend';
         if(isToday) cls+=' today';
-
-        if(isHoli){
-          cells+=`<div class="${cls}"><div class="cal-dnum">${d}</div><div class="cal-ot-b" style="font-size:7px">หยุด</div></div>`;
-          continue;
-        }
-        if(isSun||isSat){
-          cells+=`<div class="${cls}"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
-          continue;
-        }
-
+        if(isHoli){cells+=`<div class="${cls}"><div class="cal-dnum">${d}</div><div class="cal-ot-b" style="font-size:7px">หยุด</div></div>`;continue;}
+        if(isSun||isSat){cells+=`<div class="${cls}"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;continue;}
         const a=recs&&recs.length?analyzeAttDay(recs):null;
-
-        // ตรวจวันลาจาก attMapData (status=leave)
-        const leaveRec=!a&&attMapData[dateStr]?.[name+'__leave'];
-
         if(!a){
-          // ตรวจว่ามีข้อมูลลาไหม
-          const leaveName=name+'__leave__'+dateStr;
           const leaveInfo=window._leaveMap?.[name]?.[dateStr];
-          if(leaveInfo){
-            const lType=(leaveInfo||'ลา').replace('ลา','').slice(0,4);
-            cells+=`<div class="${cls} c-leave">
-              <div class="cal-dnum">${d}</div>
-              <div class="cal-tin" style="background:#EEF4FF;color:#1E3A5F">🏥</div>
-              <div class="cal-tout" style="background:#EEF4FF;color:#1E3A5F;font-size:7px">${lType}</div>
-            </div>`;
-          } else {
-            cells+=`<div class="${cls} c-absent"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;
-          }
+          if(leaveInfo){const lType=(leaveInfo||'ลา').replace('ลา','').slice(0,4);cells+=`<div class="${cls} c-leave"><div class="cal-dnum">${d}</div><div class="cal-tin" style="background:#EEF4FF;color:#1E3A5F">🏥</div><div class="cal-tout" style="background:#EEF4FF;color:#1E3A5F;font-size:7px">${lType}</div></div>`;}
+          else{cells+=`<div class="${cls} c-absent"><div class="cal-dnum" style="color:var(--muted)">${d}</div></div>`;}
           continue;
         }
-
-        if(a.status==='ok')       cls+=' c-ok';
+        if(a.status==='ok') cls+=' c-ok';
         else if(a.status==='late') cls+=' c-late';
-        else                       cls+=' c-leave';
-
-        cells+=`<div class="${cls}">
-          <div class="cal-dnum">${d}${a.status==='late'?'<span class="cal-late-b">!</span>':''}</div>
-          <div class="cal-tin">${a.in?a.in.slice(0,5):''}</div>
-          <div class="cal-tout">${a.out?a.out.slice(0,5):''}</div>
-          ${a.ot>0?`<div class="cal-ot-b">OT${a.ot}</div>`:''}
-        </div>`;
+        else cls+=' c-leave';
+        cells+=`<div class="${cls}"><div class="cal-dnum">${d}${a.status==='late'?'<span class="cal-late-b">!</span>':''}</div><div class="cal-tin">${a.in?a.in.slice(0,5):''}</div><div class="cal-tout">${a.out?a.out.slice(0,5):''}</div>${a.ot>0?`<div class="cal-ot-b">OT${a.ot}</div>`:''}</div>`;
       }
-
-      // สะสม summary
-      if(summaryAll[name]){
-        summaryAll[name].work+=cntWork;
-        summaryAll[name].late+=cntLate;
-        summaryAll[name].ot+=cntOT;
-      }
-
-      html+=`
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:700">${name} — ${MTHS[parseInt(mm)]} ${parseInt(yyyy)+543}</div>
-          <div style="display:flex;gap:6px">
-            <span class="ab ab-ok">${cntWork} วัน</span>
-            ${cntLate>0?`<span class="ab ab-late">สาย ${cntLate}</span>`:''}
-            ${cntOT>0?`<span class="ab ab-ot">OT ${cntOT} วัน</span>`:''}
-            ${(()=>{const leaveDays=attDays.filter(d=>{const[dd,mm,yyyy]=d.split('/');const isSun=new Date(yyyy,mm-1,dd).getDay()===0,isSat=new Date(yyyy,mm-1,dd).getDay()===6;const isHoli=attHolidays.some(h=>h.date===d);if(isSun||isSat||isHoli)return false;const recs=attMapData[d]?.[name];if(recs&&recs.length)return false;return window._leaveMap?.[name]?.[d];}).length;return leaveDays>0?`<span class="ab" style="background:#EEF4FF;color:#1E3A5F">🏥 ลา ${leaveDays} วัน</span>`:''})()}
-          </div>
-        </div>
-        <div class="att-cal-grid">${cells}</div>`;
+      if(summaryAll[name]){summaryAll[name].work+=cntWork;summaryAll[name].late+=cntLate;summaryAll[name].ot+=cntOT;}
+      const leaveDays=attDays.filter(d=>{const[dd,mm2,yyyy2]=d.split('/');const isSun=new Date(yyyy2,mm2-1,dd).getDay()===0,isSat=new Date(yyyy2,mm2-1,dd).getDay()===6;const isHoli=attHolidays.some(h=>h.date===d);if(isSun||isSat||isHoli)return false;const recs=attMapData[d]?.[name];if(recs&&recs.length)return false;return window._leaveMap?.[name]?.[d];}).length;
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:13px;font-weight:700">${name} — ${MTHS[parseInt(mm)]} ${parseInt(yyyy)+543}</div><div style="display:flex;gap:6px"><span class="ab ab-ok">${cntWork} วัน</span>${cntLate>0?`<span class="ab ab-late">สาย ${cntLate}</span>`:''}${cntOT>0?`<span class="ab ab-ot">OT ${cntOT} วัน</span>`:''}${leaveDays>0?`<span class="ab" style="background:#EEF4FF;color:#1E3A5F">🏥 ลา ${leaveDays} วัน</span>`:''}</div></div><div class="att-cal-grid">${cells}</div>`;
     });
     html+=`</div>`;
   });
-
-  // สร้าง summary table
-  const sumHtml=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px">
-    <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:13px;font-weight:700">📊 สรุปรวมทั้งหมด (ทุกเดือน)</div>
-    <table class="tbl">
-      <thead><tr>
-        <th>พนักงาน</th>
-        <th style="text-align:center">วันทำงาน</th>
-        <th style="text-align:center">วันที่สาย</th>
-        <th style="text-align:center">OT รวม (วัน)</th>
-      </tr></thead>
-      <tbody>
-        ${attEmps.map(name=>`<tr>
-          <td><b>${name}</b></td>
-          <td style="text-align:center"><span class="ab ab-ok">${summaryAll[name]?.work||0}</span></td>
-          <td style="text-align:center">${(summaryAll[name]?.late||0)>0?`<span class="ab ab-late">${summaryAll[name].late}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-          <td style="text-align:center">${(summaryAll[name]?.ot||0)>0?`<span class="ab ab-ot">${summaryAll[name].ot}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>`;
-
+  const sumHtml=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px"><div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:13px;font-weight:700">📊 สรุปรวมทั้งหมด</div><table class="tbl"><thead><tr><th>พนักงาน</th><th style="text-align:center">วันทำงาน</th><th style="text-align:center">วันที่สาย</th><th style="text-align:center">OT รวม (วัน)</th></tr></thead><tbody>${attEmps.map(name=>`<tr><td><b>${name}</b></td><td style="text-align:center"><span class="ab ab-ok">${summaryAll[name]?.work||0}</span></td><td style="text-align:center">${(summaryAll[name]?.late||0)>0?`<span class="ab ab-late">${summaryAll[name].late}</span>`:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:center">${(summaryAll[name]?.ot||0)>0?`<span class="ab ab-ot">${summaryAll[name].ot}</span>`:'<span style="color:var(--muted)">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;
   document.getElementById('attTableWrap').innerHTML=(html+sumHtml)||'<div style="padding:20px;text-align:center;color:var(--muted)">ไม่มีข้อมูล</div>';
 }
 
@@ -955,11 +733,7 @@ function renderAttStats(){
       tw++;if(a.status==='late')tl++;tot+=a.ot;
     });
   });
-  document.getElementById('attStats').innerHTML=`
-    <div class="att-stat"><div class="att-stat-l">วันทำงาน</div><div class="att-stat-v" style="color:var(--green)">${tw}</div></div>
-    <div class="att-stat"><div class="att-stat-l">ครั้งที่สาย</div><div class="att-stat-v" style="color:var(--red)">${tl}</div></div>
-    <div class="att-stat"><div class="att-stat-l">ขาด/ไม่มีข้อมูล</div><div class="att-stat-v" style="color:var(--muted)">${ta}</div></div>
-    <div class="att-stat"><div class="att-stat-l">รวม OT (ชม.)</div><div class="att-stat-v" style="color:var(--gold-d)">${tot}</div></div>`;
+  document.getElementById('attStats').innerHTML=`<div class="att-stat"><div class="att-stat-l">วันทำงาน</div><div class="att-stat-v" style="color:var(--green)">${tw}</div></div><div class="att-stat"><div class="att-stat-l">ครั้งที่สาย</div><div class="att-stat-v" style="color:var(--red)">${tl}</div></div><div class="att-stat"><div class="att-stat-l">ขาด/ไม่มีข้อมูล</div><div class="att-stat-v" style="color:var(--muted)">${ta}</div></div><div class="att-stat"><div class="att-stat-l">รวม OT (ชม.)</div><div class="att-stat-v" style="color:var(--gold-d)">${tot}</div></div>`;
 }
 
 function renderHoliChips(){
@@ -983,8 +757,7 @@ async function deleteHoliday(date){
   loadAttAdmin();
 }
 
-// init selectors เมื่อเปิดหน้า attendance
-document.getElementById('page-attendance') && initAttSelectors();
+initAttSelectors();
 </script>
 </body>
 </html>
