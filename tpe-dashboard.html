@@ -6,7 +6,7 @@
 <title>TPE Job Queue Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root {
+:root{
   --bg:#F5F6F8;--surface:#FFF;--border:#E4E7EC;--border2:#CDD2DB;
   --navy:#1A3358;--gold:#C9952A;--gold2:#F5B945;--green:#16A765;--green-bg:#EAF7F0;
   --amber:#D97706;--amber-bg:#FEF3C7;--red:#DC2626;--blue:#2563EB;--blue-bg:#EFF6FF;
@@ -27,7 +27,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .btn-refresh:hover{background:rgba(255,255,255,.18)}
 .btn-refresh.spinning svg{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.main{padding:20px 24px 32px;max-width:1440px;margin:0 auto}
+.main{padding:20px 24px 32px;max-width:1600px;margin:0 auto}
 .section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
 .cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
@@ -52,7 +52,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .gantt-scroll{overflow-x:auto}
 .gantt-inner{min-width:800px}
 .gantt-header{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
-.gantt-team-col{width:140px;flex-shrink:0;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-right:1px solid var(--border)}
+.gantt-team-col{width:160px;flex-shrink:0;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-right:1px solid var(--border)}
 .gantt-days{flex:1;display:flex}
 .gantt-day-hdr{flex:1;text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px 0;border-right:1px solid var(--border);min-width:28px}
 .gantt-day-hdr.today{color:var(--navy);font-weight:700;background:rgba(26,51,88,.05)}
@@ -60,7 +60,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .gantt-row{display:flex;border-bottom:1px solid var(--border);min-height:44px}
 .gantt-row:last-child{border-bottom:none}
 .gantt-row:hover{background:rgba(26,51,88,.02)}
-.gantt-team-label{width:140px;flex-shrink:0;padding:8px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.gantt-team-label{width:160px;flex-shrink:0;padding:6px 16px;border-right:1px solid var(--border);display:flex;align-items:flex-start;flex-direction:column;gap:3px;justify-content:center}
 .team-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .team-name{font-size:12px;font-weight:600;color:var(--text)}
 .gantt-cells{flex:1;display:flex;position:relative}
@@ -78,19 +78,23 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .table-scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{background:var(--bg);padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
-tbody td{padding:11px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tbody td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:rgba(26,51,88,.02)}
 .td-job{font-weight:600;color:var(--navy);font-family:'IBM Plex Mono',monospace;font-size:12px}
 .td-company{font-weight:500}
 .td-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap}
-.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
 .badge-plan{background:var(--blue-bg);color:var(--blue)}
 .badge-doing{background:var(--amber-bg);color:var(--amber)}
 .badge-done{background:var(--green-bg);color:var(--green)}
-.badge-team{background:var(--bg);border:1px solid var(--border2);color:var(--text2)}
-.td-members{font-size:11px;color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tooltip{position:fixed;z-index:999;background:var(--navy);color:#fff;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;box-shadow:var(--shadow-md);pointer-events:none;opacity:0;transition:opacity .15s;max-width:280px}
+/* team badges แยกสีตามชุด */
+.team-badges{display:flex;flex-wrap:wrap;gap:4px}
+.team-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+/* members แสดงเต็ม */
+.members-list{display:flex;flex-direction:column;gap:2px}
+.member-item{font-size:11px;color:var(--text2);white-space:nowrap}
+.tooltip{position:fixed;z-index:999;background:var(--navy);color:#fff;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;box-shadow:var(--shadow-md);pointer-events:none;opacity:0;transition:opacity .15s;max-width:300px}
 .tooltip.show{opacity:1}
 .tooltip-title{font-weight:700;font-size:13px;margin-bottom:4px}
 .loading-wrap{display:flex;align-items:center;justify-content:center;min-height:200px;gap:10px;color:var(--text3);font-size:13px}
@@ -167,9 +171,16 @@ tbody tr:hover td{background:rgba(26,51,88,.02)}
       <table>
         <thead>
           <tr>
-            <th>ชุด</th><th>JOB No.</th><th>บริษัท / ลูกค้า</th><th>จังหวัด</th>
-            <th>รายละเอียด</th><th>วันเริ่ม</th><th>วันสิ้นสุด</th><th>สถานะ</th>
-            <th>👥 สมาชิก</th><th>รถ</th>
+            <th style="min-width:180px">ชุด</th>
+            <th>JOB No.</th>
+            <th>บริษัท / ลูกค้า</th>
+            <th>จังหวัด</th>
+            <th>รายละเอียด</th>
+            <th>วันเริ่ม</th>
+            <th>วันสิ้นสุด</th>
+            <th>สถานะ</th>
+            <th style="min-width:180px">👥 สมาชิก</th>
+            <th>รถ</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -187,28 +198,59 @@ const API='https://tpe-hr-bot.onrender.com';
 let allData=[];
 let ganttYear=new Date().getFullYear();
 let ganttMonth=new Date().getMonth();
-const TEAM_COLORS=['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706'];
+const TEAM_COLORS=['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706','#059669','#9333EA'];
+const teamColorCache={};
 
-// ── แยกสีตามชุด ──
+// แปลง team string (คั่นด้วย ||) → array
+function parseTeams(teamStr){
+  if(!teamStr) return [];
+  return teamStr.split('||').map(t=>t.trim()).filter(Boolean);
+}
+
+// แปลง members string (คั่นด้วย ,) → array
+function parseMembers(memberStr){
+  if(!memberStr) return [];
+  return memberStr.split(',').map(m=>m.trim()).filter(Boolean);
+}
+
+// ดึงสีของชุด (consistent)
 function getTeamColor(team){
-  const teams=[...new Set(allData.map(a=>a.team).filter(Boolean))].sort();
-  const idx=teams.indexOf(team);
-  return TEAM_COLORS[idx%TEAM_COLORS.length]||'#6B7280';
+  if(!teamColorCache[team]){
+    const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
+    allTeams.forEach((t,i)=>{ if(!teamColorCache[t]) teamColorCache[t]=TEAM_COLORS[i%TEAM_COLORS.length]; });
+  }
+  return teamColorCache[team]||'#6B7280';
+}
+
+// render team badges
+function renderTeamBadges(teamStr){
+  const teams=parseTeams(teamStr);
+  if(!teams.length) return '<span style="color:var(--border2)">—</span>';
+  return `<div class="team-badges">${teams.map(t=>{
+    const c=getTeamColor(t);
+    return `<span class="team-badge" style="background:${c}20;color:${c};border:1px solid ${c}50">${t}</span>`;
+  }).join('')}</div>`;
+}
+
+// render members list
+function renderMembers(memberStr){
+  const members=parseMembers(memberStr);
+  if(!members.length) return '<span style="color:var(--border2);font-size:11px">ทั้งชุด</span>';
+  return `<div class="members-list">${members.map(m=>`<div class="member-item">• ${m}</div>`).join('')}</div>`;
 }
 
 function updateClock(){
-  const now=new Date();
-  document.getElementById('clock').textContent=now.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});
+  document.getElementById('clock').textContent=new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});
 }
 setInterval(updateClock,1000);updateClock();
 
 function tsToDate(ts){
-  if(!ts)return null;
+  if(!ts) return null;
   const d=new Date(ts+7*3600000);
   return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
 }
 function fmtDate(ts){
-  if(!ts)return'—';
+  if(!ts) return'—';
   const d=tsToDate(ts);
   return`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()+543}`;
 }
@@ -221,8 +263,11 @@ async function loadData(){
   try{
     const r=await fetch(`${API}/api/dashboard`);
     const d=await r.json();
-    if(!d.ok)throw new Error(d.error||'error');
+    if(!d.ok) throw new Error(d.error||'error');
     allData=d.assignments||[];
+    // build color cache
+    const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
+    allTeams.forEach((t,i)=>{ teamColorCache[t]=TEAM_COLORS[i%TEAM_COLORS.length]; });
     updateCards();renderGantt();renderTable();updateTeamFilter();
   }catch(e){
     document.getElementById('ganttInner').innerHTML=`<div class="empty-wrap"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ: ${e.message}</p></div>`;
@@ -234,15 +279,16 @@ function updateCards(){
   const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
   const todayMs=new Date(todayStr).getTime();
   const tomorrowMs=todayMs+86400000;
-  const teams=[...new Set(allData.map(a=>a.team).filter(Boolean))];
+  // รวบรวมทุกชุดที่มีในระบบ
+  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))];
   let busy=0,free=0,queue=0;
-  teams.forEach(team=>{
-    const teamJobs=allData.filter(a=>a.team===team);
+  allTeams.forEach(team=>{
+    const teamJobs=allData.filter(a=>parseTeams(a.team).includes(team));
     const activeToday=teamJobs.some(a=>{
-      if(!a.startDate||!a.endDate)return false;
+      if(!a.startDate||!a.endDate) return false;
       return a.startDate<=todayMs && tomorrowMs<=a.endDate+86400000;
     });
-    if(activeToday)busy++;else free++;
+    if(activeToday) busy++; else free++;
   });
   queue=allData.filter(a=>a.startDate&&a.startDate>tomorrowMs).length;
   document.getElementById('cBusy').textContent=busy;
@@ -264,19 +310,21 @@ function renderGantt(){
   document.getElementById('ganttMonthLabel').textContent=`${thMonths[ganttMonth]} ${ganttYear+543}`;
   const days=daysInMonth(ganttYear,ganttMonth);
   const today=new Date();
-  const teams=[...new Set(allData.map(a=>a.team).filter(Boolean))].sort();
-  if(!teams.length){document.getElementById('ganttInner').innerHTML='<div class="gantt-empty">ยังไม่มีข้อมูลการมอบหมายงาน</div>';return}
+  // รวบรวมทุกชุด
+  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
+  if(!allTeams.length){document.getElementById('ganttInner').innerHTML='<div class="gantt-empty">ยังไม่มีข้อมูลการมอบหมายงาน</div>';return}
   let daysHtml='';
   for(let d=1;d<=days;d++){
     const isWE=isWeekend(ganttYear,ganttMonth,d);
     const isTd=today.getDate()===d&&today.getMonth()===ganttMonth&&today.getFullYear()===ganttYear;
     daysHtml+=`<div class="gantt-day-hdr${isWE?' weekend':''}${isTd?' today':''}">${d}</div>`;
   }
-  document.getElementById('ganttLegend').innerHTML=teams.map((t,i)=>`
-    <div class="legend-item"><div class="legend-dot" style="background:${TEAM_COLORS[i%TEAM_COLORS.length]}"></div>${t}</div>`).join('');
-  const rowsHtml=teams.map((team,ti)=>{
-    const color=TEAM_COLORS[ti%TEAM_COLORS.length];
-    const teamJobs=allData.filter(a=>a.team===team);
+  document.getElementById('ganttLegend').innerHTML=allTeams.map(t=>`
+    <div class="legend-item"><div class="legend-dot" style="background:${getTeamColor(t)}"></div>${t}</div>`).join('');
+  const rowsHtml=allTeams.map(team=>{
+    const color=getTeamColor(team);
+    // งานที่มีชุดนี้
+    const teamJobs=allData.filter(a=>parseTeams(a.team).includes(team));
     let cellsHtml='';
     for(let d=1;d<=days;d++){
       const isWE=isWeekend(ganttYear,ganttMonth,d);
@@ -286,10 +334,10 @@ function renderGantt(){
     const barsHtml=teamJobs.map(job=>{
       const s=tsToDate(job.startDate);
       const e=tsToDate(job.endDate);
-      if(!s||!e)return'';
+      if(!s||!e) return'';
       const monthStart=new Date(Date.UTC(ganttYear,ganttMonth,1));
       const monthEnd=new Date(Date.UTC(ganttYear,ganttMonth,days));
-      if(e<monthStart||s>monthEnd)return'';
+      if(e<monthStart||s>monthEnd) return'';
       const sInMonth=s<monthStart?monthStart:s;
       const eInMonth=e>monthEnd?monthEnd:e;
       const startDay=sInMonth.getUTCDate();
@@ -297,15 +345,21 @@ function renderGantt(){
       const left=((startDay-1)/days)*100;
       const width=((endDay-startDay+1)/days)*100;
       const opacity=job.status==='เสร็จแล้ว'?'opacity:.5':job.status==='วางแผน'?'opacity:.75':'';
+      const members=parseMembers(job.members);
       const tip=encodeURIComponent(JSON.stringify({
-        job:job.jobNo,name:job.jobName,company:job.company,province:job.province,
-        start:fmtDate(job.startDate),end:fmtDate(job.endDate),status:job.status,
-        members:job.members
+        job:job.jobNo,company:job.company,province:job.province,
+        start:fmtDate(job.startDate),end:fmtDate(job.endDate),
+        status:job.status,members:members.join(', ')||'ทั้งชุด'
       }));
       return`<div class="gantt-bar" style="left:${left}%;width:calc(${width}% - 2px);background:${color};${opacity}" data-tip="${tip}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">${job.jobNo||job.company||''}</div>`;
     }).join('');
     return`<div class="gantt-row">
-      <div class="gantt-team-label"><div class="team-dot" style="background:${color}"></div><div class="team-name">${team}</div></div>
+      <div class="gantt-team-label">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="team-dot" style="background:${color}"></div>
+          <div class="team-name">${team}</div>
+        </div>
+      </div>
       <div class="gantt-cells" style="position:relative">${cellsHtml}<div style="position:absolute;inset:0;pointer-events:none">${barsHtml}</div></div>
     </div>`;
   }).join('');
@@ -327,17 +381,17 @@ function showTip(e,el){
       ${d.members?`<div>👥 ${d.members}</div>`:''}
     `;
   }catch{tip.innerHTML=el.dataset.tip}
-  tip.style.left=Math.min(e.clientX+12,window.innerWidth-300)+'px';
+  tip.style.left=Math.min(e.clientX+12,window.innerWidth-320)+'px';
   tip.style.top=e.clientY+12+'px';
   tip.classList.add('show');
 }
 function hideTip(){document.getElementById('tooltip').classList.remove('show')}
 
 function updateTeamFilter(){
-  const teams=[...new Set(allData.map(a=>a.team).filter(Boolean))].sort();
+  const allTeams=[...new Set(allData.flatMap(a=>parseTeams(a.team)))].sort();
   const sel=document.getElementById('filterTeam');
   const cur=sel.value;
-  sel.innerHTML='<option value="">ทุกชุด</option>'+teams.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
+  sel.innerHTML='<option value="">ทุกชุด</option>'+allTeams.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join('');
 }
 
 function renderTable(){
@@ -345,25 +399,31 @@ function renderTable(){
   const teamF=document.getElementById('filterTeam').value;
   const statusF=document.getElementById('filterStatus').value;
   const filtered=allData.filter(a=>{
-    if(teamF&&a.team!==teamF)return false;
-    if(statusF&&a.status!==statusF)return false;
-    if(q){const hay=[a.jobNo,a.jobName,a.company,a.province,a.detail,a.team,a.members].join(' ').toLowerCase();if(!hay.includes(q))return false}
+    if(teamF && !parseTeams(a.team).includes(teamF)) return false;
+    if(statusF && a.status!==statusF) return false;
+    if(q){
+      const hay=[a.jobNo,a.jobName,a.company,a.province,a.detail,a.team,a.members].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
     return true;
   });
-  if(!filtered.length){document.getElementById('tableBody').innerHTML=`<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div></td></tr>`;return}
+  if(!filtered.length){
+    document.getElementById('tableBody').innerHTML=`<tr><td colspan="10"><div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div></td></tr>`;
+    return;
+  }
   const bc={'วางแผน':'badge-plan','กำลังทำ':'badge-doing','เสร็จแล้ว':'badge-done'};
   document.getElementById('tableBody').innerHTML=filtered.map(a=>`
     <tr>
-      <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${getTeamColor(a.team)}20;color:${getTeamColor(a.team)};border:1px solid ${getTeamColor(a.team)}50">${a.team||'—'}</span></td>
+      <td>${renderTeamBadges(a.team)}</td>
       <td class="td-job">${a.jobNo||'—'}</td>
       <td class="td-company">${a.company||'—'}</td>
       <td>${a.province||'—'}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.detail||''}">${a.detail||'—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.detail||''}">${a.detail||'—'}</td>
       <td class="td-date">${fmtDate(a.startDate)}</td>
       <td class="td-date">${fmtDate(a.endDate)}</td>
       <td><span class="badge ${bc[a.status]||'badge-plan'}">${a.status||'วางแผน'}</span></td>
-      <td class="td-members" title="${a.members||''}">${a.members||'<span style="color:var(--border2)">ทั้งชุด</span>'}</td>
-      <td style="font-size:12px;color:var(--text3)">${a.car||'—'}</td>
+      <td>${renderMembers(a.members)}</td>
+      <td style="font-size:12px;color:var(--text3);white-space:nowrap">${a.car||'—'}</td>
     </tr>`).join('');
 }
 
