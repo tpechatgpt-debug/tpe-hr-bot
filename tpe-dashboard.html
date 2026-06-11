@@ -354,7 +354,7 @@ function renderTable(){
   const bc={'วางแผน':'badge-plan','กำลังทำ':'badge-doing','เสร็จแล้ว':'badge-done'};
   document.getElementById('tableBody').innerHTML=filtered.map(a=>`
     <tr>
-      <td><span class="badge badge-team" style="border-left:3px solid ${getTeamColor(a.team)};padding-left:8px">${a.team||'—'}</span></td>
+      <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${getTeamColor(a.team)}20;color:${getTeamColor(a.team)};border:1px solid ${getTeamColor(a.team)}50">${a.team||'—'}</span></td>
       <td class="td-job">${a.jobNo||'—'}</td>
       <td class="td-company">${a.company||'—'}</td>
       <td>${a.province||'—'}</td>
