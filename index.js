@@ -1823,6 +1823,47 @@ app.get('/my-lark-id', async (req, res) => {
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'tpe-dashboard.html')));
 app.get('/fieldwork', (req, res) => res.sendFile(path.join(__dirname, 'fieldwork.html')));
 
+// ── Payroll Summary: ดึงทั้งเดือนทีเดียว ──────────────────
+app.get('/api/payroll-summary', async (req, res) => {
+  try {
+    const { month } = req.query;
+    if (!month) return res.status(400).json({ error: 'missing month' });
+    const cleanMonth = month.replace(' (รายวัน)', '').trim();
+    const payType = month.includes('รายวัน') ? 'daily' : 'monthly';
+    const prefix = payType === 'daily' ? 'เงินเดือนรายวัน_' : 'เงินเดือน_';
+    const sheetName = prefix + cleanMonth;
+
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.LOG_SHEET_ID,
+      range: `'${sheetName}'!A:AM`,
+    });
+    const rows = (r.data.values || []).slice(1);
+    const toN = v => parseFloat(v) || 0;
+
+    const data = rows
+      .filter(row => row[0] && row[0].trim() && row[0] !== '0.0')
+      .map(row => ({
+        name: row[0],
+        basePay: toN(row[payType === 'daily' ? 11 : 13]),
+        otPay:   toN(row[payType === 'daily' ? 12 : 15]),
+        totalInc: toN(row[payType === 'daily' ? 19 : 18]),
+        totalDed: toN(row[payType === 'daily' ? 26 : 26]),
+        netPay:  toN(row[payType === 'daily' ? 27 : 27]),
+        payType,
+      }));
+
+    res.json({ ok: true, month: cleanMonth, payType, data });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
