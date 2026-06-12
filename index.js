@@ -1900,14 +1900,17 @@ app.get('/api/payroll-yearly', async (req, res) => {
         });
         const rows = (r.data.values || []).slice(1);
         const toN = v => parseFloat(v) || 0;
-        let totalBase = 0, totalOT = 0, totalNet = 0;
-        rows.filter(row => row[0] && row[0].toString().trim() && row[0] !== '0.0')
-          .forEach(row => {
-            totalBase += isDaily ? toN(row[11]) : toN(row[13]);
-            totalOT   += isDaily ? toN(row[12]) : toN(row[15]);
-            totalNet  += toN(row[27]);
-          });
-        return { month, payType: isDaily ? 'daily' : 'monthly', totalInc, totalNet };
+       let totalBase = 0, totalOT = 0, totalAllow = 0, totalNet = 0;
+       rows.filter(row => row[0] && row[0].toString().trim() && row[0] !== '0.0')
+        .forEach(row => {
+        totalBase += isDaily ? toN(row[11]) : toN(row[13]);
+        totalOT   += isDaily ? toN(row[12]) : toN(row[15]);
+        totalAllow += isDaily
+      ? toN(row[13]) + toN(row[14]) + toN(row[16]) + toN(row[17])
+      : toN(row[16]) + toN(row[17]);
+      totalNet  += toN(row[27]);
+  });
+return { month, payType: isDaily ? 'daily' : 'monthly', totalBase, totalOT, totalAllow, totalNet };
       } catch(e) { return null; }
     }));
 
