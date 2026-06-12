@@ -65,23 +65,21 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .sec-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi-grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s}
 .kpi-card:hover{border-color:var(--border2)}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .kpi-gold::before{background:linear-gradient(90deg,var(--gold),var(--gold2))}.kpi-green::before{background:var(--green)}
-.kpi-blue::before{background:var(--blue)}.kpi-purple::before{background:var(--purple)}.kpi-amber::before{background:var(--amber)}
-.kpi-teal::before{background:var(--teal)}
-.kpi-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
-.kpi-val{font-size:24px;font-weight:700;line-height:1;color:var(--text);font-family:'IBM Plex Mono',monospace}
-.kpi-sub{font-size:11px;color:var(--text3);margin-top:5px}
-.kpi-icon{position:absolute;right:16px;top:16px;font-size:20px;opacity:.12}
+.kpi-blue::before{background:var(--blue)}.kpi-purple::before{background:var(--purple)}
+.kpi-amber::before{background:var(--amber)}.kpi-teal::before{background:var(--teal)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}
+.kpi-val{font-size:22px;font-weight:700;line-height:1;color:var(--text);font-family:'IBM Plex Mono',monospace}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:4px}
+.kpi-icon{position:absolute;right:14px;top:14px;font-size:18px;opacity:.12}
 .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:14px}
 .chart-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.chart-sub{font-size:11px;color:var(--text3);margin-bottom:16px}
-.legend-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
-.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.chart-sub{font-size:11px;color:var(--text3);margin-bottom:14px}
 .month-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
 .sel-label{font-size:12px;color:var(--text3);font-weight:600}
 .sel-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:var(--text);outline:none}
@@ -91,13 +89,13 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:var(--r-sm);padding:7px 14px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
 .tbl-wrap{overflow-x:auto}
-.emp-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.emp-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .emp-tbl th{background:var(--surface2);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
-.emp-tbl td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.emp-tbl td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
 .emp-tbl tr:last-child td{border-bottom:none}.emp-tbl tr:hover td{background:var(--surface2)}
 .emp-tbl .total-row td{border-top:2px solid var(--border2);background:var(--surface2);font-weight:700;color:var(--text)}
-.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
-.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:11px}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
 .pill-gold{background:var(--gold-dim);color:var(--gold)}.pill-green{background:var(--green-dim);color:var(--green)}
 .pill-blue{background:var(--blue-dim);color:var(--blue)}.pill-red{background:var(--red-dim);color:var(--red)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
@@ -145,7 +143,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .att-sel:focus{border-color:var(--gold)}
 .att-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px;margin-bottom:14px}
 .att-cal-hdr{text-align:center;font-size:9px;font-weight:700;color:var(--text3);padding:4px 0}
-.att-cal-cell{border-radius:6px;padding:4px 2px;min-height:68px;display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid transparent;font-size:9px}
+.att-cal-cell{border-radius:6px;padding:4px 2px;min-height:68px;display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid transparent}
 .att-cal-cell.empty{background:transparent;border:none}.att-cal-cell.weekend{background:rgba(255,255,255,.02)}
 .att-cal-cell.today{border:1.5px solid var(--gold)!important}
 .att-cal-cell.c-ok{background:#06D6A012;border-color:#06D6A030!important}
@@ -165,11 +163,6 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .holi-chips{display:flex;flex-wrap:wrap;gap:6px}
 .holi-chip{background:var(--gold-dim);border:1px solid #F0A50040;color:var(--gold2);padding:4px 12px;border-radius:20px;font-size:12px;display:flex;align-items:center;gap:8px}
 .holi-chip-del{cursor:pointer;color:var(--red);font-weight:700}
-/* Salary page specific */
-.salary-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
-.mini-stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;text-align:center}
-.mini-stat-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
-.mini-stat-val{font-size:18px;font-weight:700;font-family:'IBM Plex Mono',monospace}
 </style>
 </head>
 <body>
@@ -178,10 +171,8 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
   <div class="login-card">
     <div class="login-logo">
       <div class="login-icon">&#127959;</div>
-      <div>
-        <div class="login-title">TPE <span>OPS</span></div>
-        <div style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;letter-spacing:.06em">OPERATIONS CENTER</div>
-      </div>
+      <div><div class="login-title">TPE <span>OPS</span></div>
+      <div style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;letter-spacing:.06em">OPERATIONS CENTER</div></div>
     </div>
     <p class="login-sub">เข้าสู่ระบบสำหรับ HR Admin</p>
     <div class="login-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
@@ -204,7 +195,6 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
       <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
     </div>
   </div>
-
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('hr',this)">&#128100; HR Portal</button>
     <button class="tab-btn" onclick="switchTab('dashboard',this)">&#128202; Job Dashboard</button>
@@ -249,7 +239,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
           </div>
           <div class="kpi-grid">
             <div class="kpi-card kpi-gold"><div class="kpi-icon">&#128101;</div><div class="kpi-label">พนักงานทั้งหมด</div><div class="kpi-val" id="kpiEmp">&#x2014;</div><div class="kpi-sub">คน ในระบบ</div></div>
-            <div class="kpi-card kpi-green"><div class="kpi-icon">&#128196;</div><div class="kpi-label">ข้อมูลล่าสุด</div><div class="kpi-val" id="kpiMonth" style="font-size:15px;padding-top:6px">&#x2014;</div><div class="kpi-sub">เดือนที่อัปโหลด</div></div>
+            <div class="kpi-card kpi-green"><div class="kpi-icon">&#128196;</div><div class="kpi-label">ข้อมูลล่าสุด</div><div class="kpi-val" id="kpiMonth" style="font-size:15px;padding-top:4px">&#x2014;</div><div class="kpi-sub">เดือนที่อัปโหลด</div></div>
             <div class="kpi-card kpi-blue"><div class="kpi-icon">&#9203;</div><div class="kpi-label">คำขอค้างอยู่</div><div class="kpi-val" id="kpiPend">&#x2014;</div><div class="kpi-sub">รายการ</div></div>
             <div class="kpi-card kpi-purple"><div class="kpi-icon">&#128202;</div><div class="kpi-label">เดือนที่มีข้อมูล</div><div class="kpi-val" id="kpiMonthCount">&#x2014;</div><div class="kpi-sub">เดือน</div></div>
           </div>
@@ -276,7 +266,6 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
         <!-- SALARY -->
         <div class="page" id="page-salary">
           <div class="sec-title">รายงานเงินเดือน</div>
-
           <div class="month-row">
             <span class="sel-label">เดือน:</span>
             <select class="sel-input" id="chartMonthSel" style="min-width:180px"><option>กำลังโหลด...</option></select>
@@ -285,8 +274,8 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
             <span id="chartStatus" style="font-size:12px;color:var(--text3)"></span>
           </div>
 
-          <!-- KPI row -->
-          <div class="salary-kpi-grid" style="grid-template-columns:repeat(6,1fr)">
+          <!-- KPI 6 ช่อง -->
+          <div class="kpi-grid-6">
             <div class="kpi-card kpi-gold"><div class="kpi-icon">&#128176;</div><div class="kpi-label">รายได้รวม</div><div class="kpi-val" id="kpiTotalInc">&#x2014;</div><div class="kpi-sub" id="kpiTotalIncSub">บาท</div></div>
             <div class="kpi-card kpi-blue"><div class="kpi-icon">&#128184;</div><div class="kpi-label">เงินเดือนปกติ</div><div class="kpi-val" id="kpiBasePay">&#x2014;</div><div class="kpi-sub">บาท</div></div>
             <div class="kpi-card kpi-teal"><div class="kpi-icon">&#9200;</div><div class="kpi-label">OT รวม</div><div class="kpi-val" id="kpiOTPay">&#x2014;</div><div class="kpi-sub">บาท</div></div>
@@ -295,28 +284,30 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
             <div class="kpi-card kpi-purple"><div class="kpi-icon">&#128100;</div><div class="kpi-label">พนักงานรอบนี้</div><div class="kpi-val" id="kpiEmpCount">&#x2014;</div><div class="kpi-sub">คน</div></div>
           </div>
 
-          <!-- Chart row 1: Monthly trend + Donut -->
+          <!-- Chart แถว 1: Monthly trend + Donut -->
           <div class="chart-row">
-            <div class="chart-card">
+            <div class="chart-card" style="margin-bottom:0">
               <div class="chart-title">แนวโน้มรายได้รายเดือน <span id="chartRangeLabel" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
-              <div class="chart-sub">Stacked bar: เงินเดือน + OT + เบี้ย (รายวัน+รายเดือนรวมกัน)</div>
+              <div class="chart-sub">Stacked: เงินเดือน + OT + เบี้ย | เส้น = สุทธิ (รายวัน+รายเดือนรวมกัน)</div>
               <div style="position:relative;height:260px"><canvas id="chartMonthly"></canvas></div>
             </div>
-            <div class="chart-card">
+            <div class="chart-card" style="margin-bottom:0">
               <div class="chart-title">สัดส่วนเงินสุทธิ</div>
               <div class="chart-sub" id="donutSubLabel">รายบุคคล</div>
               <div style="position:relative;height:260px"><canvas id="chartDonut"></canvas></div>
             </div>
           </div>
 
-          <!-- Chart: Per employee vertical grouped bar -->
-          <div class="chart-card">
+          <!-- Chart แถว 2: Per employee — Stacked income + Net line -->
+          <div class="chart-card" style="margin-top:14px">
             <div class="chart-title">
-              รายบุคคล — รายได้แยกประเภท
+              รายบุคคล &mdash; รายได้แยกประเภท + สุทธิ
               <span id="chartEmpLabel" style="font-size:11px;color:var(--text3);font-weight:400"></span>
             </div>
-            <div class="chart-sub">แท่งแนวตั้ง แยก: เงินเดือน / OT / เบี้ย / หัก / สุทธิ — เรียงตามรายได้รวม</div>
-            <div style="position:relative;height:340px"><canvas id="chartPerEmp"></canvas></div>
+            <div class="chart-sub">
+              แท่ง Stacked: เงินเดือน (ทอง) + OT (ฟ้า) + เบี้ย (ม่วง) &nbsp;|&nbsp; เส้น: เงินสุทธิ (เขียว)
+            </div>
+            <div style="position:relative;height:360px"><canvas id="chartPerEmp"></canvas></div>
           </div>
 
           <!-- Detail table -->
@@ -414,13 +405,12 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
           </div>
         </div>
 
-      </div><!-- /main-area -->
-    </div><!-- /layout -->
-  </div><!-- /tab-hr -->
-
+      </div>
+    </div>
+  </div>
   <div class="tab-content" id="tab-dashboard"><iframe class="tab-iframe" id="iframe-dashboard" src="about:blank"></iframe></div>
   <div class="tab-content" id="tab-fieldwork"><iframe class="tab-iframe" id="iframe-fieldwork" src="about:blank"></iframe></div>
-</div><!-- /app -->
+</div>
 <script>
 
 const API='https://tpe-hr-bot.onrender.com';
@@ -429,13 +419,13 @@ let allEmployees=[],chartMonthly=null,chartDonut=null,chartPerEmp=null,allPayrol
 Chart.defaults.color='#A8B4D0';
 Chart.defaults.font.family="'IBM Plex Sans Thai', sans-serif";
 Chart.defaults.font.size=11;
-
-// color palette
 const C_BASE='rgba(240,165,0,.85)';
 const C_OT='rgba(5,195,221,.85)';
 const C_ALLOW='rgba(155,93,229,.8)';
+const C_NET='rgba(6,214,160,1)';
 const C_DED='rgba(239,71,111,.7)';
-const C_NET='rgba(6,214,160,.8)';
+
+function setEl(id,val){const e=document.getElementById(id);if(e)e.textContent=val;}
 
 function doLogin(){
   if(document.getElementById('pwInput').value===PASS){
@@ -463,8 +453,7 @@ function switchTab(tab,btn){
 function gotoPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('on'));
-  document.getElementById('page-'+id).classList.add('on');
-  btn.classList.add('on');
+  document.getElementById('page-'+id).classList.add('on');btn.classList.add('on');
   if(id==='employees')loadEmployees();
   if(id==='requests')loadRequests();
   if(id==='months')loadMonths();
@@ -475,9 +464,7 @@ function showPendingPage(){document.getElementById('nav-pending').click();}
 
 async function loadStats(){
   try{const d=await(await fetch(API+'/portal/stats')).json();
-    document.getElementById('kpiEmp').textContent=d.employees||'—';
-    document.getElementById('kpiPend').textContent=d.pending||'0';
-    document.getElementById('kpiMonth').textContent=d.latestMonth||'—';
+    setEl('kpiEmp',d.employees||'—');setEl('kpiPend',d.pending||'0');setEl('kpiMonth',d.latestMonth||'—');
   }catch(e){}
 }
 async function loadRecent(){
@@ -490,13 +477,14 @@ function renderRecent(list){
 }
 
 function fmtB(n){if(!n||isNaN(n))return '—';return Number(n).toLocaleString('th-TH',{maximumFractionDigits:0});}
+function shortName(n){return (n||'').replace(/^(นาย|นาง|นางสาว|นส\.?)\s*/u,'').split(' ')[0];}
 
 // ── PAYROLL ──────────────────────────────────────────────────
 async function loadMonthsForSelector(){
   try{
     const months=await(await fetch(API+'/portal/months')).json();
     allPayrollMonths=months;
-    document.getElementById('kpiMonthCount').textContent=months.length;
+    setEl('kpiMonthCount',months.length);
     const unique=[...new Set(months.map(m=>m.replace(' (รายวัน)','').trim()))];
     const sel=document.getElementById('chartMonthSel');
     sel.innerHTML=unique.map(m=>`<option value="${m}">${m}</option>`).join('');
@@ -505,52 +493,42 @@ async function loadMonthsForSelector(){
 
 async function loadPayrollMonth(){
   const month=document.getElementById('chartMonthSel').value;if(!month)return;
-  const status=document.getElementById('chartStatus');
-  status.textContent='⏳ กำลังโหลด...';
+  setEl('chartStatus','⏳ กำลังโหลด...');
   document.getElementById('empPayrollTable').innerHTML='<div class="loading-msg"><span class="spinner"></span>กำลังโหลด...</div>';
   try{
-    // ดึงรายเดือน + รายวัน พร้อมกัน
     const[rM,rD]=await Promise.all([
       fetch(`${API}/api/payroll-summary?month=${encodeURIComponent(month)}`),
       fetch(`${API}/api/payroll-summary?month=${encodeURIComponent(month+' (รายวัน)')}`)
     ]);
-    const dM=await rM.json(), dD=await rD.json();
+    const dM=await rM.json(),dD=await rD.json();
     const combined=[...(dM.ok?dM.data:[]),...(dD.ok?dD.data:[])];
-    if(!combined.length){status.textContent='ไม่พบข้อมูล';document.getElementById('empPayrollTable').innerHTML='<div class="empty-msg">ไม่พบข้อมูลเดือนนี้</div>';return;}
+    if(!combined.length){setEl('chartStatus','ไม่พบข้อมูล');document.getElementById('empPayrollTable').innerHTML='<div class="empty-msg">ไม่พบข้อมูลเดือนนี้</div>';return;}
 
-    status.textContent=`✅ ${combined.length} คน`;
-    const sumField=f=>combined.reduce((s,r)=>s+(r[f]||0),0);
-    const totalBase=sumField('basePay'), totalOT=sumField('otPay');
-    const totalAllow=sumField('allowance'), totalInc=sumField('totalInc');
-    const totalDed=sumField('totalDed'), totalNet=sumField('netPay');
+    const sf=f=>combined.reduce((s,r)=>s+(r[f]||0),0);
+    const totalBase=sf('basePay'),totalOT=sf('otPay'),totalAllow=sf('allowance');
+    const totalInc=sf('totalInc'),totalDed=sf('totalDed'),totalNet=sf('netPay');
 
-    // KPIs
-    document.getElementById('kpiTotalInc').textContent=fmtB(totalInc);
-    document.getElementById('kpiTotalIncSub').textContent='บาท · '+month;
-    document.getElementById('kpiBasePay').textContent=fmtB(totalBase);
-    document.getElementById('kpiOTPay').textContent=fmtB(totalOT);
-    document.getElementById('kpiAllowance').textContent=fmtB(totalAllow);
-    document.getElementById('kpiNetPay').textContent=fmtB(totalNet);
-    document.getElementById('kpiNetPaySub').textContent='บาท · '+month;
-    const elEmpCount=document.getElementById('kpiEmpCount');if(elEmpCount)elEmpCount.textContent=combined.length;
-    document.getElementById('chartEmpLabel').textContent=month;
-    document.getElementById('tableMonthLabel').textContent=month;
-    document.getElementById('chartRangeLabel').textContent=month;
-    document.getElementById('donutSubLabel').textContent=month;
+    setEl('chartStatus',`✅ ${combined.length} คน`);
+    setEl('kpiTotalInc',fmtB(totalInc)); setEl('kpiTotalIncSub','บาท · '+month);
+    setEl('kpiBasePay',fmtB(totalBase));
+    setEl('kpiOTPay',fmtB(totalOT));
+    setEl('kpiAllowance',fmtB(totalAllow));
+    setEl('kpiNetPay',fmtB(totalNet)); setEl('kpiNetPaySub','บาท · '+month);
+    setEl('kpiEmpCount',combined.length);
+    setEl('chartEmpLabel',month);setEl('tableMonthLabel',month);
+    setEl('chartRangeLabel',month);setEl('donutSubLabel',month);
 
     combined.sort((a,b)=>b.totalInc-a.totalInc);
-    renderMonthlyBar([{month,totalBase,totalOT,totalAllow}]);
+    renderMonthlyBar([{month,totalBase,totalOT,totalAllow,totalNet}]);
     renderPerEmpChart(combined);
     renderDonutChart(combined);
     renderEmpTable(combined,totalNet);
-  }catch(e){status.textContent='❌ '+e.message;document.getElementById('empPayrollTable').innerHTML='<div class="empty-msg">❌ '+e.message+'</div>';}
+  }catch(e){setEl('chartStatus','❌ '+e.message);document.getElementById('empPayrollTable').innerHTML='<div class="empty-msg">❌ '+e.message+'</div>';}
 }
 
 async function loadYearlyChart(){
-  const status=document.getElementById('chartStatus');
-  status.textContent='⏳ กำลังโหลดทั้งปี...';
-  document.getElementById('chartRangeLabel').textContent='ทั้งปี';
-  document.getElementById('donutSubLabel').textContent='ทั้งปี';
+  setEl('chartStatus','⏳ กำลังโหลดทั้งปี...');
+  setEl('chartRangeLabel','ทั้งปี');setEl('donutSubLabel','ทั้งปี');
   try{
     const r=await fetch(`${API}/api/payroll-yearly`);
     const d=await r.json();if(!d.ok)throw new Error(d.error||'error');
@@ -567,51 +545,38 @@ async function loadYearlyChart(){
     const parseM=s=>{const mi=thM.findIndex(m=>s.includes(m));const yr=parseInt((s.match(/\d{4}/)||['0'])[0]);return yr*100+mi;};
     const sorted=Object.values(merged).sort((a,b)=>parseM(a.month)-parseM(b.month));
     renderMonthlyBar(sorted);
-    status.textContent='✅ '+sorted.length+' เดือน';
-    // donut รวมทุกเดือน
-    const empAgg={};
-    d.data.forEach(item=>{
-      if(!item.employees)return;
-      item.employees.forEach(e=>{
-        if(!empAgg[e.name])empAgg[e.name]=0;
-        empAgg[e.name]+=(e.netPay||0);
-      });
-    });
-    if(Object.keys(empAgg).length){
-      const empList=Object.entries(empAgg).map(([name,netPay])=>({name,netPay})).sort((a,b)=>b.netPay-a.netPay);
-      renderDonutChart(empList);
-    }
+    setEl('chartStatus','✅ '+sorted.length+' เดือน');
     document.getElementById('empPayrollTable').innerHTML='<div class="empty-msg">เลือกเดือนแล้วกด "โหลด" เพื่อดูรายละเอียด</div>';
-  }catch(e){status.textContent='❌ '+e.message;}
+  }catch(e){setEl('chartStatus','❌ '+e.message);}
 }
 
 // ── CHARTS ──────────────────────────────────────────────────
+const gridColor='rgba(255,255,255,.04)';
+const tickColor='#A8B4D0';
+
 function renderMonthlyBar(data){
   if(chartMonthly)chartMonthly.destroy();
   const ctx=document.getElementById('chartMonthly').getContext('2d');
   const labels=data.map(d=>d.month.replace(/\s*\d{4}/,'').trim());
   chartMonthly=new Chart(ctx,{
-    type:'bar',
     data:{
       labels,
       datasets:[
-        {label:'เงินเดือน',data:data.map(d=>d.totalBase||0),backgroundColor:C_BASE,stack:'s',borderRadius:3},
-        {label:'OT',data:data.map(d=>d.totalOT||0),backgroundColor:C_OT,stack:'s',borderRadius:3},
-        {label:'เบี้ย',data:data.map(d=>d.totalAllow||0),backgroundColor:C_ALLOW,stack:'s',borderRadius:3},
+        {type:'bar',label:'เงินเดือน',data:data.map(d=>d.totalBase||0),backgroundColor:C_BASE,stack:'s',borderRadius:3,order:2},
+        {type:'bar',label:'OT',data:data.map(d=>d.totalOT||0),backgroundColor:C_OT,stack:'s',borderRadius:3,order:2},
+        {type:'bar',label:'เบี้ย',data:data.map(d=>d.totalAllow||0),backgroundColor:C_ALLOW,stack:'s',borderRadius:3,order:2},
+        {type:'line',label:'สุทธิ',data:data.map(d=>d.totalNet||0),borderColor:C_NET,backgroundColor:'rgba(6,214,160,.1)',borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:.35,fill:false,order:1,yAxisID:'y'},
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{position:'top',labels:{boxWidth:12,padding:16,color:'#A8B4D0'}},
-        tooltip:{callbacks:{
-          label:c=>`${c.dataset.label}: ฿${Number(c.raw).toLocaleString('th-TH')}`,
-          footer:items=>{const t=items.reduce((s,i)=>s+i.raw,0);return t?'รวม: ฿'+Number(t).toLocaleString('th-TH'):'';}
-        }}
+        legend:{position:'top',labels:{boxWidth:12,padding:16,color:tickColor}},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:c=>`${c.dataset.label}: ฿${Number(c.raw).toLocaleString('th-TH')}`}}
       },
       scales:{
-        x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{maxRotation:45,font:{size:10},color:'#A8B4D0'}},
-        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>'฿'+Number(v).toLocaleString('th-TH',{notation:'compact'}),color:'#A8B4D0'}}
+        x:{grid:{color:gridColor},ticks:{maxRotation:45,font:{size:10},color:tickColor}},
+        y:{grid:{color:gridColor},ticks:{callback:v=>'฿'+Number(v).toLocaleString('th-TH',{notation:'compact'}),color:tickColor},stacked:true},
       }
     }
   });
@@ -620,27 +585,28 @@ function renderMonthlyBar(data){
 function renderPerEmpChart(data){
   if(chartPerEmp)chartPerEmp.destroy();
   const ctx=document.getElementById('chartPerEmp').getContext('2d');
+  const labels=data.map(r=>shortName(r.name));
   chartPerEmp=new Chart(ctx,{
-    type:'bar',
     data:{
-      labels:data.map(r=>r.name.replace(/^(นาย|นาง|นางสาว|นส\.?)\s*/u,'')),
+      labels,
       datasets:[
-        {label:'เงินเดือน',data:data.map(r=>r.basePay||0),backgroundColor:C_BASE,borderRadius:4,borderSkipped:false},
-        {label:'OT',data:data.map(r=>r.otPay||0),backgroundColor:C_OT,borderRadius:4,borderSkipped:false},
-        {label:'เบี้ย',data:data.map(r=>r.allowance||0),backgroundColor:C_ALLOW,borderRadius:4,borderSkipped:false},
-        {label:'หัก',data:data.map(r=>-(r.totalDed||0)),backgroundColor:C_DED,borderRadius:4,borderSkipped:false},
-        {label:'สุทธิ',data:data.map(r=>r.netPay||0),backgroundColor:C_NET,borderRadius:4,borderSkipped:false,type:'bar'},
+        // Stacked bars
+        {type:'bar',label:'เงินเดือน',data:data.map(r=>r.basePay||0),backgroundColor:C_BASE,stack:'income',borderRadius:{topLeft:0,topRight:0,bottomLeft:3,bottomRight:3},order:2},
+        {type:'bar',label:'OT',data:data.map(r=>r.otPay||0),backgroundColor:C_OT,stack:'income',borderRadius:0,order:2},
+        {type:'bar',label:'เบี้ย',data:data.map(r=>r.allowance||0),backgroundColor:C_ALLOW,stack:'income',borderRadius:{topLeft:3,topRight:3,bottomLeft:0,bottomRight:0},order:2},
+        // Line: net pay
+        {type:'line',label:'สุทธิ',data:data.map(r=>r.netPay||0),borderColor:C_NET,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:.3,order:1,yAxisID:'y'},
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{position:'top',labels:{boxWidth:12,padding:16,color:'#A8B4D0'}},
-        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ฿${Math.abs(Number(c.raw)).toLocaleString('th-TH')}`}}
+        legend:{position:'top',labels:{boxWidth:12,padding:16,color:tickColor}},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:c=>`${c.dataset.label}: ฿${Number(c.raw).toLocaleString('th-TH')}`}}
       },
       scales:{
-        x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{font:{size:11},color:'#A8B4D0'}},
-        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>'฿'+Number(Math.abs(v)).toLocaleString('th-TH',{notation:'compact'}),color:'#A8B4D0'}}
+        x:{grid:{color:gridColor},ticks:{font:{size:10},color:tickColor,maxRotation:45}},
+        y:{grid:{color:gridColor},stacked:true,ticks:{callback:v=>'฿'+Number(v).toLocaleString('th-TH',{notation:'compact'}),color:tickColor}},
       }
     }
   });
@@ -649,17 +615,17 @@ function renderPerEmpChart(data){
 function renderDonutChart(data){
   if(chartDonut)chartDonut.destroy();
   const ctx=document.getElementById('chartDonut').getContext('2d');
-  const COLS=['#F0A500','#06D6A0','#118AB2','#9B5DE5','#EF476F','#FFB703','#05C3DD','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7'];
+  const COLS=['#F0A500','#06D6A0','#118AB2','#9B5DE5','#EF476F','#FFB703','#05C3DD','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#A8DADC','#E63946','#2EC4B6','#CBF3F0'];
   chartDonut=new Chart(ctx,{
     type:'doughnut',
     data:{
-      labels:data.map(r=>r.name.replace(/^(นาย|นาง|นางสาว|นส\.?)\s*/u,'')),
+      labels:data.map(r=>shortName(r.name)),
       datasets:[{data:data.map(r=>r.netPay),backgroundColor:COLS,borderColor:'#161E2E',borderWidth:2}]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,cutout:'62%',
+      responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{
-        legend:{position:'right',labels:{boxWidth:10,padding:8,font:{size:10},color:'#A8B4D0'}},
+        legend:{position:'right',labels:{boxWidth:10,padding:6,font:{size:10},color:tickColor}},
         tooltip:{callbacks:{label:c=>`฿${Number(c.raw).toLocaleString('th-TH')}`}}
       }
     }
@@ -672,24 +638,20 @@ function renderEmpTable(data,totalNet){
     <td style="font-weight:600;color:var(--text)">${r.name}</td>
     <td><span class="pill ${r.payType==='daily'?'pill-blue':'pill-green'}">${r.payType==='daily'?'รายวัน':'รายเดือน'}</span></td>
     <td class="mono" style="text-align:right">${fmtB(r.basePay)}</td>
-    <td class="mono" style="text-align:right;color:var(--teal)">${r.otPay>0?fmtB(r.otPay):'—'}</td>
-    <td class="mono" style="text-align:right;color:var(--purple)">${r.allowance>0?fmtB(r.allowance):'—'}</td>
+    <td class="mono" style="text-align:right;color:#05C3DD">${r.otPay>0?fmtB(r.otPay):'—'}</td>
+    <td class="mono" style="text-align:right;color:#9B5DE5">${r.allowance>0?fmtB(r.allowance):'—'}</td>
     <td class="mono" style="text-align:right;color:var(--gold)">${fmtB(r.totalInc)}</td>
     <td class="mono" style="text-align:right;color:var(--red)">${r.totalDed>0?fmtB(r.totalDed):'—'}</td>
     <td class="mono" style="text-align:right;color:var(--green);font-weight:700">${fmtB(r.netPay)}</td>
     <td style="text-align:right"><span class="pill pill-gold">${totalNet>0?((r.netPay/totalNet)*100).toFixed(1)+'%':'—'}</span></td>
   </tr>`).join('');
-  const sumBase=data.reduce((s,r)=>s+(r.basePay||0),0);
-  const sumOT=data.reduce((s,r)=>s+(r.otPay||0),0);
-  const sumAllow=data.reduce((s,r)=>s+(r.allowance||0),0);
-  const sumInc=data.reduce((s,r)=>s+(r.totalInc||0),0);
-  const sumDed=data.reduce((s,r)=>s+(r.totalDed||0),0);
+  const s=f=>data.reduce((a,r)=>a+(r[f]||0),0);
   document.getElementById('empPayrollTable').innerHTML=`<div class="tbl-wrap"><table class="emp-tbl">
     <thead><tr>
       <th>#</th><th>ชื่อ-นามสกุล</th><th>ประเภท</th>
       <th style="text-align:right">เงินเดือน</th>
-      <th style="text-align:right;color:var(--teal)">OT</th>
-      <th style="text-align:right;color:var(--purple)">เบี้ย</th>
+      <th style="text-align:right;color:#05C3DD">OT</th>
+      <th style="text-align:right;color:#9B5DE5">เบี้ย</th>
       <th style="text-align:right;color:var(--gold)">รายได้รวม</th>
       <th style="text-align:right;color:var(--red)">หักรวม</th>
       <th style="text-align:right;color:var(--green)">สุทธิ</th>
@@ -698,11 +660,11 @@ function renderEmpTable(data,totalNet){
     <tbody>${rows}
       <tr class="total-row">
         <td colspan="3">รวมทั้งหมด (${data.length} คน)</td>
-        <td class="mono" style="text-align:right">${fmtB(sumBase)}</td>
-        <td class="mono" style="text-align:right;color:var(--teal)">${fmtB(sumOT)}</td>
-        <td class="mono" style="text-align:right;color:var(--purple)">${fmtB(sumAllow)}</td>
-        <td class="mono" style="text-align:right;color:var(--gold)">${fmtB(sumInc)}</td>
-        <td class="mono" style="text-align:right;color:var(--red)">${fmtB(sumDed)}</td>
+        <td class="mono" style="text-align:right">${fmtB(s('basePay'))}</td>
+        <td class="mono" style="text-align:right;color:#05C3DD">${fmtB(s('otPay'))}</td>
+        <td class="mono" style="text-align:right;color:#9B5DE5">${fmtB(s('allowance'))}</td>
+        <td class="mono" style="text-align:right;color:var(--gold)">${fmtB(s('totalInc'))}</td>
+        <td class="mono" style="text-align:right;color:var(--red)">${fmtB(s('totalDed'))}</td>
         <td class="mono" style="text-align:right;color:var(--green)">${fmtB(totalNet)}</td>
         <td style="text-align:right"><span class="pill pill-gold">100%</span></td>
       </tr>
@@ -778,9 +740,9 @@ async function loadPendingNotify(){
     if(badge){badge.textContent=list.length||'';badge.style.display=list.length?'inline':'none';}
     if(alertBar){alertBar.classList.toggle('show',list.length>0);if(alertCount)alertCount.textContent=list.length;}
     if(!tableWrap)return;
-    if(!list.length){if(emptyMsg)emptyMsg.style.display='block';tableWrap.innerHTML='';document.getElementById('pending-count-title').textContent='';return;}
+    if(!list.length){if(emptyMsg)emptyMsg.style.display='block';tableWrap.innerHTML='';setEl('pending-count-title','');return;}
     if(emptyMsg)emptyMsg.style.display='none';
-    document.getElementById('pending-count-title').textContent='('+list.length+' รายการ)';
+    setEl('pending-count-title','('+list.length+' รายการ)');
     tableWrap.innerHTML=`<table class="tbl"><thead><tr><th>ชื่อพนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">ดำเนินการ</th></tr></thead><tbody>${list.map(n=>`<tr><td style="font-weight:600;color:var(--text)">${n.empName}</td><td>${n.docType==='payslip'?'สลิป':'ใบรับรอง'}</td><td>${n.month}</td><td style="font-size:11px;color:var(--text3)">${n.time}</td><td style="text-align:right"><button class="approve-btn" onclick="portalApprove('${n.requestId}','approve')">✅ อนุมัติ</button><button class="reject-btn" onclick="portalApprove('${n.requestId}','reject')">❌ ปฏิเสธ</button></td></tr>`).join('')}</tbody></table>`;
   }catch(e){}
 }
@@ -823,7 +785,7 @@ async function loadAttAdmin(){
     const[r,lr]=await Promise.all([fetch(`${API}/admin/attendance?password=${PASS}&year=${year}&month=${month}`),fetch(`${API}/admin/leave-map?password=${PASS}&year=${year}&month=${month}`)]);
     const d=await r.json();if(d.error)throw new Error(d.error);
     attDays=d.days;attMapData=d.attMap;attHolidays=d.holidays||[];attEmps=[...new Set(d.emps.map(e=>e.name))].sort();
-    document.getElementById('attRange').textContent='รอบ: '+d.startDate+' — '+d.endDate;
+    setEl('attRange','รอบ: '+d.startDate+' — '+d.endDate);
     try{const ldata=await lr.json();window._leaveMap=ldata.leaveMap||{};}catch(e){window._leaveMap={};}
     renderAttTable();renderAttStats();renderHoliChips();
   }catch(e){document.getElementById('attTableWrap').innerHTML='<div class="empty-msg">❌ '+e.message+'</div>';}
@@ -834,7 +796,7 @@ function analyzeAttDay(recs){
   const sorted=[...recs].sort();const first=sorted[0],last=sorted[sorted.length-1];
   const fm=toM(first),lm=toM(last);
   const res={in:first,out:sorted.length>1?last:null,status:'',ot:0};
-  if(fm<=toM('08:00:59'))res.status='ok';else res.status='late';
+  res.status=fm<=toM('08:00:59')?'ok':'late';
   if(sorted.length>1){
     if(lm>=toM('11:50:00')&&lm<=toM('12:30:00'))res.status='half-pm';
     else if(lm>=toM('17:30:00')&&lm<toM('17:55:00'))res.ot=0.5;
@@ -894,8 +856,8 @@ function renderAttTable(){
       html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:16px"><div style="font-size:13px;font-weight:700;color:var(--text)">'+name+' — '+MONTH_TH[parseInt(mm)]+' '+(parseInt(yyyy)+543)+'</div><div style="display:flex;gap:6px"><span class="ab ab-ok">'+cW+' วัน</span>'+(cL>0?'<span class="ab ab-late">สาย '+cL+'</span>':'')+(cO>0?'<span class="ab ab-ot">OT '+cO+'</span>':'')+(lD>0?'<span class="ab ab-leave">🏥 ลา '+lD+'</span>':'')+'</div></div><div class="att-cal-grid">'+cells+'</div>';
     });
   });
-  const sHtml='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:20px"><div style="background:var(--surface3);color:var(--text);padding:10px 14px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border)">📊 สรุปรวม</div><table class="tbl"><thead><tr><th>พนักงาน</th><th style="text-align:center">วันทำงาน</th><th style="text-align:center">วันสาย</th><th style="text-align:center">OT</th></tr></thead><tbody>'+attEmps.map(n=>'<tr><td style="font-weight:600;color:var(--text)">'+n+'</td><td style="text-align:center"><span class="ab ab-ok">'+(sumAll[n]?.work||0)+'</span></td><td style="text-align:center">'+((sumAll[n]?.late||0)>0?'<span class="ab ab-late">'+sumAll[n].late+'</span>':'—')+'</td><td style="text-align:center">'+((sumAll[n]?.ot||0)>0?'<span class="ab ab-ot">'+sumAll[n].ot+'</span>':'—')+'</td></tr>').join('')+'</tbody></table></div>';
-  document.getElementById('attTableWrap').innerHTML=(html+sHtml)||'<div class="empty-msg">ไม่มีข้อมูล</div>';
+  const sH='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:20px"><div style="background:var(--surface3);color:var(--text);padding:10px 14px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border)">📊 สรุปรวม</div><table class="tbl"><thead><tr><th>พนักงาน</th><th style="text-align:center">วันทำงาน</th><th style="text-align:center">วันสาย</th><th style="text-align:center">OT</th></tr></thead><tbody>'+attEmps.map(n=>'<tr><td style="font-weight:600;color:var(--text)">'+n+'</td><td style="text-align:center"><span class="ab ab-ok">'+(sumAll[n]?.work||0)+'</span></td><td style="text-align:center">'+((sumAll[n]?.late||0)>0?'<span class="ab ab-late">'+sumAll[n].late+'</span>':'—')+'</td><td style="text-align:center">'+((sumAll[n]?.ot||0)>0?'<span class="ab ab-ot">'+sumAll[n].ot+'</span>':'—')+'</td></tr>').join('')+'</tbody></table></div>';
+  document.getElementById('attTableWrap').innerHTML=(html+sH)||'<div class="empty-msg">ไม่มีข้อมูล</div>';
 }
 function renderAttStats(){
   let tw=0,tl=0,ta=0,tot=0;
