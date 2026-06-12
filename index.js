@@ -1651,12 +1651,15 @@ app.post('/notify-assignment', async (req, res) => {
     // ดึงข้อมูล Assignment จาก Lark
     const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records/${recordId}`;
     const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
-    console.log('[notify] raw:', JSON.stringify(r.data));
     const f = r.data?.data?.record?.fields || {};
     console.log('[notify] recordId:', recordId);
     console.log('[notify] fields:', JSON.stringify(f));
 
-    const team      = Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '—');
+    // ── แก้: รองรับ Lark Single Select object ──
+    const rawTeam = Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '—');
+    const team    = typeof rawTeam === 'object' ? (rawTeam?.text || rawTeam?.value || '—') : rawTeam.toString();
+    console.log('[notify] team resolved:', team);
+
     const jobNo     = f['JOB'] || '—';
     const company   = f['บริษัท'] || '—';
     const province  = f['จังหวัด'] || '—';
@@ -1694,6 +1697,9 @@ app.post('/notify-assignment', async (req, res) => {
       if (!lid) return false;
       return rolesForThisTeam.some(r => pos === r);
     });
+
+    console.log('[notify] TEAM_ROLES match:', TEAM_ROLES[team]);
+    console.log('[notify] targets positions:', targets.map(e => e['ตำแหน่ง']));
 
     const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
