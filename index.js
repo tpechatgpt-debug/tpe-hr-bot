@@ -1863,8 +1863,7 @@ app.get('/api/payroll-summary', async (req, res) => {
        totalDed:  toN(row[26]),
        netPay:    toN(row[27]),
        payType,
-    }));
-    }));
+ }));
 
     res.json({ ok: true, month: cleanMonth, payType, data });
   } catch(e) {
