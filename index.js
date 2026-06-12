@@ -1852,13 +1852,19 @@ app.get('/api/payroll-summary', async (req, res) => {
     const data = rows
       .filter(row => row[0] && row[0].toString().trim() && row[0] !== '0.0')
       .map(row => ({
-       name:     (row[0] || '').toString().trim(),
-       position: (row[1] || '').toString().trim(),
-       totalInc: payType === 'daily' ? toN(row[19]) : toN(row[18]),
-       totalDed: toN(row[26]),
-       netPay:   toN(row[27]),
+       name:      (row[0] || '').toString().trim(),
+       position:  (row[1] || '').toString().trim(),
+       basePay:   payType === 'daily' ? toN(row[11]) : toN(row[13]),
+       otPay:     payType === 'daily' ? toN(row[12]) : toN(row[15]),
+       allowance: payType === 'daily'
+                  ? toN(row[13]) + toN(row[14]) + toN(row[16]) + toN(row[17])
+                  : toN(row[16]) + toN(row[17]),
+       totalInc:  payType === 'daily' ? toN(row[19]) : toN(row[18]),
+       totalDed:  toN(row[26]),
+       netPay:    toN(row[27]),
        payType,
-}));
+    }));
+    }));
 
     res.json({ ok: true, month: cleanMonth, payType, data });
   } catch(e) {
