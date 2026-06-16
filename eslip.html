@@ -66,6 +66,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:all .15s;text-align:left}
 .qa-btn:active{transform:scale(.97)}
 .qa-btn.qa-job{border-color:rgba(245,166,35,.3);background:linear-gradient(135deg,rgba(245,166,35,.08),rgba(201,149,42,.05))}
+.qa-btn.qa-field{border-color:rgba(6,214,160,.3);background:linear-gradient(135deg,rgba(6,214,160,.08),rgba(27,127,78,.05))}
 .qa-icon{font-size:24px}
 .qa-label{font-size:13px;font-weight:600;color:var(--text)}
 .qa-desc{font-size:10px;color:var(--muted)}
@@ -235,6 +236,65 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-ot{font-size:8px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.15);padding:1px 4px;border-radius:4px}
 .cal-late-dot{font-size:8px;color:var(--red);font-weight:700}
 
+/* ── FIELD CHECK-IN CSS ── */
+.field-page{padding:16px;display:flex;flex-direction:column;gap:14px}
+.field-clock{font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.field-emp{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px}
+.field-emp-av{width:48px;height:48px;border-radius:50%;background:#1E3A5F;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;border:2px solid rgba(245,166,35,.3)}
+.field-emp-name{font-size:16px;font-weight:700}
+.field-emp-team{font-size:12px;color:var(--muted);margin-top:3px}
+.field-emp-badge{margin-left:auto;background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.3);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700}
+.field-gps{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px 16px}
+.field-gps-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.gps-pulse{width:10px;height:10px;border-radius:50%;background:var(--muted);position:relative;flex-shrink:0}
+.gps-pulse.active{background:var(--green)}
+.gps-pulse.active::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--green);animation:gpsp 1.5s ease-out infinite;opacity:.6}
+@keyframes gpsp{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.2);opacity:0}}
+.gps-label{font-size:13px;font-weight:600;flex:1}
+.gps-acc{font-size:11px;color:var(--muted)}
+.gps-coords{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gps-coord{background:var(--bg2);border-radius:10px;padding:10px 12px}
+.gps-coord-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
+.gps-coord-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.gps-map-link{display:flex;align-items:center;gap:6px;margin-top:10px;color:var(--gold);font-size:12px;cursor:pointer;text-decoration:none}
+.field-job{background:var(--surface);border:1px solid rgba(245,166,35,.25);border-radius:18px;overflow:hidden}
+.field-job-hdr{background:linear-gradient(135deg,#1a2a4a,#0f1a33);padding:12px 16px;display:flex;align-items:center;gap:8px}
+.field-job-lbl{font-size:11px;color:rgba(255,255,255,.5)}
+.field-job-no{font-size:14px;font-weight:700;color:var(--gold);margin-left:auto}
+.field-job-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.field-job-row{display:flex;gap:10px;align-items:flex-start}
+.field-job-icon{font-size:14px;width:20px;flex-shrink:0;margin-top:1px}
+.field-job-val{font-size:13px;line-height:1.4}
+.field-job-sub{font-size:11px;color:var(--muted)}
+.field-no-job{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:14px;padding:12px 16px;font-size:13px;color:rgba(245,166,35,.8);display:flex;gap:10px;align-items:center}
+.field-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-btn{padding:18px 16px;border-radius:16px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;font-family:'Sarabun',sans-serif}
+.field-btn:active{transform:scale(.97);opacity:.85}
+.field-btn-icon{font-size:24px}
+.field-btn:disabled{opacity:.4;pointer-events:none}
+.field-btn-in{background:linear-gradient(135deg,#0d4a2e,#1B7F4E);color:#fff;box-shadow:0 4px 20px rgba(27,127,78,.3)}
+.field-btn-out{background:linear-gradient(135deg,#4a0d0d,#CF3636);color:#fff;box-shadow:0 4px 20px rgba(207,54,54,.3)}
+.field-btn-report{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);color:var(--text);flex-direction:row;padding:14px 16px;font-size:14px;border-radius:14px}
+.field-timeline{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px}
+.field-tl-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.field-tl-item{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.field-tl-item:last-child{border-bottom:none}
+.field-tl-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);margin-top:5px;flex-shrink:0}
+.field-tl-dot.in{background:var(--green)}
+.field-tl-dot.out{background:var(--red)}
+.field-tl-action{font-size:13px;font-weight:700}
+.field-tl-time{font-size:11px;color:var(--muted);margin-top:2px}
+.field-tl-loc{font-size:11px;color:var(--gold);margin-top:2px}
+.field-report-modal{display:none;position:fixed;inset:0;z-index:400;align-items:flex-end}
+.field-report-modal.show{display:flex}
+.field-report-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px)}
+.field-report-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-radius:28px 28px 0 0;border-top:1px solid var(--border);padding:20px 20px calc(20px + env(safe-area-inset-bottom));animation:slideUp .3s ease}
+.field-report-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin:0 auto 16px}
+.field-report-title{font-size:16px;font-weight:700;margin-bottom:14px}
+.field-report-textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Sarabun',sans-serif;font-size:14px;padding:12px;resize:none;height:100px;outline:none;margin-bottom:12px}
+.field-report-textarea:focus{border-color:var(--gold)}
+.field-report-actions{display:flex;gap:10px}
+
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -265,6 +325,20 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- FIELD REPORT MODAL -->
+<div class="field-report-modal" id="fieldReportModal">
+  <div class="field-report-overlay" onclick="closeFieldReport()"></div>
+  <div class="field-report-sheet">
+    <div class="field-report-handle"></div>
+    <div class="field-report-title">รายงานปัญหา / หมายเหตุ</div>
+    <textarea class="field-report-textarea" id="fieldReportText" placeholder="เช่น รถเสีย, งานล่าช้า, ต้องการอุปกรณ์เพิ่ม..."></textarea>
+    <div class="field-report-actions">
+      <button class="field-btn field-btn-report" style="flex:1;padding:14px;border-radius:12px" onclick="closeFieldReport()">ยกเลิก</button>
+      <button class="field-btn field-btn-in" style="flex:1;padding:14px;border-radius:12px;flex-direction:row;gap:6px" onclick="sendFieldReport()">ส่งรายงาน</button>
+    </div>
+  </div>
+</div>
+
 <div id="app" style="display:none">
 
   <div class="bnav">
@@ -276,6 +350,9 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </button>
     <button class="bnav-btn" id="nav-att" onclick="showPage('att')">
       <span class="bnav-icon">🕐</span>เวลาเข้างาน
+    </button>
+    <button class="bnav-btn" id="nav-field" onclick="showPage('field')">
+      <span class="bnav-icon">📍</span>หน้างาน
     </button>
   </div>
 
@@ -339,6 +416,11 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="qa-label">งานวันนี้</div>
           <div class="qa-desc" id="qaJobDesc">ดูงานที่ได้รับมอบหมาย</div>
         </div>
+        <div class="qa-btn qa-field" onclick="showPage('field')" style="grid-column:1/-1">
+          <div class="qa-icon">📍</div>
+          <div class="qa-label">เช็คอินหน้างาน</div>
+          <div class="qa-desc" id="qaFieldDesc">GPS อัตโนมัติ · แจ้งหัวหน้าทันที</div>
+        </div>
       </div>
     </div>
   </div>
@@ -376,6 +458,69 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     <div class="att-wrap">
       <div class="year-select" id="yearSelect"></div>
       <div id="attContent"><div class="sk sk-h"></div><div class="sk sk-h"></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: FIELD CHECK-IN -->
+  <div class="page" id="page-field">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <div class="hdr-logo">📍</div>
+        <div>
+          <div class="hdr-title">เช็คอินหน้างาน</div>
+          <div class="hdr-sub">GPS อัตโนมัติ · บันทึกแบบ Real-time</div>
+        </div>
+      </div>
+    </div>
+    <div class="field-page">
+      <div class="field-clock" id="fieldClock"></div>
+      <div class="field-emp">
+        <div class="field-emp-av" id="fieldAvatar">?</div>
+        <div>
+          <div class="field-emp-name" id="fieldName">กำลังโหลด...</div>
+          <div class="field-emp-team" id="fieldTeam">—</div>
+        </div>
+        <div class="field-emp-badge" id="fieldBadge">พนักงาน</div>
+      </div>
+      <div class="field-gps">
+        <div class="field-gps-row">
+          <div class="gps-pulse" id="gpsDot"></div>
+          <div class="gps-label" id="gpsLabel">กำลังระบุตำแหน่ง...</div>
+          <div class="gps-acc" id="gpsAcc"></div>
+        </div>
+        <div class="gps-coords">
+          <div class="gps-coord"><div class="gps-coord-lbl">Latitude</div><div class="gps-coord-val" id="gpsLat">—</div></div>
+          <div class="gps-coord"><div class="gps-coord-lbl">Longitude</div><div class="gps-coord-val" id="gpsLng">—</div></div>
+        </div>
+        <a class="gps-map-link" id="gpsMapLink" href="#" target="_blank" style="display:none">📍 เปิด Google Maps</a>
+      </div>
+      <div class="field-job" id="fieldJobCard" style="display:none">
+        <div class="field-job-hdr">
+          <div class="field-job-lbl">งานวันนี้</div>
+          <div class="field-job-no" id="fieldJobNo">—</div>
+        </div>
+        <div class="field-job-body">
+          <div class="field-job-row"><div class="field-job-icon">🏭</div><div><div class="field-job-val" id="fieldJobCompany">—</div><div class="field-job-sub" id="fieldJobProvince">—</div></div></div>
+          <div class="field-job-row"><div class="field-job-icon">📝</div><div class="field-job-val" id="fieldJobDetail">—</div></div>
+          <div class="field-job-row"><div class="field-job-icon">🚗</div><div class="field-job-val" id="fieldJobCar">—</div></div>
+        </div>
+      </div>
+      <div class="field-no-job" id="fieldNoJob" style="display:none">⚠️ ไม่พบงานวันนี้ — สามารถเช็คอินได้แต่บันทึกเป็นงานทั่วไป</div>
+      <div class="field-btns">
+        <button class="field-btn field-btn-in" id="btnFieldIn" onclick="doFieldCheckin()" disabled>
+          <span class="field-btn-icon">✅</span><span>เช็คอิน</span>
+        </button>
+        <button class="field-btn field-btn-out" id="btnFieldOut" onclick="doFieldCheckout()" disabled>
+          <span class="field-btn-icon">🏁</span><span>เช็คเอ้าท์</span>
+        </button>
+        <button class="field-btn field-btn-report" onclick="openFieldReport()">
+          <span class="field-btn-icon">⚠️</span><span>รายงานปัญหา / หมายเหตุ</span>
+        </button>
+      </div>
+      <div class="field-timeline" id="fieldTimeline" style="display:none">
+        <div class="field-tl-title">ประวัติวันนี้</div>
+        <div id="fieldTimelineItems"></div>
+      </div>
     </div>
   </div>
 
@@ -433,7 +578,6 @@ async function loadEmp(lineId){
   }catch(e){}
 }
 
-// ── PRELOAD JOB DESC ──
 async function preloadJobDesc(){
   if(!empData)return;
   try{
@@ -449,7 +593,6 @@ async function preloadJobDesc(){
   }catch(e){}
 }
 
-// ── JOB MODAL ──
 async function openJobModal(){
   const modal=document.getElementById('jobModal');
   const body=document.getElementById('jmBody');
@@ -469,17 +612,10 @@ async function openJobModal(){
     body.innerHTML='<div class="jm-empty"><div class="jm-empty-icon">❌</div><p>โหลดไม่สำเร็จ</p></div>';
   }
 }
-
-function closeJobModal(){
-  document.getElementById('jobModal').classList.remove('show');
-}
+function closeJobModal(){document.getElementById('jobModal').classList.remove('show');}
 
 function renderJobCard(j){
-  const statusMap={
-    'วางแผน':'status-plan',
-    'กำลังทำ':'status-doing',
-    'เสร็จแล้ว':'status-done',
-  };
+  const statusMap={'วางแผน':'status-plan','กำลังทำ':'status-doing','เสร็จแล้ว':'status-done'};
   const statusCls=statusMap[j['สถานะ']]||'status-plan';
   const jobNo=Array.isArray(j['JOB'])?j['JOB'].map(x=>x.value||x).join(', '):(j['JOB']||'');
   const company=j['บริษัท']||'—';
@@ -487,16 +623,11 @@ function renderJobCard(j){
   const detail=j['รายละเอียดงาน']||'';
   const car=j['รถที่ใช้ออกหน้างาน']||'—';
   const status=j['สถานะ']||'วางแผน';
-
-  // format date
   const fmtDate=ts=>{if(!ts)return'—';const d=new Date(ts+7*3600000);return`${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`;};
   const startStr=fmtDate(j['วันที่เริ่ม']);
   const endStr=fmtDate(j['วันสิ้นสุด']);
-
-  // Google Maps URL
   const mapQuery=encodeURIComponent((company+' '+province).trim());
   const mapUrl=`https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
-
   return`<div class="job-card">
     <div class="job-card-hero">
       <div class="jc-no">🔧 ${jobNo}</div>
@@ -504,42 +635,24 @@ function renderJobCard(j){
       <div class="jc-status ${statusCls}">● ${status}</div>
     </div>
     <div class="job-card-body">
-      <div class="jc-row">
-        <div class="jc-icon">🏭</div>
-        <div class="jc-info"><div class="jc-label">บริษัท</div><div class="jc-val">${company}</div></div>
-      </div>
-      ${province?`<div class="jc-row">
-        <div class="jc-icon">📍</div>
-        <div class="jc-info"><div class="jc-label">จังหวัด</div><div class="jc-val">${province}</div></div>
-      </div>`:''}
-      <div class="jc-row">
-        <div class="jc-icon">📅</div>
-        <div class="jc-info"><div class="jc-label">ช่วงงาน</div><div class="jc-val">${startStr} – ${endStr}</div></div>
-      </div>
-      <div class="jc-row">
-        <div class="jc-icon">🚗</div>
-        <div class="jc-info"><div class="jc-label">รถที่ใช้</div><div class="jc-val">${car}</div></div>
-      </div>
-      ${detail?`<div class="jc-row">
-        <div class="jc-icon">📝</div>
-        <div class="jc-info"><div class="jc-label">รายละเอียด</div><div class="jc-val">${detail}</div></div>
-      </div>`:''}
-      <button class="jc-map-btn" onclick="window.open('${mapUrl}','_blank')">
-        🗺️ เปิด Google Maps · ${province||company}
-      </button>
+      <div class="jc-row"><div class="jc-icon">🏭</div><div class="jc-info"><div class="jc-label">บริษัท</div><div class="jc-val">${company}</div></div></div>
+      ${province?`<div class="jc-row"><div class="jc-icon">📍</div><div class="jc-info"><div class="jc-label">จังหวัด</div><div class="jc-val">${province}</div></div></div>`:''}
+      <div class="jc-row"><div class="jc-icon">📅</div><div class="jc-info"><div class="jc-label">ช่วงงาน</div><div class="jc-val">${startStr} – ${endStr}</div></div></div>
+      <div class="jc-row"><div class="jc-icon">🚗</div><div class="jc-info"><div class="jc-label">รถที่ใช้</div><div class="jc-val">${car}</div></div></div>
+      ${detail?`<div class="jc-row"><div class="jc-icon">📝</div><div class="jc-info"><div class="jc-label">รายละเอียด</div><div class="jc-val">${detail}</div></div></div>`:''}
+      <button class="jc-map-btn" onclick="window.open('${mapUrl}','_blank')">🗺️ เปิด Google Maps · ${province||company}</button>
     </div>
   </div>`;
 }
 
-// ── PAGES ──
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('show');
   document.getElementById('nav-'+page).classList.add('active');
+  if(page==='field'&&!fieldState.initialized){fieldState.initialized=true;initFieldPage();}
 }
 
-// ── SLIP ──
 async function loadSlipMonths(){
   if(!empData)return;
   const list=document.getElementById('monthList');
@@ -551,10 +664,7 @@ async function loadSlipMonths(){
     list.innerHTML=months.map(m=>`
       <div class="month-card" onclick="openDoc('payslip','${m.month}')">
         <div class="mc-icon mc-pay">💰</div>
-        <div class="mc-info">
-          <div class="mc-name">${m.month}</div>
-          ${m.netPay?`<div class="mc-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>`:''}
-        </div>
+        <div class="mc-info"><div class="mc-name">${m.month}</div>${m.netPay?`<div class="mc-net">฿${Number(m.netPay).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>`:''}</div>
         <div class="mc-arrow">›</div>
       </div>`).join('');
   }catch(e){list.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ</p></div>';}
@@ -570,7 +680,6 @@ async function openCertDirect(){
   }catch(e){showToast('❌ โหลดไม่สำเร็จ');}
 }
 
-// ── DOC VIEW ──
 async function openDoc(docType,month){
   if(!empData)return;
   currentDoc={docType,month};
@@ -587,7 +696,6 @@ async function openDoc(docType,month){
 }
 function closeDoc(){document.getElementById('docView').classList.remove('show');}
 
-// ── ATTENDANCE ──
 async function loadAttendance(){
   if(!empData)return;
   try{
@@ -599,10 +707,7 @@ async function loadAttendance(){
     const now=new Date();
     const thisMonth=String(now.getMonth()+1).padStart(2,'0');
     const thisYear=now.getFullYear();
-    const thisMonthRecs=attData.filter(r=>{
-      const [dd,mm,yyyy]=r.date.split('/');
-      return parseInt(yyyy)===thisYear&&mm===thisMonth;
-    });
+    const thisMonthRecs=attData.filter(r=>{const[dd,mm,yyyy]=r.date.split('/');return parseInt(yyyy)===thisYear&&mm===thisMonth;});
     document.getElementById('statDays').textContent=thisMonthRecs.length;
     document.getElementById('statLate').textContent=thisMonthRecs.filter(r=>r.late).length;
     renderAttendance();
@@ -613,43 +718,14 @@ function renderSummary(){
   const s=window._attSummary;
   if(!s)return'';
   const MTHS={'01':'ม.ค.','02':'ก.พ.','03':'มี.ค.','04':'เม.ย.','05':'พ.ค.','06':'มิ.ย.','07':'ก.ค.','08':'ส.ค.','09':'ก.ย.','10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.'};
-  const months=s.byMonth.map(m=>{
-    const [mm,yyyy]=m.month.split('/');
-    const thY=parseInt(yyyy)+543;
-    return`<div class="sum-month-card">
-      <div class="sum-month-name">${MTHS[mm]||mm} ${thY}</div>
-      <div class="sum-badges">
-        <span class="sum-badge sb-work">🏢 ${m.work} วัน</span>
-        ${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}
-        ${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-  return`<div class="sum-wrap">
-    <div class="sum-total">
-      <div class="sum-total-title">📊 สรุปรวมทั้งหมด</div>
-      <div class="sum-total-grid">
-        <div class="sum-total-item"><div class="sum-total-val c-g">${s.total.work}</div><div class="sum-total-label">วันทำงาน</div></div>
-        <div class="sum-total-item"><div class="sum-total-val c-r">${s.total.late}</div><div class="sum-total-label">วันที่สาย</div></div>
-        <div class="sum-total-item"><div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div><div class="sum-total-label">ชม. OT</div></div>
-      </div>
-    </div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">รายเดือน</div>
-    <div class="sum-months">${months}</div>
-  </div>`;
+  const months=s.byMonth.map(m=>{const[mm,yyyy]=m.month.split('/');const thY=parseInt(yyyy)+543;return`<div class="sum-month-card"><div class="sum-month-name">${MTHS[mm]||mm} ${thY}</div><div class="sum-badges"><span class="sum-badge sb-work">🏢 ${m.work} วัน</span>${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}</div></div>`;}).join('');
+  return`<div class="sum-wrap"><div class="sum-total"><div class="sum-total-title">📊 สรุปรวมทั้งหมด</div><div class="sum-total-grid"><div class="sum-total-item"><div class="sum-total-val c-g">${s.total.work}</div><div class="sum-total-label">วันทำงาน</div></div><div class="sum-total-item"><div class="sum-total-val c-r">${s.total.late}</div><div class="sum-total-label">วันที่สาย</div></div><div class="sum-total-item"><div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div><div class="sum-total-label">ชม. OT</div></div></div></div><div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">รายเดือน</div><div class="sum-months">${months}</div></div>`;
 }
 
 function renderAttendance(){
   if(!attData.length){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติ</p></div>';return;}
   const byYear={};
-  attData.forEach(r=>{
-    if(!r.date)return;
-    const parts=r.date.split('/');
-    if(parts.length!==3)return;
-    const dd=parseInt(parts[0]),mm=parseInt(parts[1]),yyyy=parseInt(parts[2]);
-    if(!byYear[yyyy])byYear[yyyy]=[];
-    byYear[yyyy].push({...r,dd,mm,yyyy});
-  });
+  attData.forEach(r=>{if(!r.date)return;const parts=r.date.split('/');if(parts.length!==3)return;const dd=parseInt(parts[0]),mm=parseInt(parts[1]),yyyy=parseInt(parts[2]);if(!byYear[yyyy])byYear[yyyy]=[];byYear[yyyy].push({...r,dd,mm,yyyy});});
   const years=Object.keys(byYear).sort((a,b)=>b-a);
   const sumHtml=renderSummary();
   const sel=document.getElementById('yearSelect');
@@ -660,11 +736,7 @@ function renderAttendance(){
   window._attByYear=byYear;
 }
 
-function selectYear(y){
-  currentYear=y;
-  document.querySelectorAll('.year-chip').forEach(c=>{c.classList.toggle('active',c.textContent==parseInt(y)+543);});
-  renderYear(y,window._attByYear);
-}
+function selectYear(y){currentYear=y;document.querySelectorAll('.year-chip').forEach(c=>{c.classList.toggle('active',c.textContent==parseInt(y)+543);});renderYear(y,window._attByYear);}
 
 const MONTH_NAMES=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 
@@ -677,8 +749,7 @@ function renderYear(y,byYear){
     const mrs=byMonth[m];
     const lateCount=mrs.filter(r=>r.late).length;
     const otCount=mrs.filter(r=>r.ot>0).length;
-    const dayMap={};
-    mrs.forEach(r=>{if(r.dd)dayMap[r.dd]=r;});
+    const dayMap={};mrs.forEach(r=>{if(r.dd)dayMap[r.dd]=r;});
     const daysInMonth=new Date(parseInt(y),m,0).getDate();
     const firstDay=new Date(parseInt(y),m-1,1).getDay();
     const cells=[];
@@ -700,24 +771,10 @@ function renderYear(y,byYear){
       const timeOut=rec&&rec.timeOut?rec.timeOut:'';
       const otBadge=rec&&rec.ot>0?`<div class="cal-ot">OT${rec.ot}</div>`:'';
       const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
-      if(rec&&rec.status==='leave'){
-        const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);
-        cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div><div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div></div>`);
-      }else{
-        cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);
-      }
+      if(rec&&rec.status==='leave'){const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div><div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div></div>`);}
+      else{cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);}
     }
-    return`<div class="month-group">
-      <div class="mg-header">
-        <div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)+543}</div>
-        <div class="mg-stats">
-          <span class="mg-stat mg-ok">${mrs.length} วัน</span>
-          ${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}
-          ${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}
-        </div>
-      </div>
-      <div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div>
-    </div>`;
+    return`<div class="month-group"><div class="mg-header"><div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)+543}</div><div class="mg-stats"><span class="mg-stat mg-ok">${mrs.length} วัน</span>${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}</div></div><div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div></div>`;
   }).join('');
   document.getElementById('attContent').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div><p>ไม่มีข้อมูลในปีนี้</p></div>';
 }
@@ -729,32 +786,12 @@ function renderCert(d,month){
   const today=new Date();
   const thM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   const ds=`${today.getDate()} ${thM[today.getMonth()]} พ.ศ.${today.getFullYear()+543}`;
-  return`<div class="cert-card">
-    <div class="cert-hero"><div class="cert-tag">📋 ใบรับรองเงินเดือน</div><div class="cert-name">${d.name||'—'}</div><div class="cert-pos">${d.position||'—'}</div><div class="cert-month">📅 ${month}</div></div>
-    <div class="cert-salary"><div class="cert-s-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div><div class="cert-s-amount">฿${fmt(salary)}</div><div class="cert-s-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div></div>
-    <div class="cert-info"><div class="cert-row"><span class="cert-rl">ตำแหน่ง</span><span class="cert-rv">${d.position||'—'}</span></div><div class="cert-row"><span class="cert-rl">ประเภท</span><span class="cert-rv">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div></div>
-    <div class="cert-footer">ออกให้ ณ วันที่ ${ds} · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
-  </div>`;
+  return`<div class="cert-card"><div class="cert-hero"><div class="cert-tag">📋 ใบรับรองเงินเดือน</div><div class="cert-name">${d.name||'—'}</div><div class="cert-pos">${d.position||'—'}</div><div class="cert-month">📅 ${month}</div></div><div class="cert-salary"><div class="cert-s-title">${d.payType==='daily'?'เงินเดือน (ค่าแรง × 26 วัน)':'เงินเดือนฐาน'}</div><div class="cert-s-amount">฿${fmt(salary)}</div><div class="cert-s-note">ยังไม่รวมค่าล่วงเวลาและเบี้ยเลี้ยง</div></div><div class="cert-info"><div class="cert-row"><span class="cert-rl">ตำแหน่ง</span><span class="cert-rv">${d.position||'—'}</span></div><div class="cert-row"><span class="cert-rl">ประเภท</span><span class="cert-rv">${d.payType==='daily'?'รายวัน':'รายเดือน'}</span></div></div><div class="cert-footer">ออกให้ ณ วันที่ ${ds} · ธนพลเอ็นจิเนียริ่ง จำกัด</div></div>`;
 }
 
 function renderPay(d,month){
   const row=(l,v,c)=>{const n=parseFloat(v)||0;if(!n)return'';return`<div class="pay-row"><span class="pay-rl">${l}</span><span class="pay-rv ${c}">${fmt(Math.abs(n))}</span></div>`;};
-  return`<div class="pay-card">
-    <div class="pay-hero"><div class="pay-tag">💰 สลิปเงินเดือน</div><div class="pay-name">${d.name||'—'}</div><div class="pay-pos">${d.position||'—'}</div><div class="pay-month">📅 ${month}</div></div>
-    <div class="pay-net"><div class="pay-nl">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div>
-    <div class="pay-body">
-      <div class="pay-st">สถิติการทำงาน</div>
-      ${row('วันทำงาน',d.workDays,'c-t')}${row('OT (ชม.)',d.otH,'c-b')}${row('ลากิจ',d.leaveP,'c-t')}${row('ลาป่วย',d.leaveSick,'c-t')}
-      <div class="pay-st">รายได้</div>
-      ${row('ค่าจ้างปกติ',d.basePay||d.baseWage,'c-g')}${row('ค่า OT',d.otPay,'c-g')}${row('เบี้ยเลี้ยง',d.allowance,'c-g')}${row('เบี้ยขยัน',d.bonus,'c-g')}${row('รายได้อื่นๆ',d.otherInc,'c-g')}
-      <div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมรายได้</span><span class="pay-rv c-g">฿${fmt(d.totalInc)}</span></div>
-      <div class="pay-st">รายการหัก</div>
-      ${row('ประกันสังคม',d.soc,'c-r')}${row('ภาษี ณ ที่จ่าย',d.tax,'c-r')}${row('หักล่วงหน้า',d.advance,'c-r')}${row('กยศ.',d.kot,'c-r')}${row('รายการหักอื่นๆ',d.otherDed,'c-r')}
-      <div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมหัก</span><span class="pay-rv c-r">฿${fmt(d.totalDed)}</span></div>
-    </div>
-    <div class="pay-net" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)"><div class="pay-nl" style="color:var(--green)">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div>
-    <div class="pay-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div>
-  </div>`;
+  return`<div class="pay-card"><div class="pay-hero"><div class="pay-tag">💰 สลิปเงินเดือน</div><div class="pay-name">${d.name||'—'}</div><div class="pay-pos">${d.position||'—'}</div><div class="pay-month">📅 ${month}</div></div><div class="pay-net"><div class="pay-nl">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div><div class="pay-body"><div class="pay-st">สถิติการทำงาน</div>${row('วันทำงาน',d.workDays,'c-t')}${row('OT (ชม.)',d.otH,'c-b')}${row('ลากิจ',d.leaveP,'c-t')}${row('ลาป่วย',d.leaveSick,'c-t')}<div class="pay-st">รายได้</div>${row('ค่าจ้างปกติ',d.basePay||d.baseWage,'c-g')}${row('ค่า OT',d.otPay,'c-g')}${row('เบี้ยเลี้ยง',d.allowance,'c-g')}${row('เบี้ยขยัน',d.bonus,'c-g')}${row('รายได้อื่นๆ',d.otherInc,'c-g')}<div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมรายได้</span><span class="pay-rv c-g">฿${fmt(d.totalInc)}</span></div><div class="pay-st">รายการหัก</div>${row('ประกันสังคม',d.soc,'c-r')}${row('ภาษี ณ ที่จ่าย',d.tax,'c-r')}${row('หักล่วงหน้า',d.advance,'c-r')}${row('กยศ.',d.kot,'c-r')}${row('รายการหักอื่นๆ',d.otherDed,'c-r')}<div class="pay-row" style="font-weight:700"><span class="pay-rl">รวมหัก</span><span class="pay-rv c-r">฿${fmt(d.totalDed)}</span></div></div><div class="pay-net" style="background:rgba(6,214,160,.05);border-top:1px solid rgba(6,214,160,.15)"><div class="pay-nl" style="color:var(--green)">เงินได้สุทธิ</div><div class="pay-nv">฿${fmt(d.netPay)}</div></div><div class="pay-footer">สร้างโดยระบบ HR อัตโนมัติ · ธนพลเอ็นจิเนียริ่ง จำกัด</div></div>`;
 }
 
 async function logErr(s,m){try{await fetch(`${API}/eslip/log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:s,message:m,ua:navigator.userAgent,lineId:empData?.lineId||'?',time:new Date().toISOString()})});}catch(e){}}
@@ -792,6 +829,132 @@ async function dlPdf(){
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ════════════════════════════════════════════════════
+// FIELD CHECK-IN
+// ════════════════════════════════════════════════════
+let fieldState={gps:null,job:null,checkedIn:false,initialized:false};
+
+function initFieldPage(){
+  if(empData){
+    const initial=(empData.name||'?').charAt(0).toUpperCase();
+    document.getElementById('fieldAvatar').textContent=initial;
+    document.getElementById('fieldName').textContent=empData.name||'—';
+    document.getElementById('fieldTeam').textContent=empData.position||'—';
+    document.getElementById('fieldBadge').textContent=empData.payType==='daily'?'รายวัน':'รายเดือน';
+  }
+  startFieldClock();getFieldGPS();loadFieldJob();loadFieldToday();
+}
+
+function startFieldClock(){
+  const el=document.getElementById('fieldClock');
+  const tick=()=>{el.textContent=new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});};
+  tick();setInterval(tick,1000);
+}
+
+function getFieldGPS(){
+  if(!navigator.geolocation){document.getElementById('gpsLabel').textContent='ไม่รองรับ GPS';return;}
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const{latitude:lat,longitude:lng,accuracy}=pos.coords;
+      fieldState.gps={lat,lng,accuracy};
+      document.getElementById('gpsDot').classList.add('active');
+      document.getElementById('gpsLabel').textContent='ระบุตำแหน่งแล้ว';
+      document.getElementById('gpsAcc').textContent=`±${Math.round(accuracy)}m`;
+      document.getElementById('gpsLat').textContent=lat.toFixed(6);
+      document.getElementById('gpsLng').textContent=lng.toFixed(6);
+      const ml=document.getElementById('gpsMapLink');
+      ml.href=`https://maps.google.com/?q=${lat},${lng}`;ml.style.display='flex';
+      updateFieldButtons();
+    },
+    ()=>{document.getElementById('gpsLabel').textContent='ไม่สามารถระบุตำแหน่ง';document.getElementById('gpsLabel').style.color='var(--red)';},
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
+  );
+}
+
+async function loadFieldJob(){
+  if(!empData)return;
+  try{
+    const r=await fetch(`${API}/eslip/jobs-today?lineId=${empData.lineId}`);
+    const d=await r.json();
+    if(d.jobs&&d.jobs.length>0){
+      const job=d.jobs[0];fieldState.job=job;
+      document.getElementById('fieldJobCard').style.display='block';
+      document.getElementById('fieldJobNo').textContent=job['JOB']||'—';
+      document.getElementById('fieldJobCompany').textContent=job['บริษัท']||'—';
+      document.getElementById('fieldJobProvince').textContent=job['จังหวัด']||'—';
+      document.getElementById('fieldJobDetail').textContent=job['รายละเอียดงาน']||'—';
+      document.getElementById('fieldJobCar').textContent=job['รถที่ใช้ออกหน้างาน']||'—';
+    }else{document.getElementById('fieldNoJob').style.display='flex';}
+  }catch(e){console.error('loadFieldJob:',e.message);}
+}
+
+async function loadFieldToday(){
+  if(!empData)return;
+  try{
+    const r=await fetch(`${API}/fieldwork/today?lineId=${empData.lineId}`);
+    const d=await r.json();
+    if(d.logs&&d.logs.length>0){fieldState.checkedIn=d.checkedIn;renderFieldTimeline(d.logs);updateFieldButtons();}
+  }catch(e){console.error('loadFieldToday:',e.message);}
+}
+
+function renderFieldTimeline(logs){
+  document.getElementById('fieldTimeline').style.display='block';
+  document.getElementById('fieldTimelineItems').innerHTML=logs.map(l=>`
+    <div class="field-tl-item">
+      <div class="field-tl-dot ${l.type==='checkin'?'in':'out'}"></div>
+      <div>
+        <div class="field-tl-action">${l.type==='checkin'?'✅ เช็คอิน':'🏁 เช็คเอ้าท์'}</div>
+        <div class="field-tl-time">${l.time}</div>
+        ${l.lat?`<div class="field-tl-loc"><a href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank" style="color:inherit">📍 ${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}</a></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function updateFieldButtons(){
+  const hasGPS=!!fieldState.gps;
+  document.getElementById('btnFieldIn').disabled=!hasGPS||fieldState.checkedIn;
+  document.getElementById('btnFieldOut').disabled=!hasGPS||!fieldState.checkedIn;
+}
+
+async function doFieldCheckin(){
+  if(!fieldState.gps){showToast('⚠️ ยังไม่ได้รับ GPS');return;}
+  const btn=document.getElementById('btnFieldIn');
+  btn.disabled=true;btn.innerHTML='<span class="field-btn-icon">⏳</span><span>กำลังส่ง...</span>';
+  try{
+    const r=await fetch(`${API}/fieldwork/checkin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineId:empData.lineId,empName:empData.name,team:empData.position,lat:fieldState.gps.lat,lng:fieldState.gps.lng,accuracy:fieldState.gps.accuracy,jobNo:fieldState.job?.['JOB']||null,company:fieldState.job?.['บริษัท']||null})});
+    const d=await r.json();
+    if(d.ok){fieldState.checkedIn=true;showToast('✅ เช็คอินสำเร็จ!');loadFieldToday();}
+    else throw new Error(d.error);
+  }catch(e){showToast('❌ '+e.message);}
+  finally{btn.innerHTML='<span class="field-btn-icon">✅</span><span>เช็คอิน</span>';updateFieldButtons();}
+}
+
+async function doFieldCheckout(){
+  if(!fieldState.gps){showToast('⚠️ ยังไม่ได้รับ GPS');return;}
+  const btn=document.getElementById('btnFieldOut');
+  btn.disabled=true;btn.innerHTML='<span class="field-btn-icon">⏳</span><span>กำลังส่ง...</span>';
+  try{
+    const r=await fetch(`${API}/fieldwork/checkout`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineId:empData.lineId,empName:empData.name,team:empData.position,lat:fieldState.gps.lat,lng:fieldState.gps.lng,accuracy:fieldState.gps.accuracy,jobNo:fieldState.job?.['JOB']||null})});
+    const d=await r.json();
+    if(d.ok){fieldState.checkedIn=false;showToast('🏁 เช็คเอ้าท์สำเร็จ!');loadFieldToday();}
+    else throw new Error(d.error);
+  }catch(e){showToast('❌ '+e.message);}
+  finally{btn.innerHTML='<span class="field-btn-icon">🏁</span><span>เช็คเอ้าท์</span>';updateFieldButtons();}
+}
+
+function openFieldReport(){document.getElementById('fieldReportModal').classList.add('show');setTimeout(()=>document.getElementById('fieldReportText').focus(),350);}
+function closeFieldReport(){document.getElementById('fieldReportModal').classList.remove('show');}
+
+async function sendFieldReport(){
+  const text=document.getElementById('fieldReportText').value.trim();
+  if(!text){showToast('⚠️ กรุณาพิมพ์ข้อความก่อน');return;}
+  try{
+    const r=await fetch(`${API}/fieldwork/report`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineId:empData.lineId,empName:empData.name,team:empData.position,message:text,lat:fieldState.gps?.lat||null,lng:fieldState.gps?.lng||null,jobNo:fieldState.job?.['JOB']||null})});
+    const d=await r.json();
+    if(d.ok){closeFieldReport();document.getElementById('fieldReportText').value='';showToast('📢 ส่งรายงานแล้ว');}
+  }catch(e){showToast('❌ ส่งไม่สำเร็จ');}
+}
 
 const up=new URLSearchParams(window.location.search);
 const did=up.get('lineId');
