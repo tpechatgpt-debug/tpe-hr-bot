@@ -1927,6 +1927,374 @@ return { month, payType: isDaily ? 'daily' : 'monthly', totalBase, totalOT, tota
   }
 });
 
+// ════════════════════════════════════════════════════════
+// FIELDWORK CHECK-IN / CHECK-OUT ENDPOINTS
+// ── วางก่อน startServer(PORT) ──────────────────────────
+// ════════════════════════════════════════════════════════
+
+// หน้า LIFF fieldwork check-in
+app.get('/fieldwork-checkin', (req, res) => res.sendFile(path.join(__dirname, 'fieldwork-checkin.html')));
+
+// ── เช็คอินหน้างาน ─────────────────────────────────────
+app.post('/fieldwork/checkin', async (req, res) => {
+  try {
+    const { lineId, empName, team, lat, lng, accuracy, jobNo, company } = req.body;
+    if (!lineId || !lat || !lng) return res.status(400).json({ error: 'missing params' });
+
+    const now    = new Date();
+    const thTime = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const thDate = now.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const thTimeOnly = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+
+    // ── บันทึกลง Google Sheets (FieldworkAttendance sheet) ──
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    // สร้าง sheet ถ้ายังไม่มี
+    await ensureFieldworkSheet(sheets, sid);
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sid,
+      range: 'FieldworkAttendance!A:J',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          thDate,          // A: วันที่
+          thTimeOnly,      // B: เวลา
+          lineId,          // C: LINE ID
+          empName || '—',  // D: ชื่อ
+          team    || '—',  // E: ทีม/ตำแหน่ง
+          'checkin',       // F: ประเภท
+          jobNo   || '—',  // G: JOB
+          company || '—',  // H: บริษัท
+          `${lat},${lng}`, // I: GPS
+          mapsUrl,         // J: Maps link
+        ]]
+      }
+    });
+
+    // ── แจ้ง LINE หัวหน้าทีม ──
+    const larkToken = await lark.getToken();
+    const emps = await lark.getAllEmployees(larkToken);
+    const ALWAYS_NOTIFY = ['ผู้บริหาร','เจ้าหน้าที่ฝ่ายขาย','ผู้จัดการฝ่ายผลิต','เจ้าหน้าที่ทรัพยากรมนุษย์'];
+    const TEAM_ROLES = {
+      'ฝ่ายติดตั้ง':  ['ผู้จัดการฝ่ายติดตั้ง'],
+      'ฝ่ายบอยเลอร์': ['หัวหน้าบอยเลอร์'],
+      'ฝ่ายผลิต A':   ['หัวหน้าผลิต A'],
+      'ฝ่ายผลิต B':   ['หัวหน้าผลิต B'],
+    };
+    const notifyRoles = [...ALWAYS_NOTIFY, ...(TEAM_ROLES[team] || [])];
+    const targets = emps.filter(e => {
+      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+      const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      return lid && notifyRoles.includes(pos);
+    });
+
+    const msg = {
+      type: 'flex',
+      altText: `✅ ${empName} เช็คอินหน้างาน`,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box', layout: 'vertical',
+          backgroundColor: '#1B7F4E', paddingAll: '16px',
+          contents: [
+            { type: 'text', text: '✅ เช็คอินหน้างาน', color: '#ffffff', weight: 'bold', size: 'md' },
+            { type: 'text', text: thTime, color: 'rgba(255,255,255,0.7)', size: 'xs', margin: 'xs' },
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+          contents: [
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'พนักงาน', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: empName || '—', size: 'sm', weight: 'bold', flex: 5 }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'ทีม', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: team || '—', size: 'sm', flex: 5 }
+            ]},
+            jobNo ? { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: jobNo, size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }
+            ]} : null,
+            company ? { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'สถานที่', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: company, size: 'sm', flex: 5, wrap: true }
+            ]} : null,
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'GPS', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: `±${Math.round(accuracy || 0)}m`, size: 'sm', flex: 5, color: '#1B7F4E' }
+            ]},
+          ].filter(Boolean)
+        },
+        footer: {
+          type: 'box', layout: 'vertical', paddingAll: '10px',
+          contents: [{
+            type: 'button', style: 'primary', color: '#1E3A5F', height: 'sm',
+            action: { type: 'uri', label: '📍 ดูตำแหน่ง Google Maps', uri: mapsUrl }
+          }]
+        }
+      }
+    };
+
+    for (const emp of targets) {
+      const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
+      if (lid) await push(lid, msg).catch(e => console.error('push error:', e.message));
+    }
+
+    console.log(`[fieldwork] checkin: ${empName} | ${lat},${lng} | JOB:${jobNo}`);
+    res.json({ ok: true, time: thTime });
+  } catch(e) {
+    console.error('/fieldwork/checkin error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── เช็คเอ้าท์หน้างาน ──────────────────────────────────
+app.post('/fieldwork/checkout', async (req, res) => {
+  try {
+    const { lineId, empName, team, lat, lng, accuracy, jobNo } = req.body;
+    if (!lineId || !lat || !lng) return res.status(400).json({ error: 'missing params' });
+
+    const now    = new Date();
+    const thTime = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const thDate = now.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const thTimeOnly = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    await ensureFieldworkSheet(sheets, sid);
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sid,
+      range: 'FieldworkAttendance!A:J',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          thDate, thTimeOnly, lineId,
+          empName || '—', team || '—',
+          'checkout', jobNo || '—', '—',
+          `${lat},${lng}`, mapsUrl,
+        ]]
+      }
+    });
+
+    // แจ้งหัวหน้า
+    const larkToken = await lark.getToken();
+    const emps = await lark.getAllEmployees(larkToken);
+    const ALWAYS_NOTIFY = ['ผู้บริหาร','เจ้าหน้าที่ฝ่ายขาย','ผู้จัดการฝ่ายผลิต','เจ้าหน้าที่ทรัพยากรมนุษย์'];
+    const TEAM_ROLES = { 'ฝ่ายติดตั้ง':['ผู้จัดการฝ่ายติดตั้ง'],'ฝ่ายบอยเลอร์':['หัวหน้าบอยเลอร์'],'ฝ่ายผลิต A':['หัวหน้าผลิต A'],'ฝ่ายผลิต B':['หัวหน้าผลิต B'] };
+    const notifyRoles = [...ALWAYS_NOTIFY, ...(TEAM_ROLES[team] || [])];
+    const targets = emps.filter(e => {
+      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+      const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      return lid && notifyRoles.includes(pos);
+    });
+
+    const msg = {
+      type: 'flex',
+      altText: `🏁 ${empName} เช็คเอ้าท์หน้างาน`,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box', layout: 'vertical',
+          backgroundColor: '#CF3636', paddingAll: '16px',
+          contents: [
+            { type: 'text', text: '🏁 เช็คเอ้าท์หน้างาน', color: '#ffffff', weight: 'bold', size: 'md' },
+            { type: 'text', text: thTime, color: 'rgba(255,255,255,0.7)', size: 'xs', margin: 'xs' },
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+          contents: [
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'พนักงาน', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: empName || '—', size: 'sm', weight: 'bold', flex: 5 }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'ทีม', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: team || '—', size: 'sm', flex: 5 }
+            ]},
+            jobNo ? { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: jobNo, size: 'sm', weight: 'bold', flex: 5 }
+            ]} : null,
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'GPS', size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: `±${Math.round(accuracy || 0)}m`, size: 'sm', flex: 5, color: '#CF3636' }
+            ]},
+          ].filter(Boolean)
+        },
+        footer: {
+          type: 'box', layout: 'vertical', paddingAll: '10px',
+          contents: [{
+            type: 'button', style: 'primary', color: '#1E3A5F', height: 'sm',
+            action: { type: 'uri', label: '📍 ดูตำแหน่ง Google Maps', uri: mapsUrl }
+          }]
+        }
+      }
+    };
+
+    for (const emp of targets) {
+      const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
+      if (lid) await push(lid, msg).catch(e => console.error('push error:', e.message));
+    }
+
+    console.log(`[fieldwork] checkout: ${empName} | ${lat},${lng}`);
+    res.json({ ok: true, time: thTime });
+  } catch(e) {
+    console.error('/fieldwork/checkout error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── รายงานปัญหา ─────────────────────────────────────────
+app.post('/fieldwork/report', async (req, res) => {
+  try {
+    const { lineId, empName, team, message, lat, lng, jobNo } = req.body;
+    if (!lineId || !message) return res.status(400).json({ error: 'missing params' });
+
+    const now  = new Date();
+    const thTime = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    const mapsUrl = lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : null;
+
+    // แจ้ง Lark Group + LINE หัวหน้า
+    await axios.post(process.env.LARK_WEBHOOK_URL, {
+      msg_type: 'text',
+      content: { text: `⚠️ รายงานปัญหาหน้างาน\nจาก: ${empName || lineId}\nทีม: ${team || '—'}\nJOB: ${jobNo || '—'}\nปัญหา: ${message}\nเวลา: ${thTime}${mapsUrl ? `\n📍 ${mapsUrl}` : ''}` }
+    }).catch(e => console.error('lark webhook report error:', e.message));
+
+    // ส่ง LINE ให้ HR_USER_ID ด้วย
+    await push(HR_USER_ID, {
+      type: 'flex',
+      altText: `⚠️ รายงานปัญหาจาก ${empName}`,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box', layout: 'vertical',
+          backgroundColor: '#C9A227', paddingAll: '16px',
+          contents: [
+            { type: 'text', text: '⚠️ รายงานปัญหาหน้างาน', color: '#ffffff', weight: 'bold', size: 'md' },
+            { type: 'text', text: thTime, color: 'rgba(255,255,255,0.7)', size: 'xs', margin: 'xs' },
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+          contents: [
+            { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'จาก', size: 'sm', color: '#888888', flex: 2 },
+              { type: 'text', text: empName || '—', size: 'sm', weight: 'bold', flex: 5 }
+            ]},
+            jobNo ? { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 2 },
+              { type: 'text', text: jobNo, size: 'sm', flex: 5 }
+            ]} : null,
+            { type: 'separator', margin: 'sm' },
+            { type: 'text', text: message, size: 'sm', wrap: true, margin: 'sm', color: '#333333' },
+          ].filter(Boolean)
+        },
+        footer: mapsUrl ? {
+          type: 'box', layout: 'vertical', paddingAll: '10px',
+          contents: [{
+            type: 'button', style: 'secondary', height: 'sm',
+            action: { type: 'uri', label: '📍 ดูตำแหน่ง', uri: mapsUrl }
+          }]
+        } : undefined
+      }
+    }).catch(e => console.error('push report error:', e.message));
+
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('/fieldwork/report error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── ดูประวัติวันนี้ ─────────────────────────────────────
+app.get('/fieldwork/today', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    let rows = [];
+    try {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: sid,
+        range: 'FieldworkAttendance!A:J',
+      });
+      rows = (r.data.values || []).slice(1);
+    } catch(e) { return res.json({ logs: [], checkedIn: false }); }
+
+    // กรองเฉพาะวันนี้ + lineId นี้
+    const todayTH = new Date().toLocaleDateString('th-TH', {
+      timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+
+    const todayRows = rows.filter(r => r[0] === todayTH && r[2] === lineId);
+    const logs = todayRows.map(r => {
+      const gpsParts = (r[8] || '').split(',');
+      return {
+        date:    r[0], time: r[1], type: r[5],
+        jobNo:   r[6],
+        lat:     gpsParts[0] ? parseFloat(gpsParts[0]) : null,
+        lng:     gpsParts[1] ? parseFloat(gpsParts[1]) : null,
+        mapsUrl: r[9],
+      };
+    });
+
+    // checkedIn = มี checkin และ checkout ล่าสุดไม่ใช่ checkout
+    const lastLog = logs[logs.length - 1];
+    const checkedIn = lastLog?.type === 'checkin';
+
+    res.json({ logs, checkedIn, today: todayTH });
+  } catch(e) {
+    console.error('/fieldwork/today error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Helper: สร้าง FieldworkAttendance sheet ถ้ายังไม่มี ──
+async function ensureFieldworkSheet(sheets, spreadsheetId) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const exists = meta.data.sheets.some(s => s.properties.title === 'FieldworkAttendance');
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'FieldworkAttendance' } } }] }
+      });
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: 'FieldworkAttendance!A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [['วันที่','เวลา','LINE ID','ชื่อ','ทีม','ประเภท','JOB','บริษัท','GPS','Maps Link']] }
+      });
+    }
+  } catch(e) { console.error('ensureFieldworkSheet error:', e.message); }
+}
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
