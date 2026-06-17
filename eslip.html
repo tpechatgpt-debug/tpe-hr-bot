@@ -719,25 +719,28 @@ function renderSummary(){
   const s=window._attSummary;
   if(!s)return'';
   const MTHS={'01':'ม.ค.','02':'ก.พ.','03':'มี.ค.','04':'เม.ย.','05':'พ.ค.','06':'มิ.ย.','07':'ก.ค.','08':'ส.ค.','09':'ก.ย.','10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.'};
-  const months=s.byMonth.map(m=>{const[mm,yyyy]=m.month.split('/');const thY=parseInt(yyyy)+543;return`<div class="sum-month-card"><div class="sum-month-name">${MTHS[mm]||mm} ${thY}</div><div class="sum-badges"><span class="sum-badge sb-work">🏢 ${m.work} วัน</span>${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}</div></div>`;}).join('');
+  const months=s.byMonth.map(m=>{const[mm,yyyy]=m.month.split('/');const thY=parseInt(yyyy)>2400?parseInt(yyyy):parseInt(yyyy)+543;return`<div class="sum-month-card"><div class="sum-month-name">${MTHS[mm]||mm} ${thY}</div><div class="sum-badges"><span class="sum-badge sb-work">🏢 ${m.work} วัน</span>${m.late>0?`<span class="sum-badge sb-late">⚠️ สาย ${m.late} ครั้ง</span>`:''}${m.otHours>0?`<span class="sum-badge sb-ot">⏰ OT ${m.otHours} ชม.</span>`:''}</div></div>`;}).join('');
   return`<div class="sum-wrap"><div class="sum-total"><div class="sum-total-title">📊 สรุปรวมทั้งหมด</div><div class="sum-total-grid"><div class="sum-total-item"><div class="sum-total-val c-g">${s.total.work}</div><div class="sum-total-label">วันทำงาน</div></div><div class="sum-total-item"><div class="sum-total-val c-r">${s.total.late}</div><div class="sum-total-label">วันที่สาย</div></div><div class="sum-total-item"><div class="sum-total-val" style="color:var(--orange)">${s.total.ot}</div><div class="sum-total-label">ชม. OT</div></div></div></div><div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">รายเดือน</div><div class="sum-months">${months}</div></div>`;
 }
 
 function renderAttendance(){
   if(!attData.length){document.getElementById('attContent').innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติ</p></div>';return;}
   const byYear={};
-  attData.forEach(r=>{if(!r.date)return;const parts=r.date.split('/');if(parts.length!==3)return;const dd=parseInt(parts[0]),mm=parseInt(parts[1]),yyyy=parseInt(parts[2]);if(!byYear[yyyy])byYear[yyyy]=[];byYear[yyyy].push({...r,dd,mm,yyyy});});
+  attData.forEach(r=>{if(!r.date)return;const parts=r.date.split('/');if(parts.length!==3)return;const dd=parseInt(parts[0]),mm=parseInt(parts[1]);
+    let yyyy=parseInt(parts[2]);
+    if(yyyy>2400)yyyy=yyyy-543; // แปลง พ.ศ. → ค.ศ.
+    if(!byYear[yyyy])byYear[yyyy]=[];byYear[yyyy].push({...r,dd,mm,yyyy});});
   const years=Object.keys(byYear).sort((a,b)=>b-a);
   const sumHtml=renderSummary();
   const sel=document.getElementById('yearSelect');
   sel.parentElement.insertAdjacentHTML('beforebegin',sumHtml);
-  sel.innerHTML=years.map((y,i)=>`<div class="year-chip${i===0?' active':''}" onclick="selectYear('${y}')">${parseInt(y)+543}</div>`).join('');
+  sel.innerHTML=years.map((y,i)=>`<div class="year-chip${i===0?' active':''}" onclick="selectYear('${y}')">${parseInt(y)>2400?parseInt(y):parseInt(y)+543}</div>`).join('');
   currentYear=years[0];
   renderYear(currentYear,byYear);
   window._attByYear=byYear;
 }
 
-function selectYear(y){currentYear=y;document.querySelectorAll('.year-chip').forEach(c=>{c.classList.toggle('active',c.textContent==parseInt(y)+543);});renderYear(y,window._attByYear);}
+function selectYear(y){currentYear=y;document.querySelectorAll('.year-chip').forEach(c=>{const yDisplay=parseInt(y)>2400?parseInt(y):parseInt(y)+543;c.classList.toggle('active',c.textContent==yDisplay);});renderYear(y,window._attByYear);}
 
 const MONTH_NAMES=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 
@@ -776,7 +779,7 @@ function renderYear(y,byYear){
       else if(rec&&rec.isFieldwork){cls+=' cal-leave';cells.push(`<div class="${cls}" style="border-color:rgba(6,182,212,.3)!important;background:rgba(6,182,212,.08)"><div class="cal-day-num">${d}</div><div class="cal-field">📍${rec.time?rec.time.slice(0,5):''}</div>${rec.timeOut?`<div class="cal-field" style="color:#10B981;background:rgba(16,185,129,.12)">🏁${rec.timeOut.slice(0,5)}</div>`:''}</div>`);}
       else{cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);}
     }
-    return`<div class="month-group"><div class="mg-header"><div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)+543}</div><div class="mg-stats"><span class="mg-stat mg-ok">${mrs.length} วัน</span>${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}</div></div><div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div></div>`;
+    return`<div class="month-group"><div class="mg-header"><div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)>2400?parseInt(y):parseInt(y)+543}</div><div class="mg-stats"><span class="mg-stat mg-ok">${mrs.length} วัน</span>${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}</div></div><div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div></div>`;
   }).join('');
   document.getElementById('attContent').innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div><p>ไม่มีข้อมูลในปีนี้</p></div>';
 }
