@@ -736,8 +736,16 @@ app.get('/eslip/attendance', async (req, res) => {
 
     // จัดกลุ่มตามวัน — เก็บทุก time ในวันเดียวกัน
     const byDate = {};
+    // normalize helper: แปลง พ.ศ. → ค.ศ. ถ้า yyyy > 2400
+    const normDate = (d) => {
+      const p = d.split('/');
+      if (p.length !== 3) return d;
+      const y = parseInt(p[2]);
+      if (y > 2400) p[2] = String(y - 543);
+      return p.join('/');
+    };
     finalRows.forEach(row => {
-      const date = (row[0]||'').trim();
+      const date = normDate((row[0]||'').trim());
       const time = (row[1]||'').trim();
       if (!date || !time) return;
       if (!byDate[date]) byDate[date] = [];
@@ -1987,7 +1995,8 @@ app.post('/fieldwork/checkin', async (req, res) => {
     if (!lineId || !lat || !lng) return res.status(400).json({ error: 'missing params' });
     const now = new Date();
     const thTime = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const thDate = now.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const _bkk = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    const thDate = `${String(_bkk.getDate()).padStart(2,'0')}/${String(_bkk.getMonth()+1).padStart(2,'0')}/${_bkk.getFullYear()}`;
     const thTimeOnly = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
     const { google } = require('googleapis');
@@ -2029,7 +2038,8 @@ app.post('/fieldwork/checkout', async (req, res) => {
     if (!lineId || !lat || !lng) return res.status(400).json({ error: 'missing params' });
     const now = new Date();
     const thTime = now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const thDate = now.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const _bkk = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    const thDate = `${String(_bkk.getDate()).padStart(2,'0')}/${String(_bkk.getMonth()+1).padStart(2,'0')}/${_bkk.getFullYear()}`;
     const thTimeOnly = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
     const { google } = require('googleapis');
@@ -2095,7 +2105,8 @@ app.get('/fieldwork/today', async (req, res) => {
     const sid = process.env.LOG_SHEET_ID;
     let rows = [];
     try { const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' }); rows = (r.data.values||[]).slice(1); } catch(e) { return res.json({ logs:[], checkedIn:false }); }
-    const todayTH = new Date().toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok', day:'2-digit', month:'2-digit', year:'numeric' });
+    const _n=new Date(), _b=new Date(_n.toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));
+    const todayTH=`${String(_b.getDate()).padStart(2,'0')}/${String(_b.getMonth()+1).padStart(2,'0')}/${_b.getFullYear()}`;
     const todayRows = rows.filter(r => r[0]===todayTH && r[2]===lineId);
     const logs = todayRows.map(r => { const gps=(r[8]||'').split(','); return { date:r[0], time:r[1], type:r[5], jobNo:r[6], lat:gps[0]?parseFloat(gps[0]):null, lng:gps[1]?parseFloat(gps[1]):null, mapsUrl:r[9] }; });
     const checkedIn = logs[logs.length-1]?.type === 'checkin';
