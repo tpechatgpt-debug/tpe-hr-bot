@@ -2142,6 +2142,41 @@ async function ensureFieldworkSheet(sheets, spreadsheetId) {
 }
 
 
+
+// ════ E-Slip Usage Log → Google Sheets ════
+app.post('/eslip/usage-log', express.json(), async (req, res) => {
+  res.json({ ok: true }); // ตอบก่อนเสมอ ไม่ให้ block แอพ
+  try {
+    const { lineId, name, action, detail, status, device, time } = req.body;
+    if (!lineId || !action) return;
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    // auto-create AppLog sheet ถ้ายังไม่มี
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sid });
+    const hasLog = meta.data.sheets.some(s => s.properties.title === 'AppLog');
+    if (!hasLog) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'AppLog' } } }] }
+      });
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'AppLog!A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [['Timestamp','LineID','ชื่อ','Action','Detail','Status','Device']] }
+      });
+    }
+    const bkk = new Date(new Date(time||Date.now()).toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));
+    const ts = `${String(bkk.getDate()).padStart(2,'0')}/${String(bkk.getMonth()+1).padStart(2,'0')}/${bkk.getFullYear()} ${String(bkk.getHours()).padStart(2,'0')}:${String(bkk.getMinutes()).padStart(2,'0')}`;
+    await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'AppLog!A:G',
+      valueInputOption: 'RAW',
+      requestBody: { values: [[ts, lineId, name||'', action, detail||'', status||'ok', device||'']] }
+    });
+  } catch(e) { console.log('[usage-log] error:', e.message); }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
