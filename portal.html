@@ -185,6 +185,7 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 .fw-log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.fw-log-dot.in{background:var(--green)}.fw-log-dot.out{background:var(--red)}
 .fw-log-time{font-size:12px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace}.fw-log-type{font-size:11px;color:var(--text3)}
 .fw-map-link{font-size:11px;color:var(--teal);text-decoration:none;margin-left:auto}.fw-map-link:hover{color:var(--gold)}
+.fw-location{font-size:11px;color:var(--teal);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
 .fw-filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .fw-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
 </style>
@@ -431,33 +432,53 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 
         <!-- ════ FIELDWORK ════ -->
         <div class="page" id="page-fieldwork">
-          <div class="sec-hdr"><div class="sec-title"><div class="dot"></div>Fieldwork Check-in</div></div>
-          <div class="fw-filter-bar">
-            <span style="font-size:12px;color:var(--text3);font-weight:600">วันที่:</span>
-            <input type="date" id="fwDatePicker" class="holi-inp" style="width:160px">
-            <button class="btn btn-primary btn-sm" onclick="loadFieldworkDay()">&#128260; โหลด</button>
-            <button class="btn-ghost" onclick="loadFieldworkToday()">วันนี้</button>
+          <div class="sec-hdr">
+            <div class="sec-title"><div class="dot"></div>Fieldwork Check-in</div>
+          </div>
+
+          <!-- Period tabs -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-primary btn-sm" id="fwTabToday" onclick="loadFwPeriod('today')">📅 วันนี้</button>
+            <button class="btn-ghost" id="fwTabMonth" onclick="loadFwPeriod('month')">เดือนนี้</button>
+            <button class="btn-ghost" id="fwTabYear" onclick="loadFwPeriod('year')">ปีนี้</button>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:8px">
+              <select class="att-sel" id="fwMonthPicker" style="width:120px" onchange="loadFwPeriod('custom')">
+                <option value="">— เลือกเดือน —</option>
+              </select>
+              <select class="att-sel" id="fwYearPicker" style="width:90px" onchange="loadFwPeriod('custom')"></select>
+            </div>
             <span class="status-chip" id="fwStatus"></span>
           </div>
+
+          <!-- KPI 4 ช่อง -->
           <div class="fw-stat-row">
-            <div class="kpi-card kc-green"><div class="kpi-icon">&#10003;</div><div class="kpi-label">เช็คอินแล้ว</div><div class="kpi-val" id="fwKpiIn">—</div><div class="kpi-sub">คน</div></div>
-            <div class="kpi-card kc-red"><div class="kpi-icon">&#9650;</div><div class="kpi-label">เช็คเอ้าท์แล้ว</div><div class="kpi-val" id="fwKpiOut">—</div><div class="kpi-sub">คน</div></div>
-            <div class="kpi-card kc-gold"><div class="kpi-icon">&#128205;</div><div class="kpi-label">ยังอยู่หน้างาน</div><div class="kpi-val" id="fwKpiOnsite">—</div><div class="kpi-sub">คน</div></div>
-            <div class="kpi-card kc-purple"><div class="kpi-icon">&#128228;</div><div class="kpi-label">รายงานปัญหา</div><div class="kpi-val" id="fwKpiReport">—</div><div class="kpi-sub">รายการ</div></div>
+            <div class="kpi-card kc-green"><div class="kpi-icon">✅</div><div class="kpi-label">เช็คอินแล้ว</div><div class="kpi-val" id="fwKpiIn">—</div><div class="kpi-sub">คน/ครั้ง</div></div>
+            <div class="kpi-card kc-red"><div class="kpi-icon">🏁</div><div class="kpi-label">เช็คเอ้าท์แล้ว</div><div class="kpi-val" id="fwKpiOut">—</div><div class="kpi-sub">คน/ครั้ง</div></div>
+            <div class="kpi-card kc-gold"><div class="kpi-icon">📍</div><div class="kpi-label">ยังอยู่หน้างาน</div><div class="kpi-val" id="fwKpiOnsite">—</div><div class="kpi-sub">คน</div></div>
+            <div class="kpi-card kc-purple"><div class="kpi-icon">📨</div><div class="kpi-label">รายงานปัญหา</div><div class="kpi-val" id="fwKpiReport">—</div><div class="kpi-sub">รายการ</div></div>
           </div>
-          <div class="fw-grid" id="fwEmpGrid"><div class="loading-msg">กด "วันนี้" เพื่อโหลด</div></div>
+
+          <!-- Employee cards -->
+          <div class="fw-grid" id="fwEmpGrid"><div class="loading-msg">เลือกช่วงเวลาเพื่อโหลดข้อมูล</div></div>
+
+          <!-- History table + Export -->
           <div class="card" id="fwHistoryCard" style="display:none">
             <div class="card-title">รายการเช็คอิน/เอ้าท์
               <span id="fwHistoryLabel" style="font-size:12px;color:var(--text3);font-weight:400"></span>
-              <button class="btn-ghost" onclick="exportFwCsv()">&#128229; Export CSV</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn-ghost" onclick="exportFwExcel()">📊 Export Excel</button>
+                <button class="btn-ghost" onclick="exportFwCsv()">📄 CSV</button>
+              </div>
             </div>
             <div class="tbl-wrap">
-              <table class="tbl"><thead><tr><th>เวลา</th><th>ชื่อ</th><th>ทีม</th><th>ประเภท</th><th>JOB</th><th>บริษัท</th><th style="text-align:right">GPS</th></tr></thead>
+              <table class="tbl"><thead><tr>
+                <th>เวลา</th><th>ชื่อ</th><th>ทีม</th><th>ประเภท</th>
+                <th>JOB</th><th>บริษัท</th><th>ตำแหน่ง (GPS)</th><th style="text-align:right">Maps</th>
+              </tr></thead>
               <tbody id="fwHistoryBody"></tbody></table>
             </div>
           </div>
         </div>
-
       </div><!-- /main-area -->
     </div><!-- /layout -->
   </div><!-- /tab-hr -->
@@ -825,33 +846,82 @@ initAttSelectors();
 
 // ════ FIELDWORK ADMIN ════
 let fwRawData=[];
+let fwRawData=[];
+
 function initFwPage(){
-  const t=new Date(),dp=document.getElementById('fwDatePicker');
-  if(dp&&!dp.value)dp.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  // populate month/year selectors
+  const mSel=document.getElementById('fwMonthPicker');
+  const ySel=document.getElementById('fwYearPicker');
+  if(mSel&&mSel.options.length<=1){
+    const thMonths=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    thMonths.forEach((m,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=m;mSel.appendChild(o);});
+    // default current month
+    mSel.value=new Date().getMonth()+1;
+  }
+  if(ySel&&ySel.options.length===0){
+    const y=new Date().getFullYear();
+    for(let i=y;i>=y-3;i--){const o=document.createElement('option');o.value=i;o.textContent=i+543+' ('+i+')';ySel.appendChild(o);}
+  }
+  loadFwPeriod('today');
 }
-function loadFieldworkToday(){
-  const t=new Date();
-  document.getElementById('fwDatePicker').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  loadFieldworkDay();
-}
-async function loadFieldworkDay(){
-  const dp=document.getElementById('fwDatePicker').value;
+
+async function loadFwPeriod(period){
+  // set active tab style
+  ['fwTabToday','fwTabMonth','fwTabYear'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.className=id==='fwTab'+period.charAt(0).toUpperCase()+period.slice(1)?'btn btn-primary btn-sm':'btn-ghost';}
+  });
   setEl('fwStatus','⏳ กำลังโหลด...');
   document.getElementById('fwEmpGrid').innerHTML='<div class="loading-msg"><span class="spinner"></span>Loading...</div>';
   document.getElementById('fwHistoryCard').style.display='none';
-  let thDate='';
-  if(dp){const[y,m,d]=dp.split('-');thDate=`${d}/${m}/${y}`;}
-  else{const n=new Date();thDate=`${String(n.getDate()).padStart(2,'0')}/${String(n.getMonth()+1).padStart(2,'0')}/${n.getFullYear()}`;}
+
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  let dateParam='';
+
+  if(period==='today'){
+    dateParam=`${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+    document.getElementById('fwTabToday').className='btn btn-primary btn-sm';
+    document.getElementById('fwTabMonth').className='btn-ghost';
+    document.getElementById('fwTabYear').className='btn-ghost';
+  } else if(period==='month'){
+    dateParam=`month:${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+    document.getElementById('fwTabToday').className='btn-ghost';
+    document.getElementById('fwTabMonth').className='btn btn-primary btn-sm';
+    document.getElementById('fwTabYear').className='btn-ghost';
+  } else if(period==='year'){
+    dateParam=`year:${now.getFullYear()}`;
+    document.getElementById('fwTabToday').className='btn-ghost';
+    document.getElementById('fwTabMonth').className='btn-ghost';
+    document.getElementById('fwTabYear').className='btn btn-primary btn-sm';
+  } else if(period==='custom'){
+    const m=document.getElementById('fwMonthPicker').value;
+    const y=document.getElementById('fwYearPicker').value;
+    if(!m||!y)return;
+    dateParam=`month:${y}-${pad(m)}`;
+    document.getElementById('fwTabToday').className='btn-ghost';
+    document.getElementById('fwTabMonth').className='btn-ghost';
+    document.getElementById('fwTabYear').className='btn-ghost';
+  }
+
   try{
-    const r=await fetch(`${API}/fieldwork/history?password=${PASS}&date=${encodeURIComponent(thDate)}`);
+    const r=await fetch(`${API}/fieldwork/history?password=${PASS}&date=${encodeURIComponent(dateParam)}`);
     const d=await r.json();if(d.error)throw new Error(d.error);
     fwRawData=d.logs||[];
-    setEl('fwHistoryLabel',thDate+' · '+fwRawData.length+' รายการ');
-    renderFieldworkCards(fwRawData);renderFieldworkHistory(fwRawData);
+    const label=period==='today'?'วันนี้':period==='month'?'เดือนนี้':period==='year'?'ปีนี้':'';
+    setEl('fwHistoryLabel',label+' · '+fwRawData.length+' รายการ');
+    renderFieldworkCards(fwRawData);
+    renderFieldworkHistory(fwRawData);
     setEl('fwStatus',`✅ ${fwRawData.length} รายการ`);
     if(fwRawData.length>0)document.getElementById('fwHistoryCard').style.display='block';
-  }catch(e){setEl('fwStatus','❌ '+e.message);document.getElementById('fwEmpGrid').innerHTML='<div class="empty-msg">❌ '+e.message+'</div>';}
+  }catch(e){
+    setEl('fwStatus','❌ '+e.message);
+    document.getElementById('fwEmpGrid').innerHTML='<div class="empty-msg">❌ '+e.message+'</div>';
+  }
 }
+
+function loadFieldworkToday(){loadFwPeriod('today');}
+
 function renderFieldworkCards(logs){
   const byEmp={};
   logs.forEach(l=>{if(!byEmp[l.empName])byEmp[l.empName]={team:l.team,logs:[]};byEmp[l.empName].logs.push(l);});
@@ -870,31 +940,57 @@ function renderFieldworkCards(logs){
     const sc=hi&&!ho?'fw-status-in':ho?'fw-status-out':'fw-status-none';
     const li=d.logs.filter(l=>l.type!=='report').map(l=>{
       const mp=l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:null;
-      return`<div class="fw-log-item"><div class="fw-log-dot ${l.type==='checkin'?'in':'out'}"></div><div class="fw-log-time">${l.time||'—'}</div><div class="fw-log-type">${l.type==='checkin'?'✅ เช็คอิน':'🏁 เช็คเอ้าท์'}</div>${mp?`<a class="fw-map-link" href="${mp}" target="_blank">📍 Maps</a>`:''}</div>`;
+      const loc=l.locationName?`<div class="fw-location">📍 ${l.locationName}</div>`:'';
+      return`<div class="fw-log-item"><div class="fw-log-dot ${l.type==='checkin'?'in':'out'}"></div><div class="fw-log-time">${l.time||'—'}</div><div class="fw-log-type">${l.type==='checkin'?'✅ เช็คอิน':'🏁 เช็คเอ้าท์'}</div>${loc}${mp?`<a class="fw-map-link" href="${mp}" target="_blank">🗺️</a>`:''}</div>`;
     }).join('');
     const rp=d.logs.filter(l=>l.type==='report');
-    const rh=rp.length?`<div style="margin-top:8px;padding:8px 10px;background:rgba(245,166,35,.08);border-radius:8px;border:1px solid rgba(245,166,35,.2)">${rp.map(r=>`<div style="font-size:11px;color:var(--gold2)">⚠️ ${r.company||'—'}</div>`).join('')}</div>`:'';
+    const rh=rp.length?`<div style="margin-top:8px;padding:8px 10px;background:var(--amber-dim);border-radius:8px;border:1px solid rgba(245,166,35,.2)">${rp.map(r=>`<div style="font-size:11px;color:var(--amber)">⚠️ ${r.company||'—'}</div>`).join('')}</div>`:'';
     return`<div class="fw-emp-card ${cc}"><div class="fw-emp-top"><div class="fw-emp-av">${(name||'?').charAt(0)}</div><div><div class="fw-emp-name">${name}</div><div class="fw-emp-team">${d.team||'—'}</div></div><div class="fw-status-badge ${sc}">${sl}</div></div>${li||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">ยังไม่มีการเช็คอิน</div>'}${rh}</div>`;
   }).join('');
 }
+
 function renderFieldworkHistory(logs){
   const tbody=document.getElementById('fwHistoryBody');
-  if(!logs.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>';return;}
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3)">ไม่มีข้อมูล</td></tr>';return;}
   tbody.innerHTML=logs.map(l=>{
     const mp=l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:null;
     const tp=l.type==='checkin'?'<span class="pill pill-green">✅ เช็คอิน</span>':l.type==='checkout'?'<span class="pill pill-red">🏁 เช็คเอ้าท์</span>':'<span class="pill pill-gold">⚠️ รายงาน</span>';
-    return`<tr><td class="mono">${l.time||'—'}</td><td style="font-weight:600">${l.empName||'—'}</td><td style="color:var(--text3)">${l.team||'—'}</td><td>${tp}</td><td>${l.jobNo!=='—'?'<span class="pill pill-gold">'+l.jobNo+'</span>':'<span style="color:var(--text3)">—</span>'}</td><td style="color:var(--text3)">${l.company!=='—'?l.company:'—'}</td><td style="text-align:right">${mp?`<a href="${mp}" target="_blank" class="fw-map-link">📍 Maps</a>`:'—'}</td></tr>`;
+    const loc=l.locationName||'—';
+    return`<tr><td class="mono">${l.date||''} ${l.time||''}</td><td style="font-weight:600">${l.empName||'—'}</td><td style="color:var(--text3)">${l.team||'—'}</td><td>${tp}</td><td>${l.jobNo!=='—'?'<span class="pill pill-gold">'+l.jobNo+'</span>':'<span style="color:var(--text3)">—</span>'}</td><td style="color:var(--text3)">${l.company!=='—'?l.company:'—'}</td><td style="font-size:11px;color:var(--teal);max-width:160px">${loc}</td><td style="text-align:right">${mp?`<a href="${mp}" target="_blank" class="fw-map-link">📍 Maps</a>`:'—'}</td></tr>`;
   }).join('');
 }
+
+// ── Export Excel (xlsx สวย) ──────────────────────────────
+function exportFwExcel(){
+  if(!fwRawData.length)return;
+  // สร้าง HTML table แปลงเป็น Excel
+  const period=document.getElementById('fwHistoryLabel').textContent||'fieldwork';
+  const headers=['วันที่','เวลา','ชื่อพนักงาน','ทีม','ประเภท','JOB','บริษัท','ตำแหน่ง (GPS)','Lat','Lng'];
+  const typeMap={checkin:'เช็คอิน',checkout:'เช็คเอ้าท์',report:'รายงาน'};
+  const rows=fwRawData.map(l=>[
+    l.date||'',l.time||'',l.empName||'',l.team||'',typeMap[l.type]||l.type,
+    l.jobNo||'',l.company||'',l.locationName||'',
+    l.lat||'',l.lng||''
+  ]);
+  // สร้าง HTML table สำหรับ Excel
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0FDF4}</style></head><body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{html+='<tr>'+r.map(c=>'<td>'+String(c).replace(/&/g,'&amp;')+'</td>').join('')+'</tr>';});
+  html+='</tbody></table></body></html>';
+  const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='Fieldwork_'+period.replace(/[^ก-๙a-zA-Z0-9]/g,'_')+'.xls';
+  a.click();
+}
+
 function exportFwCsv(){
   if(!fwRawData.length)return;
-  const rows=[['เวลา','ชื่อ','ทีม','ประเภท','JOB','บริษัท','GPS']];
-  fwRawData.forEach(l=>rows.push([l.time||'',l.empName||'',l.team||'',l.type||'',l.jobNo||'',l.company||'',l.lat&&l.lng?l.lat+','+l.lng:'']));
+  const rows=[['วันที่','เวลา','ชื่อ','ทีม','ประเภท','JOB','บริษัท','ตำแหน่ง','Lat','Lng']];
+  const typeMap={checkin:'เช็คอิน',checkout:'เช็คเอ้าท์',report:'รายงาน'};
+  fwRawData.forEach(l=>rows.push([l.date||'',l.time||'',l.empName||'',l.team||'',typeMap[l.type]||l.type,l.jobNo||'',l.company||'',l.locationName||'',l.lat||'',l.lng||'']));
   const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
-  a.download='fieldwork_'+(document.getElementById('fwDatePicker').value||'today')+'.csv';
-  a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='Fieldwork_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
 }
 
 </script>
