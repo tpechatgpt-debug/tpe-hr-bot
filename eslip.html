@@ -40,6 +40,10 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 
 .hdr{background:#fff;border-bottom:0.5px solid #E5E7EB;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .hdr-inner{display:flex;align-items:center;gap:12px;padding:14px 18px}
+.hdr-back{width:34px;height:34px;border-radius:10px;background:#F3F4F6;border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:18px;color:#374151;flex-shrink:0;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.hdr-back:active{background:#E5E7EB}
 .hdr-logo{width:36px;height:36px;border-radius:10px;background:#1B3E6F;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
 .hdr-title{flex:1;font-size:15px;font-weight:700;color:#111827}
 .hdr-sub{font-size:10px;color:#9CA3AF;margin-top:1px}
@@ -449,6 +453,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
   <div class="page" id="page-slip">
     <div class="hdr">
       <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
         <div class="hdr-logo">💰</div>
         <div>
           <div class="hdr-title">สลิปเงินเดือน</div>
@@ -468,6 +473,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
   <div class="page" id="page-att">
     <div class="hdr">
       <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
         <div class="hdr-logo">🕐</div>
         <div>
           <div class="hdr-title">เวลาเข้างาน</div>
@@ -485,6 +491,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
   <div class="page" id="page-field">
     <div class="hdr">
       <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
         <div class="hdr-logo">📍</div>
         <div>
           <div class="hdr-title">เช็คอินหน้างาน</div>
@@ -548,6 +555,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
   <div class="page" id="page-welfare">
     <div class="hdr">
       <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
         <div class="hdr-logo">🛡️</div>
         <div>
           <div class="hdr-title">สวัสดิการ &amp; ประกันภัย</div>
