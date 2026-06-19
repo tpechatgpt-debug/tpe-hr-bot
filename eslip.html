@@ -29,11 +29,21 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .ls-fill{height:100%;background:linear-gradient(90deg,#1B3E6F,#2563EB);animation:lf 1s ease forwards}
 @keyframes lf{to{width:100%}}
 
-.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #E5E7EB;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 8px rgba(0,0,0,.06)}
-.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 8px;cursor:pointer;transition:all .2s;border:none;background:transparent;color:#9CA3AF;font-family:'Sarabun',sans-serif;font-size:10px;gap:4px}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #E5E7EB;display:flex;flex-direction:column;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 8px rgba(0,0,0,.06)}
+.bnav-row{display:flex;width:100%}
+.bnav-row .bnav-btn:first-child{flex:1.5;border-right:0.5px solid #F3F4F6}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;cursor:pointer;transition:all .2s;border:none;background:transparent;color:#9CA3AF;font-family:'Sarabun',sans-serif;font-size:9px;gap:3px}
 .bnav-btn.active{color:#1B3E6F}
-.bnav-icon{font-size:20px;transition:transform .2s}
-.bnav-btn.active .bnav-icon{transform:scale(1.2)}
+.bnav-home{flex:1.7;border-right:0.5px solid #F3F4F6}
+.bnav-home .bnav-icon{font-size:24px}
+.bnav-home.active,.bnav-home:not(.active){font-size:11px;font-weight:600}
+.bnav-checkin{width:100%;padding:0 12px 8px;background:transparent;border:none}
+.bnav-checkin-btn{width:100%;padding:14px;background:linear-gradient(135deg,#16A34A,#15803D);border:none;border-radius:16px;font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(22,163,74,.4);letter-spacing:.01em}
+.bnav-checkin-btn:active{opacity:.88;transform:scale(.98)}
+.bnav-checkin-btn.active-checkin{background:linear-gradient(135deg,#15803D,#166534)}
+.bnav-icon{font-size:18px;transition:transform .2s}
+.bnav-btn.active .bnav-icon{transform:scale(1.15)}
+
 
 .page{display:none;min-height:100vh;padding-bottom:80px}
 .page.show{display:block}
@@ -358,21 +368,28 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <div id="app" style="display:none">
 
   <div class="bnav">
-    <button class="bnav-btn active" id="nav-home" onclick="showPage('home')">
-      <span class="bnav-icon">🏠</span>หลัก
-    </button>
-    <button class="bnav-btn" id="nav-slip" onclick="showPage('slip')">
-      <span class="bnav-icon">💰</span>สลิป
-    </button>
-    <button class="bnav-btn" id="nav-att" onclick="showPage('att')">
-      <span class="bnav-icon">🕐</span>เวลา
-    </button>
-    <button class="bnav-btn" id="nav-field" onclick="showPage('field')">
-      <span class="bnav-icon">📍</span>หน้างาน
-    </button>
-    <button class="bnav-btn" id="nav-welfare" onclick="showPage('welfare')">
-      <span class="bnav-icon">🛡️</span>สวัสดิการ
-    </button>
+    <div class="bnav-row">
+      <button class="bnav-btn bnav-home active" id="nav-home" onclick="showPage('home')">
+        <span class="bnav-icon">🏠</span>หน้าหลัก
+      </button>
+      <button class="bnav-btn" id="nav-slip" onclick="showPage('slip')">
+        <span class="bnav-icon">💰</span>สลิป
+      </button>
+      <button class="bnav-btn" id="nav-att" onclick="showPage('att')">
+        <span class="bnav-icon">🕐</span>เวลา
+      </button>
+      <button class="bnav-btn" id="nav-welfare" onclick="showPage('welfare')">
+        <span class="bnav-icon">🎁</span>สวัสดิการ
+      </button>
+      <button class="bnav-btn" id="nav-insurance" onclick="showPage('insurance')">
+        <span class="bnav-icon">🔒</span>ประกัน
+      </button>
+    </div>
+    <div class="bnav-checkin">
+      <button class="bnav-checkin-btn" id="nav-field" onclick="showPage('field')">
+        <span style="font-size:20px">📍</span> เช็คอินหน้างาน
+      </button>
+    </div>
   </div>
 
   <!-- PAGE: HOME -->
@@ -435,16 +452,17 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="qa-label">งานวันนี้</div>
           <div class="qa-desc" id="qaJobDesc">ดูงานที่ได้รับมอบหมาย</div>
         </div>
-        <div class="qa-btn qa-field" onclick="showPage('field')" style="grid-column:1/-1">
-          <div class="qa-icon">📍</div>
-          <div class="qa-label">เช็คอินหน้างาน</div>
-          <div class="qa-desc" id="qaFieldDesc">GPS อัตโนมัติ · แจ้งหัวหน้าทันที</div>
+        <div class="qa-btn" onclick="showPage('welfare')" style="border-color:#BBF7D0;background:#F0FDF4">
+          <div class="qa-icon">🎁</div>
+          <div class="qa-label">สวัสดิการ</div>
+          <div class="qa-desc">10 รายการ</div>
         </div>
-        <div class="qa-btn" onclick="showPage('welfare')" style="grid-column:1/-1;border-color:#BFDBFE;background:#EFF6FF">
-          <div class="qa-icon">🛡️</div>
-          <div class="qa-label">สวัสดิการ &amp; ประกันภัย</div>
-          <div class="qa-desc">ประกันอุบัติเหตุกลุ่ม · สวัสดิการองค์กร 10 รายการ</div>
+        <div class="qa-btn" onclick="showPage('insurance')" style="border-color:#FECACA;background:#FEF2F2">
+          <div class="qa-icon">🔒</div>
+          <div class="qa-label">ประกันภัยกลุ่ม</div>
+          <div class="qa-desc">คุ้มครองสูงสุด ฿300,000</div>
         </div>
+
       </div>
     </div>
   </div>
@@ -551,55 +569,19 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
-  <!-- PAGE: WELFARE & INSURANCE -->
+  <!-- PAGE: WELFARE (สวัสดิการองค์กร) -->
   <div class="page" id="page-welfare">
     <div class="hdr">
       <div class="hdr-inner">
         <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
-        <div class="hdr-logo">🛡️</div>
+        <div class="hdr-logo">🎁</div>
         <div>
-          <div class="hdr-title">สวัสดิการ &amp; ประกันภัย</div>
+          <div class="hdr-title">สวัสดิการองค์กร</div>
           <div class="hdr-sub">ธนพลเอ็นจิเนียริ่ง จำกัด</div>
         </div>
       </div>
     </div>
     <div style="padding:14px 18px 80px">
-
-      <!-- กรมทัณฑ์ / ประกันอุบัติเหตุกลุ่ม -->
-      <div class="welfare-section-title">🛡️ ประกันอุบัติเหตุกลุ่ม</div>
-      <div class="welfare-card">
-        <div class="welfare-item">
-          <div class="welfare-icon">💀</div>
-          <div class="welfare-info">
-            <div class="welfare-label">เสียชีวิต / อวัยวะ / สายตา / ทุพพลภาพถาวร</div>
-            <div class="welfare-amount">฿300,000</div>
-          </div>
-        </div>
-        <div class="welfare-item">
-          <div class="welfare-icon">⚔️</div>
-          <div class="welfare-info">
-            <div class="welfare-label">ถูกฆาตกรรมหรือลอบทำร้ายร่างกาย</div>
-            <div class="welfare-amount">฿300,000</div>
-          </div>
-        </div>
-        <div class="welfare-item">
-          <div class="welfare-icon">🏍️</div>
-          <div class="welfare-info">
-            <div class="welfare-label">เสียชีวิตจากอุบัติเหตุขณะขับ/ซ้อนรถจักรยานยนต์</div>
-            <div class="welfare-amount" style="color:#D97706">฿150,000</div>
-          </div>
-        </div>
-        <div class="welfare-item" style="border-bottom:none">
-          <div class="welfare-icon">🏥</div>
-          <div class="welfare-info">
-            <div class="welfare-label">ค่ารักษาพยาบาลต่ออุบัติเหตุ (ต่อครั้ง)</div>
-            <div class="welfare-amount" style="color:#16A34A">สูงสุด ฿30,000</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- สวัสดิการองค์กร -->
-      <div class="welfare-section-title" style="margin-top:20px">🎁 สวัสดิการองค์กร</div>
       <div class="welfare-card">
         <div class="welfare-benefit-item">
           <span class="welfare-check">✓</span>
@@ -642,7 +624,56 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <span>โบนัสรายปี (ตามผลประกอบการ)</span>
         </div>
       </div>
+    </div>
+  </div>
 
+  <!-- PAGE: INSURANCE (ประกันอุบัติเหตุกลุ่ม) -->
+  <div class="page" id="page-insurance">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')" aria-label="กลับหน้าหลัก">←</button>
+        <div class="hdr-logo">🔒</div>
+        <div>
+          <div class="hdr-title">ประกันอุบัติเหตุกลุ่ม</div>
+          <div class="hdr-sub">ความคุ้มครองพนักงาน TPE</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 18px 80px">
+      <div style="background:#FEF2F2;border:0.5px solid #FECACA;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#991B1B;display:flex;gap:8px;align-items:flex-start">
+        <span style="font-size:16px;flex-shrink:0">ℹ️</span>
+        <span>ความคุ้มครองนี้เป็นของประกันอุบัติเหตุกลุ่มที่บริษัทจัดให้ ครอบคลุมพนักงานทุกคน</span>
+      </div>
+      <div class="welfare-card">
+        <div class="welfare-item">
+          <div class="welfare-icon">💀</div>
+          <div class="welfare-info">
+            <div class="welfare-label">เสียชีวิต / สูญเสียอวัยวะ / สายตา / ทุพพลภาพถาวร</div>
+            <div class="welfare-amount">฿300,000</div>
+          </div>
+        </div>
+        <div class="welfare-item">
+          <div class="welfare-icon">⚔️</div>
+          <div class="welfare-info">
+            <div class="welfare-label">ถูกฆาตกรรมหรือลอบทำร้ายร่างกาย</div>
+            <div class="welfare-amount">฿300,000</div>
+          </div>
+        </div>
+        <div class="welfare-item">
+          <div class="welfare-icon">🏍️</div>
+          <div class="welfare-info">
+            <div class="welfare-label">เสียชีวิตจากอุบัติเหตุขณะขับ / ซ้อนรถจักรยานยนต์</div>
+            <div class="welfare-amount" style="color:#D97706">฿150,000</div>
+          </div>
+        </div>
+        <div class="welfare-item" style="border-bottom:none">
+          <div class="welfare-icon">🏥</div>
+          <div class="welfare-info">
+            <div class="welfare-label">ค่ารักษาพยาบาลจากอุบัติเหตุ (ต่อครั้ง)</div>
+            <div class="welfare-amount" style="color:#16A34A">สูงสุด ฿30,000</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -786,8 +817,15 @@ function renderJobCard(j){
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('show');
+  const pageEl=document.getElementById('page-'+page);
+  if(pageEl)pageEl.classList.add('show');
   const navEl=document.getElementById('nav-'+page);if(navEl)navEl.classList.add('active');
+  // checkin button active state
+  const checkinBtn=document.querySelector('.bnav-checkin-btn');
+  if(checkinBtn){
+    if(page==='field')checkinBtn.classList.add('active-checkin');
+    else checkinBtn.classList.remove('active-checkin');
+  }
   if(page==='field'&&!fieldState.initialized){fieldState.initialized=true;initFieldPage();}
   logAction(page,page);
 }
