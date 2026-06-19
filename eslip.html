@@ -29,23 +29,17 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .ls-fill{height:100%;background:linear-gradient(90deg,#1B3E6F,#2563EB);animation:lf 1s ease forwards}
 @keyframes lf{to{width:100%}}
 
-.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #E5E7EB;display:flex;flex-direction:column;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 8px rgba(0,0,0,.06)}
-.bnav-row{display:flex;width:100%}
-.bnav-row .bnav-btn:first-child{flex:1.5;border-right:0.5px solid #F3F4F6}
-.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;cursor:pointer;transition:all .2s;border:none;background:transparent;color:#9CA3AF;font-family:'Sarabun',sans-serif;font-size:9px;gap:3px}
-.bnav-btn.active{color:#1B3E6F}
-.bnav-home{flex:1.7;border-right:0.5px solid #F3F4F6}
-.bnav-home .bnav-icon{font-size:24px}
-.bnav-home.active,.bnav-home:not(.active){font-size:11px;font-weight:600}
-.bnav-checkin{width:100%;padding:0 12px 8px;background:transparent;border:none}
-.bnav-checkin-btn{width:100%;padding:14px;background:linear-gradient(135deg,#16A34A,#15803D);border:none;border-radius:16px;font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(22,163,74,.4);letter-spacing:.01em}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #E5E7EB;display:flex;align-items:stretch;z-index:100;padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -1px 8px rgba(0,0,0,.06)}
+.bnav-home-btn{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:#F3F4F6;border:none;border-radius:14px;cursor:pointer;color:#1B3E6F;font-family:'Sarabun',sans-serif;font-size:10px;font-weight:700;padding:8px 4px;transition:all .15s}
+.bnav-home-btn:active{background:#E5E7EB}
+.bnav-home-btn.active{background:#EFF6FF;color:#1B3E6F}
+.bnav-home-icon{font-size:26px}
+.bnav-checkin-btn{flex:1;padding:0 16px;background:linear-gradient(135deg,#16A34A,#15803D);border:none;border-radius:16px;font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(22,163,74,.35);letter-spacing:.01em;min-height:56px}
 .bnav-checkin-btn:active{opacity:.88;transform:scale(.98)}
 .bnav-checkin-btn.active-checkin{background:linear-gradient(135deg,#15803D,#166534)}
-.bnav-icon{font-size:18px;transition:transform .2s}
-.bnav-btn.active .bnav-icon{transform:scale(1.15)}
 
 
-.page{display:none;min-height:100vh;padding-bottom:80px}
+.page{display:none;min-height:100vh;padding-bottom:88px}
 .page.show{display:block}
 
 .hdr{background:#fff;border-bottom:0.5px solid #E5E7EB;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.05)}
@@ -368,28 +362,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 <div id="app" style="display:none">
 
   <div class="bnav">
-    <div class="bnav-row">
-      <button class="bnav-btn bnav-home active" id="nav-home" onclick="showPage('home')">
-        <span class="bnav-icon">🏠</span>หน้าหลัก
-      </button>
-      <button class="bnav-btn" id="nav-slip" onclick="showPage('slip')">
-        <span class="bnav-icon">💰</span>สลิป
-      </button>
-      <button class="bnav-btn" id="nav-att" onclick="showPage('att')">
-        <span class="bnav-icon">🕐</span>เวลา
-      </button>
-      <button class="bnav-btn" id="nav-welfare" onclick="showPage('welfare')">
-        <span class="bnav-icon">🎁</span>สวัสดิการ
-      </button>
-      <button class="bnav-btn" id="nav-insurance" onclick="showPage('insurance')">
-        <span class="bnav-icon">🔒</span>ประกัน
-      </button>
-    </div>
-    <div class="bnav-checkin">
-      <button class="bnav-checkin-btn" id="nav-field" onclick="showPage('field')">
-        <span style="font-size:20px">📍</span> เช็คอินหน้างาน
-      </button>
-    </div>
+    <button class="bnav-home-btn active" id="nav-home" onclick="showPage('home')">
+      <span class="bnav-home-icon">🏠</span>หน้าหลัก
+    </button>
+    <button class="bnav-checkin-btn" id="nav-field" onclick="showPage('field')">
+      <span style="font-size:22px">📍</span> เช็คอินหน้างาน
+    </button>
   </div>
 
   <!-- PAGE: HOME -->
@@ -816,16 +794,14 @@ function renderJobCard(j){
 
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
-  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl)pageEl.classList.add('show');
-  const navEl=document.getElementById('nav-'+page);if(navEl)navEl.classList.add('active');
-  // checkin button active state
+  // home btn active
+  const homeBtn=document.querySelector('.bnav-home-btn');
+  if(homeBtn)homeBtn.classList.toggle('active', page==='home');
+  // checkin btn active
   const checkinBtn=document.querySelector('.bnav-checkin-btn');
-  if(checkinBtn){
-    if(page==='field')checkinBtn.classList.add('active-checkin');
-    else checkinBtn.classList.remove('active-checkin');
-  }
+  if(checkinBtn)checkinBtn.classList.toggle('active-checkin', page==='field');
   if(page==='field'&&!fieldState.initialized){fieldState.initialized=true;initFieldPage();}
   logAction(page,page);
 }
