@@ -2114,6 +2114,25 @@ app.get('/fieldwork/today', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// cache reverse geocoding
+const geocodeCache = {};
+async function reverseGeocode(lat, lng) {
+  if (!lat || !lng) return '';
+  const key = `${parseFloat(lat).toFixed(4)},${parseFloat(lng).toFixed(4)}`;
+  if (geocodeCache[key]) return geocodeCache[key];
+  try {
+    const r = await axios.get(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=th`,
+      { headers: { 'User-Agent': 'TPE-HR-Bot/1.0' }, timeout: 4000 }
+    );
+    const a = r.data?.address || {};
+    const parts = [a.road, a.suburb||a.neighbourhood||a.village, a.city||a.town||a.county].filter(Boolean);
+    const name = parts.slice(0,3).join(', ') || '';
+    geocodeCache[key] = name;
+    return name;
+  } catch(e) { geocodeCache[key]=''; return ''; }
+}
+
 app.get('/fieldwork/history', async (req, res) => {
   const { password, date } = req.query;
   if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
@@ -2123,11 +2142,52 @@ app.get('/fieldwork/history', async (req, res) => {
     const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
     const sid = process.env.LOG_SHEET_ID;
     let rows = [];
-    try { const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' }); rows = (r.data.values||[]).slice(1); } catch(e) { return res.json({ logs:[] }); }
-    const filtered = date ? rows.filter(r => r[0]===date) : rows.slice(-200);
-    const logs = filtered.map(r => { const gps=(r[8]||'').split(','); return { date:r[0]||'', time:r[1]||'', lineId:r[2]||'', empName:r[3]||'', team:r[4]||'', type:r[5]||'', jobNo:r[6]||'—', company:r[7]||'—', lat:gps[0]?parseFloat(gps[0]):null, lng:gps[1]?parseFloat(gps[1]):null, mapsUrl:r[9]||'' }; });
+    try {
+      const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' });
+      rows = (r.data.values||[]).slice(1);
+    } catch(e) { return res.json({ logs: [] }); }
+
+    // กรองตาม period
+    let filtered = rows;
+    if (date) {
+      if (date.startsWith('month:')) {
+        const [y, m] = date.replace('month:','').split('-');
+        filtered = rows.filter(r => { const p=(r[0]||'').split('/'); return p[2]===y && p[1]===m.padStart(2,'0'); });
+      } else if (date.startsWith('year:')) {
+        const y = date.replace('year:','');
+        filtered = rows.filter(r => (r[0]||'').split('/')[2]===y);
+      } else {
+        filtered = rows.filter(r => r[0]===date);
+      }
+    } else {
+      filtered = rows.slice(-200);
+    }
+
+    // reverse geocode เฉพาะ GPS ที่ไม่ซ้ำ (จำกัด 15)
+    const uniqueGPS = [...new Set(filtered.map(r=>r[8]).filter(Boolean))].slice(0,15);
+    await Promise.all(uniqueGPS.map(async coords => {
+      const [lat,lng] = coords.split(',').map(parseFloat);
+      if (lat && lng) await reverseGeocode(lat, lng);
+    }));
+
+    const logs = filtered.map(r => {
+      const gps = (r[8]||'').split(',');
+      const lat = gps[0] ? parseFloat(gps[0]) : null;
+      const lng = gps[1] ? parseFloat(gps[1]) : null;
+      const locKey = lat && lng ? `${lat.toFixed(4)},${lng.toFixed(4)}` : '';
+      return {
+        date:r[0]||'', time:r[1]||'', lineId:r[2]||'',
+        empName:r[3]||'', team:r[4]||'', type:r[5]||'',
+        jobNo:r[6]||'—', company:r[7]||'—',
+        lat, lng, mapsUrl:r[9]||'',
+        locationName: locKey ? (geocodeCache[locKey]||'') : '',
+      };
+    });
     res.json({ ok: true, logs, date: date||'all' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error('/fieldwork/history error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 async function ensureFieldworkSheet(sheets, spreadsheetId) {
