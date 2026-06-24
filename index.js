@@ -1681,24 +1681,33 @@ app.get('/api/dashboard', async (req, res) => {
         ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
         : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
 
-      // ถ้าชุดไหนไม่ระบุชื่อสมาชิก → ดึงทั้งชุดจาก HR Base
-      let allMembers = [...namedMembers];
-      teams.forEach(team => {
+      // แยกทีละชุด: ชุดไหนไม่มีใครใน namedMembers → ทั้งชุด, มี → เฉพาะคนนั้น
+      // ผลลัพธ์เป็น array ของ { team, members[], allTeam }
+      const teamBreakdown = teams.map(team => {
         const teamMembers = teamMemberMap[team] || [];
-        if (namedMembers.length === 0) {
-          // ไม่ระบุชื่อเลย → เอาทั้งชุด
-          teamMembers.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
+        // หาว่า namedMembers มีคนอยู่ในชุดนี้ไหม
+        const matchedInTeam = namedMembers.filter(m => teamMembers.includes(m));
+        if (matchedInTeam.length > 0) {
+          return { team, members: matchedInTeam, allTeam: false };
         } else {
-          // ระบุชื่อบางคน → เฉพาะที่ระบุมา (ไม่ expand)
+          // ไม่มีใคร named ในชุดนี้ → ทั้งชุด
+          return { team, members: teamMembers, allTeam: true };
         }
+      });
+
+      // รวมเป็น flat list สำหรับ backward compat + เก็บ breakdown แยก
+      const allMembers = [];
+      teamBreakdown.forEach(tb => {
+        tb.members.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
       });
 
       return {
         id: a.record_id,
         team: teams.join('||'),
         members: allMembers.join(', '),
-        membersNamed: namedMembers.join(', '), // ชื่อที่ระบุโดยตรง
-        membersAllTeam: namedMembers.length === 0, // true = ทั้งชุดไป
+        membersNamed: namedMembers.join(', '),
+        membersAllTeam: namedMembers.length === 0,
+        teamBreakdown, // [{ team, members[], allTeam }]
         jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
         jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
         company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
