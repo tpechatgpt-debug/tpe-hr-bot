@@ -227,7 +227,21 @@ function renderTeamBadges(teamStr) {
   }).join('')}</div>`;
 }
 
-function renderMembers(memberStr, allTeam) {
+function renderMembers(memberStr, allTeam, teamBreakdown) {
+  // ถ้ามี teamBreakdown → render แบบแยกชุด
+  if (teamBreakdown && teamBreakdown.length > 0) {
+    return teamBreakdown.map(tb => {
+      const teamLabel = `<div style="font-size:10px;font-weight:700;color:var(--navy);margin-top:4px;margin-bottom:2px">${tb.team}</div>`;
+      if (tb.allTeam) {
+        const badge = `<span style="font-size:9px;background:#E0F2FE;color:#0369A1;padding:1px 7px;border-radius:10px">ทั้งชุด</span>`;
+        return teamLabel + badge;
+      } else {
+        const names = tb.members.map(m => `<div class="member-item">• ${m}</div>`).join('');
+        return teamLabel + names;
+      }
+    }).join('');
+  }
+  // fallback เดิม
   const members = parseMembers(memberStr);
   if (!members.length) return '<span style="color:var(--border2);font-size:11px">ทั้งชุด</span>';
   const badge = allTeam ? '<span style="font-size:9px;background:#E0F2FE;color:#0369A1;padding:1px 6px;border-radius:10px;margin-bottom:4px;display:inline-block">ทั้งชุด</span><br>' : '';
@@ -398,7 +412,11 @@ function showTip(e, el) {
       ${d.province ? `<div>📍 ${d.province}</div>` : ''}
       <div>📅 ${d.start} – ${d.end}</div>
       <div>🔖 ${d.status}</div>
-      ${d.members ? `<div>👥 ${d.membersAllTeam ? '(ทั้งชุด) ' : ''}${d.members}</div>` : ''}
+      ${d.members ? `<div>👥 ${
+      d.teamBreakdown && d.teamBreakdown.length > 1
+        ? d.teamBreakdown.map(tb => tb.team + (tb.allTeam ? ' (ทั้งชุด)' : ': ' + tb.members.join(', '))).join(' | ')
+        : (d.membersAllTeam ? '(ทั้งชุด) ' : '') + d.members
+    }</div>` : ''}
     `;
   } catch { tip.innerHTML = el.dataset.tip; }
   tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 320) + 'px';
@@ -444,7 +462,7 @@ function renderTable() {
       <td class="td-date">${fmtDate(a.startDate)}</td>
       <td class="td-date">${fmtDate(a.endDate)}</td>
       <td><span class="badge ${bc[a.status] || 'badge-plan'}">${a.status || 'วางแผน'}</span></td>
-      <td>${renderMembers(a.members, a.membersAllTeam)}</td>
+      <td>${renderMembers(a.members, a.membersAllTeam, a.teamBreakdown)}</td>
       <td style="font-size:12px;color:var(--text3);white-space:nowrap">${a.car || '—'}</td>
     </tr>`).join('');
 }
