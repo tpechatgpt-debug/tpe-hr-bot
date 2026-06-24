@@ -1650,19 +1650,55 @@ app.get('/api/dashboard', async (req, res) => {
     const jobMap = {};
     jobs.forEach(j => { jobMap[j.record_id] = j.fields; });
 
+    // ดึงพนักงานจาก HR Base เพื่อ map ชุด → สมาชิกทั้งหมด
+    const empsForDash = await lark.getAllEmployees(larkToken).catch(() => []);
+    // สร้าง map: ชื่อชุด → ['ชื่อพนักงาน1', 'ชื่อพนักงาน2', ...]
+    const teamMemberMap = {};
+    empsForDash.forEach(e => {
+      const teamRaw = (e['ชุด'] || '').toString().trim();
+      if (!teamRaw) return;
+      const empName = (e['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
+      if (!empName) return;
+      teamRaw.split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+        if (!teamMemberMap[t]) teamMemberMap[t] = [];
+        teamMemberMap[t].push(empName);
+      });
+    });
+
     // แปลง assignments
     const result = assignments.map(a => {
       const f = a.fields;
       const jobId = Array.isArray(f['JOB']) ? f['JOB'][0]?.record_id : null;
       const jobFields = jobId ? jobMap[jobId] : null;
+
+      // ชุดที่ระบุใน assignment
+      const teams = Array.isArray(f['ชุด'])
+        ? f['ชุด'].map(t => typeof t === 'object' ? (t.text||t.value||'') : t.toString()).filter(Boolean)
+        : (f['ชุด'] ? [f['ชุด'].toString()] : []);
+
+      // สมาชิกที่ระบุชื่อมาโดยตรง
+      const namedMembers = Array.isArray(f['สมาชิก'])
+        ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
+        : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
+
+      // ถ้าชุดไหนไม่ระบุชื่อสมาชิก → ดึงทั้งชุดจาก HR Base
+      let allMembers = [...namedMembers];
+      teams.forEach(team => {
+        const teamMembers = teamMemberMap[team] || [];
+        if (namedMembers.length === 0) {
+          // ไม่ระบุชื่อเลย → เอาทั้งชุด
+          teamMembers.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
+        } else {
+          // ระบุชื่อบางคน → เฉพาะที่ระบุมา (ไม่ expand)
+        }
+      });
+
       return {
         id: a.record_id,
-        team: Array.isArray(f['ชุด'])
-        ? f['ชุด'].map(t => typeof t === 'object' ? (t.text||t.value||'') : t.toString()).filter(Boolean).join('||')
-        : (f['ชุด'] || '').toString(),
-        members: Array.isArray(f['สมาชิก'])
-        ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean).join(', ')
-        : (f['สมาชิก'] || '').toString(),
+        team: teams.join('||'),
+        members: allMembers.join(', '),
+        membersNamed: namedMembers.join(', '), // ชื่อที่ระบุโดยตรง
+        membersAllTeam: namedMembers.length === 0, // true = ทั้งชุดไป
         jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
         jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
         company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
