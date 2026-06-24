@@ -1681,21 +1681,30 @@ app.get('/api/dashboard', async (req, res) => {
         ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
         : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
 
-      // แยกทีละชุด: ชุดไหนไม่มีใครใน namedMembers → ทั้งชุด, มี → เฉพาะคนนั้น
-      // ผลลัพธ์เป็น array ของ { team, members[], allTeam }
+      // Logic:
+      // - ถ้า namedMembers มีชื่อ → ชุดที่มีคนนั้นอยู่ = แสดงเฉพาะคนนั้น
+      //                              ชุดที่ไม่มีคนนั้นเลย = ทั้งชุด
+      // - ถ้า namedMembers ว่าง → ทุกชุด ทั้งชุด
       const teamBreakdown = teams.map(team => {
         const teamMembers = teamMemberMap[team] || [];
-        // หาว่า namedMembers มีคนอยู่ในชุดนี้ไหม
-        const matchedInTeam = namedMembers.filter(m => teamMembers.includes(m));
+        if (namedMembers.length === 0) {
+          // ไม่ระบุชื่อใดเลย → ทั้งชุด
+          return { team, members: teamMembers, allTeam: true };
+        }
+        // มีชื่อระบุ → หาว่าชื่อที่ระบุมีใครอยู่ในชุดนี้
+        const matchedInTeam = namedMembers.filter(m =>
+          teamMembers.some(tm => tm.includes(m) || m.includes(tm))
+        );
         if (matchedInTeam.length > 0) {
+          // มีคนในชุดนี้ถูกระบุ → แสดงเฉพาะคนนั้น
           return { team, members: matchedInTeam, allTeam: false };
         } else {
-          // ไม่มีใคร named ในชุดนี้ → ทั้งชุด
+          // ไม่มีชื่อที่ระบุอยู่ในชุดนี้เลย → ทั้งชุด
           return { team, members: teamMembers, allTeam: true };
         }
       });
 
-      // รวมเป็น flat list สำหรับ backward compat + เก็บ breakdown แยก
+      // รวมเป็น flat list
       const allMembers = [];
       teamBreakdown.forEach(tb => {
         tb.members.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
