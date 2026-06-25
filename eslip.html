@@ -965,12 +965,8 @@ async function saveImg(){
     if(!r.ok)throw new Error('สร้างรูปไม่สำเร็จ ('+r.status+')');
     const blob=await r.blob();
     const filename='สลิป_'+currentDoc.month+'.jpg';
-    const file=new File([blob],filename,{type:'image/jpeg'});
-    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({files:[file],title:filename});
-      showToast('✅ บันทึกรูปสำเร็จ');return;
-    }
+    // ถ้าอยู่ใน LIFF (iOS หรือ Android) → upload แล้ว openWindow
+    // iOS LINE บล็อก navigator.share ใน in-app browser เสมอ
     const isLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
     if(isLiff){
       const fd=new FormData();fd.append('file',blob,filename);
@@ -979,6 +975,12 @@ async function saveImg(){
       if(!ud.url)throw new Error('upload failed');
       liff.openWindow({url:ud.url,external:true});
       showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;
+    }
+    // Browser ภายนอก — ลอง Web Share API ก่อน (Safari, Chrome บน iOS)
+    const file=new File([blob],filename,{type:'image/jpeg'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:filename});showToast('✅ บันทึกรูปสำเร็จ');return;}
+      catch(shareErr){if(shareErr.name==='AbortError'){showToast('ยกเลิก');return;}}
     }
     const objUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objUrl;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(objUrl),3000);showToast('✅ บันทึกรูปสำเร็จ');
   }catch(e){await logErr('saveImage_ERROR',e.name+': '+e.message);logAction('error','saveImg: '+e.message,'error');if(e.name==='AbortError')showToast('ยกเลิก');else showToast('❌ '+e.message);}
