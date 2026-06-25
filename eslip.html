@@ -967,9 +967,19 @@ async function saveImg(){
     const filename='สลิป_'+currentDoc.month+'.jpg';
     const file=new File([blob],filename,{type:'image/jpeg'});
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});showToast('✅ บันทึกรูปสำเร็จ');return;}
+    if(isIOS&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:filename});
+      showToast('✅ บันทึกรูปสำเร็จ');return;
+    }
     const isLiff=typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient();
-    if(isLiff){const fd=new FormData();fd.append('file',blob,filename);const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});const ud=await up.json();if(!ud.url)throw new Error('upload failed');liff.openWindow({url:ud.url,external:true});showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;}
+    if(isLiff){
+      const fd=new FormData();fd.append('file',blob,filename);
+      const up=await fetch(`${API}/eslip/temp-image`,{method:'POST',body:fd});
+      const ud=await up.json();
+      if(!ud.url)throw new Error('upload failed');
+      liff.openWindow({url:ud.url,external:true});
+      showToast('📱 กดปุ่มบันทึกในหน้าที่เปิด');return;
+    }
     const objUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objUrl;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(objUrl),3000);showToast('✅ บันทึกรูปสำเร็จ');
   }catch(e){await logErr('saveImage_ERROR',e.name+': '+e.message);logAction('error','saveImg: '+e.message,'error');if(e.name==='AbortError')showToast('ยกเลิก');else showToast('❌ '+e.message);}
   finally{btn.textContent='💾 บันทึกรูป';btn.classList.remove('btn-dis');}
