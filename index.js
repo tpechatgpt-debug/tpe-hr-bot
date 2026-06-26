@@ -796,8 +796,6 @@ app.get('/eslip/attendance', async (req, res) => {
       console.log(`[Attendance]   ${d}: [${t.join(', ')}]`);
     });
 
-    const toM = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
-
     const toM = t => {
       // รองรับ cross-midnight: 00:xx–03:29 นับเป็นนาทีต่อจาก 24:00 (1440+)
       const[h,m,s]=(t||'00:00:00').split(':').map(Number);
