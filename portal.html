@@ -840,7 +840,7 @@ function renderAttTable(){
           // ลืมสแกนเข้า — สีส้ม แสดงแค่ timeout
           cls+=' c-no-in';
           cells+='<div class="'+cls+'"><div class="cal-dnum">'+d+'</div>'+
-            '<div class="cal-tin" style="font-size:7px;color:#D97706;background:rgba(217,119,6,.15)">ลืมสแกน</div>'+
+            '<div class="cal-tin" style="font-size:10px;color:#D97706;background:rgba(217,119,6,.15);font-weight:700">—</div>'+
             '<div class="cal-tout" style="color:#D97706">'+(a.out?a.out.slice(0,5):'')+'</div></div>';
         } else {
           if(a.status==='ok')cls+=' c-ok';else cls+=' c-late';
