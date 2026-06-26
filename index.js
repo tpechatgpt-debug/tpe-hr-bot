@@ -1391,32 +1391,36 @@ app.post('/eslip/temp-image', upload.single('file'), (req, res) => {
 });
 app.get('/eslip/temp-image/:token', (req, res) => {
   const entry = tempImages[req.params.token];
-  if (!entry) return res.status(404).send('หมดอายุ');
-  // ถ้ามี ?download=1 ให้ download เลย
+  if (!entry) return res.status(404).send('หมดอายุ กรุณากดบันทึกรูปใหม่');
+  // ?download=1 → ส่งไฟล์โดยตรง
   if (req.query.download === '1') {
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(entry.filename)}"`);
     res.send(entry.buffer);
     return;
   }
-  // ไม่งั้นแสดงหน้า HTML พร้อมปุ่มบันทึก
   const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
-  const imgUrl = `${RENDER_URL}/eslip/temp-image-raw/${req.params.token}`;
-  const dlUrl  = `${RENDER_URL}/eslip/temp-image/${req.params.token}?download=1`;
+  const imgUrl  = `${RENDER_URL}/eslip/temp-image-raw/${req.params.token}`;
+  const dlUrl   = `${RENDER_URL}/eslip/temp-image/${req.params.token}?download=1`;
   res.send(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-    <title>สลิปเงินเดือน</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>บันทึกสลิป</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box}
-      body{background:#111;font-family:sans-serif;min-height:100vh}
-      .bar{background:linear-gradient(135deg,#1E3A5F,#2a4f80);padding:16px;text-align:center}
-      .btn{display:block;background:#C9952A;color:#fff;font-size:16px;font-weight:700;
-           padding:14px;text-align:center;border-radius:12px;margin:12px 16px;text-decoration:none}
+      body{background:#111;font-family:'Sarabun',sans-serif;min-height:100vh}
+      .bar{background:linear-gradient(135deg,#1B3E6F,#2a4f80);padding:16px;text-align:center;color:#fff;font-size:14px;font-weight:700}
+      .tip{background:#1a2a1a;margin:12px;border-radius:12px;padding:12px 14px;font-size:12px;color:#86efac;line-height:1.6}
+      .btn{display:block;background:#16A34A;color:#fff;font-size:16px;font-weight:700;padding:15px;text-align:center;border-radius:14px;margin:12px;text-decoration:none}
+      .btn-sec{display:block;background:#1B3E6F;color:#fff;font-size:14px;font-weight:600;padding:13px;text-align:center;border-radius:14px;margin:8px 12px;text-decoration:none}
       img{width:100%;display:block;margin-top:8px}
     </style></head><body>
-    <div class="bar" style="color:#fff;font-size:14px">📄 สลิปเงินเดือน</div>
-    <a class="btn" href="${dlUrl}" download>💾 บันทึกรูปลงเครื่อง</a>
+    <div class="bar">💰 ${entry.filename}</div>
+    <div class="tip">📌 วิธีบันทึก<br>
+      📱 <b>iOS:</b> กดปุ่มเขียว → เลือก "บันทึกในรูปภาพ"<br>
+      🤖 <b>Android:</b> กดปุ่มเขียว หรือกดค้างที่รูป → "บันทึก"
+    </div>
+    <a class="btn" href="${dlUrl}">💾 บันทึกรูปลงเครื่อง</a>
     <img src="${imgUrl}" alt="สลิป">
   </body></html>`);
 });
@@ -2279,14 +2283,26 @@ app.post('/eslip/usage-log', express.json(), async (req, res) => {
       });
       await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'AppLog!A1',
         valueInputOption: 'RAW',
-        requestBody: { values: [['Timestamp','LineID','ชื่อ','Action','Detail','Status','Device']] }
+        requestBody: { values: [['Timestamp','LineID','ชื่อ','Action','Detail','Status','Device','หมายเหตุ']] }
       });
     }
     const bkk = new Date(new Date(time||Date.now()).toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));
     const ts = `${String(bkk.getDate()).padStart(2,'0')}/${String(bkk.getMonth()+1).padStart(2,'0')}/${bkk.getFullYear()} ${String(bkk.getHours()).padStart(2,'0')}:${String(bkk.getMinutes()).padStart(2,'0')}`;
-    await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'AppLog!A:G',
+    const note = action === 'open_app' ? '🟢 เปิดแอพ' :
+                 action === 'slip'     ? '💰 หน้าสลิป' :
+                 action === 'att'      ? '🕐 หน้าเวลา' :
+                 action === 'field'    ? '📍 หน้างาน' :
+                 action === 'welfare'  ? '🎁 สวัสดิการ' :
+                 action === 'insurance'? '🔒 ประกัน' :
+                 action === 'openDoc'  ? '📄 เปิดเอกสาร' :
+                 action === 'saveImg'  ? '💾 บันทึกรูป' :
+                 action === 'dlPdf'    ? '📑 PDF' :
+                 action === 'checkin'  ? '✅ เช็คอิน' :
+                 action === 'checkout' ? '🏁 เช็คเอ้าท์' :
+                 action === 'error'    ? '❌ Error' : '';
+    await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'AppLog!A:H',
       valueInputOption: 'RAW',
-      requestBody: { values: [[ts, lineId, name||'', action, detail||'', status||'ok', device||'']] }
+      requestBody: { values: [[ts, lineId, name||'', action, detail||'', status||'ok', device||'', note]] }
     });
   } catch(e) { console.log('[usage-log] error:', e.message); }
 });
