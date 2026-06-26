@@ -742,6 +742,9 @@ app.get('/eslip/attendance', async (req, res) => {
       if (p.length !== 3) return d;
       const y = parseInt(p[2]);
       if (y > 2400) p[2] = String(y - 543);
+      // pad DD และ MM ให้เป็น 2 หลักเสมอ เพื่อให้ key สม่ำเสมอ
+      p[0] = p[0].padStart(2, '0');
+      p[1] = p[1].padStart(2, '0');
       return p.join('/');
     };
     // helper: บวก/ลบวัน DD/MM/YYYY
@@ -780,13 +783,13 @@ app.get('/eslip/attendance', async (req, res) => {
       // ถ้าวันก่อนมี scan ที่ 03:30+ (มี time-in จริง)
       const prevHasTimeIn = prevTimes.some(t => toM2(t) >= toM2('03:30:00') && toM2(t) < toM2('11:55:00'));
       if (!prevHasTimeIn) return;
-      // หา scan ในวันนี้ที่อยู่ 00:00–03:29 → ย้ายไปเป็น timeout ของวันก่อน
+      // หา scan ในวันนี้ที่อยู่ 00:00–03:29
       const toMove = times.filter(t => toM2(t) < toM2('03:30:00'));
       const toKeep = times.filter(t => toM2(t) >= toM2('03:30:00'));
       if (toMove.length === 0) return;
-      // ย้าย
+      // ย้าย 00:xx ไปเป็น timeout ของวันก่อนเสมอ
       toMove.forEach(t => prevTimes.push(t));
-      if (toKeep.length === 0) delete byDate[date];
+      if (toKeep.length === 0) delete byDate[date]; // วันนี้ไม่มี scan อื่นเหลือ
       else byDate[date] = toKeep;
     });
 
@@ -1077,10 +1080,17 @@ app.get('/admin/attendance', async (req, res) => {
     // จัด attendance โดย map ID/ชื่อ → ชื่อ Lark
     const attMap = {};
     attRows.forEach(row => {
-      const date = row[0], time = row[1];
+      const rawDate = (row[0]||'').trim();
+      const time = row[1];
       const attId = (row[2]||'').toString().trim();
       const rawAtt = (row[3]||'').trim();
-      if (!date || !time) return;
+      if (!rawDate || !time) return;
+      // normalize: pad DD/MM, แปลง พ.ศ.→ค.ศ.
+      const dateParts = rawDate.split('/');
+      if (dateParts.length !== 3) return;
+      let [dd, mm, yy] = dateParts;
+      if (parseInt(yy) > 2400) yy = String(parseInt(yy) - 543);
+      const date = dd.padStart(2,'0') + '/' + mm.padStart(2,'0') + '/' + yy;
 
       // หาชื่อ Lark — ใช้ ID ก่อน ถ้าไม่มีค่อย fuzzy name
       let larkName = rawAtt;
