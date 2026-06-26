@@ -719,6 +719,7 @@ async function loadEmp(lineId){
     const b=document.getElementById('phBadge');
     b.textContent=d.payType==='daily'?'● รายวัน':'● รายเดือน';
     b.className='ph-badge '+(d.payType==='daily'?'badge-d':'badge-m');
+    logAction('open_app','v2','ok');
     loadSlipMonths();
     loadAttendance();
     preloadJobDesc();
