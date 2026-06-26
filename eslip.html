@@ -246,6 +246,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-ot{font-size:8px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.15);padding:1px 4px;border-radius:4px}
 .cal-late-dot{font-size:8px;color:var(--red);font-weight:700}
 .cal-field{font-size:8px;font-weight:700;color:#06B6D4;background:rgba(6,182,212,.12);padding:1px 3px;border-radius:4px;width:100%;text-align:center}
+.cal-no-in{background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.2)!important}
+.cal-no-in-badge{font-size:7px;font-weight:700;color:#D97706;background:rgba(217,119,6,.15);padding:1px 3px;border-radius:3px;width:100%;text-align:center}
 .welfare-section-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .welfare-card{background:#fff;border:0.5px solid #E5E7EB;border-radius:14px;overflow:hidden;margin-bottom:0;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .welfare-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:0.5px solid #F3F4F6}
@@ -931,6 +933,7 @@ function renderYear(y,byYear){
       const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
       if(rec&&rec.status==='leave'){const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div><div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div></div>`);}
       else if(rec&&rec.isFieldwork){cls+=' cal-leave';cells.push(`<div class="${cls}" style="border-color:rgba(6,182,212,.3)!important;background:rgba(6,182,212,.08)"><div class="cal-day-num">${d}</div><div class="cal-field">📍${rec.time?rec.time.slice(0,5):''}</div>${rec.timeOut?`<div class="cal-field" style="color:#10B981;background:rgba(16,185,129,.12)">🏁${rec.timeOut.slice(0,5)}</div>`:''}</div>`);}
+      else if(rec&&rec.noTimeIn){cls+=' cal-no-in';cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-no-in-badge">ลืมสแกน</div><div class="cal-time-out" style="color:#D97706;background:rgba(217,119,6,.1)">${timeOut?timeOut.slice(0,5):''}</div></div>`);}
       else{cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);}
     }
     return`<div class="month-group"><div class="mg-header"><div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)>2400?parseInt(y):parseInt(y)+543}</div><div class="mg-stats"><span class="mg-stat mg-ok">${mrs.length} วัน</span>${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}</div></div><div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div></div>`;
