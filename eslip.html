@@ -680,6 +680,16 @@ const API='https://tpe-hr-bot.onrender.com';
 const LIFF_ID='2010255039-6dQLsh35';
 let empData=null, attData=[], currentDoc=null, currentYear=null;
 
+function leaveLabel(type){
+  const t=(type||'').trim();
+  if(t==='ลาป่วย')        return{icon:'🤒',label:'ลาป่วย',   color:'#EF4444'};
+  if(t==='ลากิจ')         return{icon:'📋',label:'ลากิจ',    color:'#3B82F6'};
+  if(t==='ลาพักร้อน')     return{icon:'🏖️',label:'พักร้อน', color:'#8B5CF6'};
+  if(t==='ลาเนื่องในวันเกิด') return{icon:'🎂',label:'วันเกิด',color:'#F59E0B'};
+  if(t==='ลาคลอด')        return{icon:'👶',label:'ลาคลอด',  color:'#EC4899'};
+  if(t==='ลาโดยไม่รับค่าจ้าง') return{icon:'⏸️',label:'ไม่รับค่า',color:'#6B7280'};
+  return{icon:'📅',label:t.slice(0,5)||'ลา',color:'#7B61FF'};
+}
 // ════ APP LOG ════
 const LOG_ACTIONS={home:'เปิดหน้าหลัก',slip:'เปิดหน้าสลิป',att:'เปิดหน้าเวลา',field:'เปิดหน้างาน',welfare:'เปิดหน้าสวัสดิการ',
   openDoc:'เปิดเอกสาร',saveImg:'บันทึกรูป',dlPdf:'ดาวน์โหลด PDF',checkin:'เช็คอินหน้างาน',checkout:'เช็คเอ้าท์หน้างาน',
@@ -931,7 +941,10 @@ function renderYear(y,byYear){
       const timeOut=rec&&rec.timeOut?rec.timeOut:'';
       const otBadge=rec&&rec.ot>0?`<div class="cal-ot">OT${rec.ot}</div>`:'';
       const lateBadge=rec&&rec.late?`<div class="cal-late-dot">!</div>`:'';
-      if(rec&&rec.status==='leave'){const lType=(rec.leaveType||'ลา').replace('ลา','').slice(0,4);cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:rgba(123,97,255,.15);color:var(--purple)">🏥</div><div class="cal-time-out" style="background:rgba(123,97,255,.15);color:var(--purple);font-size:8px">${lType}</div></div>`);}
+      if(rec&&rec.status==='leave'){
+        const lb=leaveLabel(rec.leaveType||'ลา');
+        cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:${lb.color}22;color:${lb.color}">${lb.icon}</div><div class="cal-time-out" style="font-size:8px;color:${lb.color};font-weight:700">${lb.label}</div></div>`);
+      }
       else if(rec&&rec.isFieldwork){cls+=' cal-leave';cells.push(`<div class="${cls}" style="border-color:rgba(6,182,212,.3)!important;background:rgba(6,182,212,.08)"><div class="cal-day-num">${d}</div><div class="cal-field">📍${rec.time?rec.time.slice(0,5):''}</div>${rec.timeOut?`<div class="cal-field" style="color:#10B981;background:rgba(16,185,129,.12)">🏁${rec.timeOut.slice(0,5)}</div>`:''}</div>`);}
       else if(rec&&rec.noTimeIn){cls+=' cal-no-in';cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-no-in-badge">—</div><div class="cal-time-out" style="color:#D97706;background:rgba(217,119,6,.1)">${timeOut?timeOut.slice(0,5):''}</div></div>`);}
       else{cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);}
