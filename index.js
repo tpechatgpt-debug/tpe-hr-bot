@@ -1107,6 +1107,7 @@ app.get('/admin/attendance', async (req, res) => {
         larkName = idToName[attId];
       } else {
         const attNorm = normN(rawAtt);
+        // 1. exact/includes/startsWith match
         for (const le of larkEmps) {
           const ln = le.norm;
           if (ln === attNorm || ln.includes(attNorm) || attNorm.includes(ln) ||
@@ -1114,11 +1115,62 @@ app.get('/admin/attendance', async (req, res) => {
             larkName = le.clean; break;
           }
         }
+        // 2. ถ้ายังไม่ match — ลอง best partial match (ชื่อหน้าตรงกัน)
+        if (larkName === rawAtt && rawAtt.length >= 3) {
+          let bestScore = 0, bestClean = rawAtt;
+          for (const le of larkEmps) {
+            const ln = le.norm;
+            let score = 0;
+            const minLen = Math.min(ln.length, attNorm.length);
+            for (let i = 0; i < minLen; i++) {
+              if (ln[i] === attNorm[i]) score++; else break;
+            }
+            if (score >= 4 && score > bestScore) {
+              bestScore = score; bestClean = le.clean;
+            }
+          }
+          if (bestScore >= 4) larkName = bestClean;
+        }
       }
 
       if (!attMap[date]) attMap[date] = {};
       if (!attMap[date][larkName]) attMap[date][larkName] = [];
       attMap[date][larkName].push(time);
+    });
+
+    // ── Cross-midnight: scan 00:00–03:29 ของวัน D → ย้ายเป็น timeout ของวัน D-1 ──
+    const toMx = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
+    const addDayStr = (dateStr, n) => {
+      const [dd,mm,yy] = dateStr.split('/').map(Number);
+      const d = new Date(yy, mm-1, dd); d.setDate(d.getDate()+n);
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    };
+    // เรียงวันที่ก่อน process
+    const sortedDates = Object.keys(attMap).sort((a,b) => {
+      const [ad,am,ay]=a.split('/').map(Number), [bd,bm,by]=b.split('/').map(Number);
+      return (ay*10000+am*100+ad)-(by*10000+bm*100+bd);
+    });
+    sortedDates.forEach(date => {
+      const prevDate = addDayStr(date, -1);
+      if (!attMap[prevDate]) return;
+      Object.keys(attMap[date]).forEach(name => {
+        const times = attMap[date][name];
+        // ถ้าวันก่อนมี time-in จริง (03:30–11:54)
+        const prevTimes = attMap[prevDate][name] || [];
+        const prevHasTimeIn = prevTimes.some(t => toMx(t) >= toMx('03:30:00') && toMx(t) < toMx('11:55:00'));
+        if (!prevHasTimeIn) return;
+        // หา scan 00:00–03:29 ในวันนี้
+        const toMove = times.filter(t => toMx(t) < toMx('03:30:00'));
+        const toKeep = times.filter(t => toMx(t) >= toMx('03:30:00'));
+        if (!toMove.length) return;
+        // ย้าย
+        if (!attMap[prevDate][name]) attMap[prevDate][name] = [];
+        toMove.forEach(t => attMap[prevDate][name].push(t));
+        if (!toKeep.length) delete attMap[date][name];
+        else attMap[date][name] = toKeep;
+      });
+      // ลบ date ที่ไม่มีข้อมูลเหลือ
+      if (!Object.keys(attMap[date]).length) delete attMap[date];
     });
 
     res.json({ days, attMap, holidays, emps: larkEmps.map(e => ({
