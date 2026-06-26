@@ -24,16 +24,26 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 40%,rgba(245,166,35,.07) 0%,transparent 60%),var(--bg)}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:380px;box-shadow:0 24px 64px rgba(0,0,0,.6)}
-.login-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px;justify-content:center}
-.login-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:22px}
-.login-title{font-size:22px;font-weight:700}
-.login-title span{color:var(--gold)}
-.login-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px}
-.form-label{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px;display:block;letter-spacing:.06em;text-transform:uppercase}
-.form-input{width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:'IBM Plex Sans Thai',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .15s}
-.form-input:focus{border-color:var(--gold)}
+.login-wrap{min-height:100vh;display:flex;align-items:stretch;background:#1B3E6F;font-family:'IBM Plex Sans Thai','Sarabun',sans-serif}
+.login-left{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden}
+.login-left::before{content:'';position:absolute;top:-80px;right:-80px;width:320px;height:320px;background:rgba(255,255,255,.06);border-radius:50%}
+.login-left::after{content:'';position:absolute;bottom:-60px;left:-60px;width:240px;height:240px;background:rgba(255,255,255,.04);border-radius:50%}
+.login-brand{position:relative;z-index:1;text-align:center}
+.login-brand-icon{width:80px;height:80px;background:rgba(255,255,255,.15);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 24px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2)}
+.login-brand-name{font-size:32px;font-weight:800;color:#fff;letter-spacing:.02em}
+.login-brand-name span{color:#93C5FD}
+.login-brand-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:8px;letter-spacing:.04em}
+.login-brand-desc{font-size:12px;color:rgba(255,255,255,.45);margin-top:32px;line-height:1.7;max-width:260px}
+.login-right{width:460px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 48px;position:relative}
+.login-card{width:100%;max-width:360px}
+.login-logo{display:none}
+.login-greeting{font-size:24px;font-weight:700;color:#1E293B;margin-bottom:6px}
+.login-sub{font-size:13px;color:#64748B;margin-bottom:36px}
+.login-err{display:none;background:#FEF2F2;border:1px solid #FECACA;color:#DC2626;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px}
+.login-err.show{display:block}
+.form-label{font-size:12px;color:#475569;font-weight:600;margin-bottom:8px;display:block;letter-spacing:.04em}
+.form-input{width:100%;padding:12px 16px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;font-family:'IBM Plex Sans Thai','Sarabun',sans-serif;font-size:14px;color:#1E293B;outline:none;transition:all .15s}
+.form-input:focus{border-color:#1B3E6F;background:#fff;box-shadow:0 0 0 3px rgba(27,62,111,.1)}
 .btn-login{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:none;border-radius:var(--r-sm);font-family:'IBM Plex Sans Thai',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .15s}
 .btn-login:hover{opacity:.9}
 .login-err{background:var(--red-dim);border:1px solid #EF444430;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;display:none}
@@ -194,19 +204,36 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 <body>
 
 <div class="login-wrap" id="loginWrap">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="login-icon">&#127959;</div>
-      <div><div class="login-title">TPE <span>OPS</span></div>
-      <div style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;letter-spacing:.08em">OPERATIONS CENTER v2</div></div>
+  <!-- Left panel — brand -->
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="login-brand-icon">🏢</div>
+      <div class="login-brand-name">TPE <span>OPS</span></div>
+      <div class="login-brand-sub">OPERATIONS CENTER v2</div>
+      <div class="login-brand-desc">
+        ระบบบริหารงาน HR อัจฉริยะ<br>
+        สำหรับ HR Admin และผู้บริหาร<br>
+        ธนพลเอ็นจิเนียริ่ง จำกัด
+      </div>
     </div>
-    <p class="login-sub">HR Admin Access</p>
-    <div class="login-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
-    <div style="margin-bottom:16px">
-      <label class="form-label">Password</label>
-      <input class="form-input" type="password" id="pwInput" placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;" onkeydown="if(event.key==='Enter')doLogin()">
+  </div>
+  <!-- Right panel — form -->
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-greeting">ยินดีต้อนรับ 👋</div>
+      <div class="login-sub">กรุณาใส่รหัสผ่านเพื่อเข้าสู่ระบบ HR Portal</div>
+      <div class="login-err" id="loginErr">รหัสผ่านไม่ถูกต้อง</div>
+      <div style="margin-bottom:20px">
+        <label class="form-label">รหัสผ่าน</label>
+        <input class="form-input" type="password" id="pwInput"
+          placeholder="●●●●●●●●"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-login" onclick="doLogin()">เข้าสู่ระบบ &nbsp;→</button>
+      <div style="text-align:center;margin-top:20px;font-size:11px;color:#94A3B8">
+        TPE HR Smart · ธนพลเอ็นจิเนียริ่ง จำกัด
+      </div>
     </div>
-    <button class="btn-login" onclick="doLogin()">เข้าสู่ระบบ &nbsp;&#8594;</button>
   </div>
 </div>
 
@@ -755,6 +782,16 @@ async function loadAttAdmin(){
 }
 function toM(t){const[h,m,s]=(t||'00:00:00').split(':').map(Number);return h*60+m+(s||0)/60;}
 // toMExt: cross-midnight aware (00:00–03:29 → +1440)
+function leaveLabel(type){
+  const t=(type||'').trim();
+  if(t==='ลาป่วย')        return{icon:'🤒',label:'ลาป่วย',   color:'#EF4444'};
+  if(t==='ลากิจ')         return{icon:'📋',label:'ลากิจ',    color:'#3B82F6'};
+  if(t==='ลาพักร้อน')     return{icon:'🏖️',label:'พักร้อน', color:'#8B5CF6'};
+  if(t==='ลาเนื่องในวันเกิด') return{icon:'🎂',label:'วันเกิด',color:'#F59E0B'};
+  if(t==='ลาคลอด')        return{icon:'👶',label:'ลาคลอด',  color:'#EC4899'};
+  if(t==='ลาโดยไม่รับค่าจ้าง') return{icon:'⏸️',label:'ไม่รับค่า',color:'#6B7280'};
+  return{icon:'📅',label:t.slice(0,5)||'ลา',color:'#7B61FF'};
+}
 function toMExt(t){const[h,m,s]=(t||'00:00:00').split(':').map(Number);const mins=h*60+m+(s||0)/60;return mins<toM('03:30:00')?mins+1440:mins;}
 
 function analyzeAttDay(recs){
@@ -842,7 +879,7 @@ function renderAttTable(){
         const a=recs&&recs.length?analyzeAttDay(recs):null;
         if(!a){
           const li=window._leaveMap?.[name]?.[ds];
-          if(li)cells+='<div class="'+cls+' c-leave"><div class="cal-dnum">'+d+'</div><div class="cal-tin" style="background:#3B82F615;color:var(--blue)">🏥</div></div>';
+          if(li){const lb=leaveLabel(li);cells+='<div class="'+cls+' c-leave"><div class="cal-dnum">'+d+'</div><div class="cal-tin" style="background:'+lb.color+'22;color:'+lb.color+'">'+lb.icon+'</div><div class="cal-tout" style="font-size:9px;color:'+lb.color+';font-weight:700">'+lb.label+'</div></div>';}
           else cells+='<div class="'+cls+' c-absent"><div class="cal-dnum" style="color:var(--text3)">'+d+'</div></div>';
           continue;
         }
