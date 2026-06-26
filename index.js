@@ -744,13 +744,52 @@ app.get('/eslip/attendance', async (req, res) => {
       if (y > 2400) p[2] = String(y - 543);
       return p.join('/');
     };
+    // helper: บวก/ลบวัน DD/MM/YYYY
+    const addDay = (dateStr, n) => {
+      const [dd,mm,yy] = dateStr.split('/').map(Number);
+      const d = new Date(yy, mm-1, dd);
+      d.setDate(d.getDate() + n);
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    };
+
+    // รวม rows พร้อม date จริง + เวลา
+    const rawEntries = []; // [{date, time, hm}]
     finalRows.forEach(row => {
       const date = normDate((row[0]||'').trim());
       const time = (row[1]||'').trim();
       if (!date || !time) return;
+      const [h,m] = time.split(':').map(Number);
+      rawEntries.push({ date, time, hm: h*60+m });
+    });
+
+    // ── Cross-midnight rule ──
+    // scan 00:00–03:29 ของวัน D → ถ้าวัน D-1 มี time-in → นับเป็น scan ออกของ D-1
+    // ก่อนอื่นสร้าง byDate แบบ naive ก่อน
+    rawEntries.forEach(({ date, time, hm }) => {
       if (!byDate[date]) byDate[date] = [];
       byDate[date].push(time);
     });
+
+    // ตรวจ cross-midnight: scan 00:00–03:29 ที่ควรเป็น timeout ของวันก่อน
+    const toM2 = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
+    Object.keys(byDate).forEach(date => {
+      const times = byDate[date];
+      const prevDate = addDay(date, -1);
+      if (!byDate[prevDate]) return; // ไม่มีข้อมูลวันก่อน
+      const prevTimes = byDate[prevDate];
+      // ถ้าวันก่อนมี scan ที่ 03:30+ (มี time-in จริง)
+      const prevHasTimeIn = prevTimes.some(t => toM2(t) >= toM2('03:30:00') && toM2(t) < toM2('11:55:00'));
+      if (!prevHasTimeIn) return;
+      // หา scan ในวันนี้ที่อยู่ 00:00–03:29 → ย้ายไปเป็น timeout ของวันก่อน
+      const toMove = times.filter(t => toM2(t) < toM2('03:30:00'));
+      const toKeep = times.filter(t => toM2(t) >= toM2('03:30:00'));
+      if (toMove.length === 0) return;
+      // ย้าย
+      toMove.forEach(t => prevTimes.push(t));
+      if (toKeep.length === 0) delete byDate[date];
+      else byDate[date] = toKeep;
+    });
+
     console.log(`[Attendance] byDate keys: ${Object.keys(byDate).length} วัน`);
     // log ตัวอย่าง 3 วันแรก
     Object.entries(byDate).slice(0,3).forEach(([d,t]) => {
@@ -759,36 +798,86 @@ app.get('/eslip/attendance', async (req, res) => {
 
     const toM = t => { const[h,m,s]=(t||'00:00:00').split(':').map(Number); return h*60+m+(s||0)/60; };
 
+    const toM = t => {
+      // รองรับ cross-midnight: 00:xx–03:29 นับเป็นนาทีต่อจาก 24:00 (1440+)
+      const[h,m,s]=(t||'00:00:00').split(':').map(Number);
+      const mins = h*60+m+(s||0)/60;
+      // ถ้าเวลา < 03:30 (บ่งชี้ว่าเป็น timeout ข้ามคืน) → บวก 1440 เพื่อเรียงลำดับถูก
+      return mins;
+    };
+    const toMExt = t => {
+      const[h,m,s]=(t||'00:00:00').split(':').map(Number);
+      const mins = h*60+m+(s||0)/60;
+      return mins < toM2('03:30:00') ? mins + 1440 : mins;
+    };
+
     const records = Object.entries(byDate).map(([date, times]) => {
-      const sorted = [...times].sort();
+      // เรียงเวลา โดยให้ 00:xx–03:29 อยู่หลังสุด (cross-midnight)
+      const sorted = [...times].sort((a,b) => toMExt(a) - toMExt(b));
       const first  = sorted[0];
       const last   = sorted[sorted.length-1];
       const fm     = toM(first);
-      const lm     = toM(last);
+      const lmExt  = toMExt(last); // ใช้ extended สำหรับ OT คำนวณ
 
-      // สถานะเข้างาน
-      let status = 'ok', lateMinutes = 0;
-      if (fm <= toM('08:00:59'))       status = 'ok';
-      else if (fm <= toM('11:59:59')) { status = 'late'; lateMinutes = Math.round(fm - toM('08:01:00')); }
-      else if (fm <= toM('12:00:59')) status = 'half-am';
-      else                            { status = 'late'; lateMinutes = Math.round(fm - toM('08:01:00')); }
+      // ── Time-in rule ──
+      // scan แรก 03:30–11:54 → time-in ปกติ
+      // scan แรก 11:55+ → ลืม scan เข้า → ไม่มี time-in (timeout only)
+      const firstIsTimeIn = fm >= toM2('03:30:00') && fm < toM2('11:55:00');
 
-      // OT
+      let timeIn  = firstIsTimeIn ? first : null;
+      let timeOut = null;
+      let status  = 'ok', lateMinutes = 0;
+
+      if (!firstIsTimeIn) {
+        // scan แรก = สแกนออกเลย ไม่มีสแกนเข้า → แสดงเป็น timeout only
+        timeOut = first;
+        status  = 'ok'; // ไม่นับสาย ไม่รู้เวลาเข้าจริง
+      } else {
+        // มี time-in → หา time-out = scan ถัดไปที่ >= 11:55
+        const outCandidates = sorted.slice(1).filter(t => toMExt(t) >= toM2('11:55:00'));
+        timeOut = outCandidates.length > 0 ? outCandidates[outCandidates.length-1] : null;
+
+        // สถานะสาย
+        if (fm <= toM2('08:00:59'))       status = 'ok';
+        else if (fm < toM2('11:55:00')) { status = 'late'; lateMinutes = Math.round(fm - toM2('08:01:00')); }
+      }
+
+      // ── OT คำนวณจาก timeOut (extended minutes) ──
       let ot = 0;
-      if (sorted.length > 1) {
-        if      (lm >= toM('11:50:00') && lm <= toM('12:30:00')) status = 'half-pm';
-        else if (lm >= toM('17:30:00') && lm < toM('17:55:00')) ot = 0.5;
-        else if (lm >= toM('17:55:00') && lm < toM('18:25:00')) ot = 1;
-        else if (lm >= toM('18:25:00') && lm < toM('18:55:00')) ot = 1.5;
-        else if (lm >= toM('18:55:00') && lm < toM('19:25:00')) ot = 2;
-        else if (lm >= toM('19:25:00') && lm < toM('19:55:00')) ot = 2.5;
-        else if (lm >= toM('19:55:00') && lm < toM('20:25:00')) ot = 3;
-        else if (lm >= toM('20:25:00'))                          ot = 3.5;
+      if (timeIn && timeOut) {
+        const lm = toMExt(timeOut); // อาจ > 1440 ถ้าข้ามคืน
+        if      (lm >= toM2('11:50:00') && lm <= toM2('12:30:00')) status = 'half-pm';
+        else if (lm >= toM2('17:30:00') && lm < toM2('17:55:00')) ot = 0.5;
+        else if (lm >= toM2('17:55:00') && lm < toM2('18:25:00')) ot = 1.0;
+        else if (lm >= toM2('18:25:00') && lm < toM2('18:55:00')) ot = 1.5;
+        else if (lm >= toM2('18:55:00') && lm < toM2('19:25:00')) ot = 2.0;
+        else if (lm >= toM2('19:25:00') && lm < toM2('19:55:00')) ot = 2.5;
+        else if (lm >= toM2('19:55:00') && lm < toM2('20:25:00')) ot = 3.0;
+        else if (lm >= toM2('20:25:00') && lm < toM2('20:55:00')) ot = 3.5;
+        else if (lm >= toM2('20:55:00') && lm < toM2('21:25:00')) ot = 4.0;
+        else if (lm >= toM2('21:25:00') && lm < toM2('21:55:00')) ot = 4.5;
+        else if (lm >= toM2('21:55:00') && lm < toM2('22:25:00')) ot = 5.0;
+        else if (lm >= toM2('22:25:00') && lm < toM2('22:55:00')) ot = 5.5;
+        else if (lm >= toM2('22:55:00') && lm < toM2('23:25:00')) ot = 6.0;
+        else if (lm >= toM2('23:25:00') && lm < toM2('23:55:00')) ot = 6.5;
+        // cross-midnight (lm >= 1440 คือ 00:xx วันถัดไป ซึ่ง toMExt แปลงแล้ว)
+        else if (lm >= 1440+0   && lm < 1440+25)  ot = 7.0;  // 00:00–00:25
+        else if (lm >= 1440+25  && lm < 1440+55)  ot = 7.5;  // 00:25–00:55
+        else if (lm >= 1440+55  && lm < 1440+85)  ot = 8.0;  // 00:55–01:25
+        else if (lm >= 1440+85  && lm < 1440+115) ot = 8.5;  // 01:25–01:55
+        else if (lm >= 1440+115 && lm < 1440+145) ot = 9.0;  // 01:55–02:25
+        else if (lm >= 1440+145)                   ot = 9.0;  // 02:25+ สูงสุด
       }
 
       return {
-        date, time: first, timeOut: sorted.length > 1 ? last : null,
-        late: status === 'late', lateMinutes, status, ot
+        date,
+        time:    timeIn,
+        timeOut: timeOut,
+        late:    status === 'late',
+        lateMinutes,
+        status,
+        ot,
+        noTimeIn: !firstIsTimeIn, // flag: ไม่มี time-in (ลืมสแกน)
       };
     }).sort((a, b) => {
       const [ad,am,ay] = a.date.split('/').map(Number);
