@@ -828,7 +828,17 @@ function renderAttTable(){
         const recs=attMapData[ds]?.[name];
         let cls='att-cal-cell';if(isSun||isSat)cls+=' weekend';if(isTd)cls+=' today';
         if(isHoli){cells+='<div class="'+cls+'"><div class="cal-dnum">'+d+'</div><div class="cal-ot-b" style="font-size:7px">หยุด</div></div>';continue;}
-        if(isSun||isSat){cells+='<div class="'+cls+'"><div class="cal-dnum" style="color:var(--text3)">'+d+'</div></div>';continue;}
+        if(isSun||isSat){
+          // weekend — แสดง scan ถ้ามี ไม่ then skip
+          const a2=recs&&recs.length?analyzeAttDay(recs):null;
+          if(!a2){cells+='<div class="'+cls+'"><div class="cal-dnum" style="color:var(--text3)">'+d+'</div></div>';}
+          else {
+            if(a2.noTimeIn)cls+=' c-no-in';
+            else if(a2.status==='ok')cls+=' c-ok';else cls+=' c-late';
+            cells+='<div class="'+cls+'"><div class="cal-dnum">'+d+(a2.status==='late'?'<span class="cal-late-b">!</span>':'')+'</div><div class="cal-tin">'+(a2.in?a2.in.slice(0,5):(a2.noTimeIn?'—':''))+'</div><div class="cal-tout">'+(a2.out?a2.out.slice(0,5):'')+'</div>'+(a2.ot>0?'<div class="cal-ot-b">OT'+a2.ot+'</div>':'')+'</div>';
+          }
+          continue;
+        }
         const a=recs&&recs.length?analyzeAttDay(recs):null;
         if(!a){
           const li=window._leaveMap?.[name]?.[ds];
