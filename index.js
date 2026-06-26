@@ -723,15 +723,24 @@ app.get('/eslip/attendance', async (req, res) => {
     // กรองด้วย ID เป็นหลัก (แม่นยำ 100%)
     let finalRows = [];
     if (empId) {
-      finalRows = rows.filter(row => (row[2]||'').toString().trim() === empId);
+      finalRows = rows.filter(row => (row[2]||'').toString().trim() === empId.toString().trim());
       console.log(`[Attendance] ID match: ${finalRows.length} rows`);
     }
-    // ถ้าไม่มี ID ให้ exact match ชื่อเท่านั้น
+    // ถ้าไม่มี ID ให้ match ชื่อ — exact ก่อน แล้ว startsWith (รองรับชื่อถูก truncate)
     if (finalRows.length === 0) {
       const normName = (s) => (s||'').replace(/\s+/g,'').toLowerCase();
       const empNorm = normName(empName);
+      // 1. exact match
       finalRows = rows.filter(row => normName(row[3]||'') === empNorm);
       console.log(`[Attendance] Exact name match: ${finalRows.length} rows`);
+      // 2. startsWith match (ชื่อใน sheet อาจถูก truncate)
+      if (finalRows.length === 0) {
+        finalRows = rows.filter(row => {
+          const sheetNorm = normName(row[3]||'');
+          return empNorm.startsWith(sheetNorm) || sheetNorm.startsWith(empNorm);
+        });
+        console.log(`[Attendance] StartsWith name match: ${finalRows.length} rows`);
+      }
     }
 
     // จัดกลุ่มตามวัน — เก็บทุก time ในวันเดียวกัน
