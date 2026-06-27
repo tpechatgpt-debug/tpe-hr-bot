@@ -319,6 +319,21 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-8px);background:#1B3E6F;border:none;color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(27,62,111,.3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── GPS History ── */
+.fw-hist-wrap{padding:14px 18px 0}
+.fw-period-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.fw-period-btn{padding:6px 16px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;color:#6B7280;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.fw-period-btn.active{background:#1B3E6F;color:#fff;border-color:#1B3E6F}
+.fw-log-card{background:#fff;border:0.5px solid #E5E7EB;border-radius:12px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fw-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.fw-log-date{font-size:12px;font-weight:700;color:#1B3E6F}
+.fw-log-time{font-size:11px;color:#9CA3AF}
+.fw-log-type-in{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#DCFCE7;color:#16A34A}
+.fw-log-type-out{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEE2E2;color:#DC2626}
+.fw-log-location{font-size:12px;color:#374151;margin-top:4px;display:flex;align-items:flex-start;gap:5px;line-height:1.4}
+.fw-log-job{font-size:11px;color:#9CA3AF;margin-top:3px}
+.fw-empty{text-align:center;padding:40px 20px;color:#9CA3AF}
 </style>
 </head>
 <body>
@@ -426,6 +441,11 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="qa-icon">🕐</div>
           <div class="qa-label">เวลาเข้างาน</div>
           <div class="qa-desc">ประวัติการสแกน</div>
+        </div>
+        <div class="qa-btn" onclick="showPage('gps')">
+          <div class="qa-icon">📍</div>
+          <div class="qa-label">ประวัติเช็คอิน</div>
+          <div class="qa-desc">GPS ย้อนหลัง</div>
         </div>
         <div class="qa-btn qa-job" onclick="openJobModal()">
           <div class="qa-icon">🔧</div>
@@ -670,6 +690,28 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     <div class="dv-actions">
       <button class="dv-btn btn-save" id="btnSave" onclick="saveImg()">💾 บันทึกรูป</button>
       <button class="dv-btn btn-pdf" id="btnPdf" onclick="dlPdf()">📄 PDF</button>
+    </div>
+  </div>
+
+
+  <!-- ── PAGE: GPS HISTORY ── -->
+  <div class="page" id="page-gps">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <div class="hdr-logo">📍</div>
+        <div>
+          <div class="hdr-title">ประวัติเช็คอินหน้างาน</div>
+          <div class="hdr-sub">GPS Check-in / Check-out</div>
+        </div>
+      </div>
+    </div>
+    <div class="fw-hist-wrap">
+      <div class="fw-period-tabs">
+        <button class="fw-period-btn active" onclick="loadGpsHistory('month',this)">เดือนนี้</button>
+        <button class="fw-period-btn" onclick="loadGpsHistory('year',this)">ปีนี้</button>
+        <button class="fw-period-btn" onclick="loadGpsHistory('all',this)">ทั้งหมด</button>
+      </div>
+      <div id="gpsContent"><div class="sk sk-h"></div><div class="sk sk-h"></div></div>
     </div>
   </div>
 
@@ -1149,6 +1191,45 @@ const up=new URLSearchParams(window.location.search);
 const did=up.get('lineId');
 if(up.get('debug')==='1'&&did){hide();empData={lineId:did};loadEmp(did);}
 else{init();}
+
+// ── GPS HISTORY ──
+let gpsCurrentPeriod = 'month';
+
+async function loadGpsHistory(period, btn) {
+  gpsCurrentPeriod = period;
+  if(btn) {
+    document.querySelectorAll('.fw-period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  if(!empData) return;
+  const el = document.getElementById('gpsContent');
+  el.innerHTML = '<div class="sk sk-h"></div><div class="sk sk-h"></div>';
+  logAction('gpsHistory', period);
+  try {
+    const r = await fetch(`${API}/eslip/fieldwork-history?lineId=${empData.lineId}&period=${period}`);
+    const d = await r.json();
+    const logs = d.logs || [];
+    if (!logs.length) {
+      el.innerHTML = '<div class="fw-empty"><div style="font-size:36px;margin-bottom:10px">📍</div><div>ยังไม่มีประวัติเช็คอินหน้างาน</div></div>';
+      return;
+    }
+    el.innerHTML = logs.map(l => {
+      const isIn = l.type === 'checkin';
+      const typeBadge = isIn
+        ? '<span class="fw-log-type-in">✅ Check-in</span>'
+        : '<span class="fw-log-type-out">🏁 Check-out</span>';
+      const locHtml = l.location ? `<div class="fw-log-location">📍 ${l.location}</div>` : '';
+      const jobHtml = l.jobNo ? `<div class="fw-log-job">🔧 JOB: ${l.jobNo}</div>` : '';
+      const mapsUrl = l.gps ? `<a href="https://maps.google.com/?q=${l.gps}" target="_blank" style="font-size:10px;color:#2563EB;text-decoration:none;margin-left:6px">🗺️ แผนที่</a>` : '';
+      return `<div class="fw-log-card">
+        <div class="fw-log-header"><span class="fw-log-date">📅 ${l.date}</span><span class="fw-log-time">${l.time.slice(0,5)}</span></div>
+        <div style="display:flex;align-items:center;gap:6px">${typeBadge}${mapsUrl}</div>
+        ${locHtml}${jobHtml}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="fw-empty">❌ โหลดไม่สำเร็จ</div>'; }
+}
+
 </script>
 </body>
 </html>
