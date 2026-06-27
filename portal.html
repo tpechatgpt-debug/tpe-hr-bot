@@ -1439,7 +1439,6 @@ function exportFwExcel(){
   // สร้าง HTML table สำหรับ Excel
   let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0FDF4}</style></head><body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{html+='<tr>'+r.map(c=>'<td>'+String(c).replace(/&/g,'&amp;')+'</td>').join('')+'</tr>';});
-  html+='</tbody></table>
   html+='</tbody></table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');
