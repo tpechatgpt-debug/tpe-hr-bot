@@ -586,7 +586,7 @@ select.form-input{cursor:pointer}
         <label class="form-label">รหัสผ่าน</label>
         <input class="form-input" type="password" id="pwInput"
           placeholder="●●●●●●●●"
-          onkeydown="if(event.key==='Enter')doLogin()">
+          onkeydown="if(event.keyCode===13)doLogin()">
       </div>
       <button class="btn-login" onclick="doLogin()">เข้าสู่ระบบ &nbsp;→</button>
       <div style="text-align:center;margin-top:20px;font-size:11px;color:#94A3B8">
@@ -614,17 +614,17 @@ select.form-input{cursor:pointer}
       </div>
     </div>
     <div class="sidebar-label">เมนูหลัก</div>
-    <button class="nav-item on" onclick="gotoPage('overview',this)"><span class="ni">📊</span><span class="nav-label">หน้าหลัก</span></button>
+    <button class="nav-item on" onclick='gotoPage("overview",this)'><span class="ni">📊</span><span class="nav-label">หน้าหลัก</span></button>
     <div class="sidebar-label">เอกสาร</div>
-    <button class="nav-item" onclick="gotoPage('upload',this)"><span class="ni">📤</span><span class="nav-label">อัปโหลด</span></button>
-    <button class="nav-item" onclick="gotoPage('requests',this)"><span class="ni">📋</span><span class="nav-label">คำขอ</span></button>
-    <button class="nav-item" id="nav-pending" onclick="gotoPage('pending',this)"><span class="ni">⏳</span><span class="nav-label">อนุมัติ</span></button>
+    <button class="nav-item" onclick='gotoPage("upload",this)'><span class="ni">📤</span><span class="nav-label">อัปโหลด</span></button>
+    <button class="nav-item" onclick='gotoPage("requests",this)'><span class="ni">📋</span><span class="nav-label">คำขอ</span></button>
+    <button class="nav-item" id="nav-pending" onclick='gotoPage("pending",this)'><span class="ni">⏳</span><span class="nav-label">อนุมัติ</span></button>
     <div class="sidebar-label">พนักงาน</div>
-    <button class="nav-item" onclick="gotoPage('employees',this)"><span class="ni">👥</span><span class="nav-label">พนักงาน</span></button>
-    <button class="nav-item" onclick="gotoPage('months',this)"><span class="ni">📅</span><span class="nav-label">รายเดือน</span></button>
+    <button class="nav-item" onclick='gotoPage("employees",this)'><span class="ni">👥</span><span class="nav-label">พนักงาน</span></button>
+    <button class="nav-item" onclick='gotoPage("months",this)'><span class="ni">📅</span><span class="nav-label">รายเดือน</span></button>
     <div class="sidebar-label">รายงาน</div>
-    <button class="nav-item" onclick="gotoPage('attendance',this)"><span class="ni">🕐</span><span class="nav-label">ปฏิทิน</span></button>
-    <button class="nav-item" onclick="gotoPage('fieldwork',this)"><span class="ni">📍</span><span class="nav-label">Fieldwork</span></button>
+    <button class="nav-item" onclick='gotoPage("attendance",this)'><span class="ni">🕐</span><span class="nav-label">ปฏิทิน</span></button>
+    <button class="nav-item" onclick='gotoPage("fieldwork",this)'><span class="ni">📍</span><span class="nav-label">Fieldwork</span></button>
   </div>
   <div class="sidebar-bottom">
     <div class="sidebar-user">
@@ -674,7 +674,7 @@ select.form-input{cursor:pointer}
         <div class="page-hdr-title">ภาพรวมการลงเวลา</div>
         <div class="page-hdr-sub" id="kpiMonth">—</div>
       </div>
-      <button class="btn btn-primary" onclick="gotoPage('months',document.querySelector('.nav-item'))">📥 ส่งออกรายงาน</button>
+      <button class="btn btn-primary" onclick='gotoPage("months",document.querySelector(".nav-item"))'>📥 ส่งออกรายงาน</button>
     </div>
     <!-- KPI Row 1 -->
     <div class="kpi-grid">
@@ -755,20 +755,20 @@ select.form-input{cursor:pointer}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px">
       <div class="card">
         <div class="card-title">👥 พนักงานรายเดือน</div>
-        <div id="uploadZoneM" class="drop-zone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'M')">
+        <div id="uploadZoneM" class="drop-zone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop='onDrop(event,"M")'>
           <div class="dz-icon">📊</div>
           <div class="dz-text">ลากไฟล์ Excel มาวางหรือ</div>
-          <label class="btn btn-secondary" style="cursor:pointer">เลือกไฟล์<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadFile(this,'M')"></label>
+          <label class="btn btn-secondary" style="cursor:pointer">เลือกไฟล์<input type="file" accept=".xlsx,.xls" style="display:none" onchange='uploadFile(this,"M")'></label>
         </div>
         <div id="progM" class="prog-bar"><div class="prog-fill" id="progFillM"></div></div>
         <div id="statusM" class="upload-status"></div>
       </div>
       <div class="card">
         <div class="card-title">📅 พนักงานรายวัน</div>
-        <div id="uploadZoneD" class="drop-zone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event,'D')">
+        <div id="uploadZoneD" class="drop-zone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop='onDrop(event,"D")'>
           <div class="dz-icon">📋</div>
           <div class="dz-text">ลากไฟล์ Excel มาวางหรือ</div>
-          <label class="btn btn-secondary" style="cursor:pointer">เลือกไฟล์<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadFile(this,'D')"></label>
+          <label class="btn btn-secondary" style="cursor:pointer">เลือกไฟล์<input type="file" accept=".xlsx,.xls" style="display:none" onchange='uploadFile(this,"D")'></label>
         </div>
         <div id="progD" class="prog-bar"><div class="prog-fill" id="progFillD"></div></div>
         <div id="statusD" class="upload-status"></div>
@@ -849,11 +849,11 @@ select.form-input{cursor:pointer}
     <div class="page-hdr">
       <div><div class="page-hdr-title">📍 Fieldwork GPS</div></div>
       <div style="display:flex;gap:8px">
-        <button class="pill active" id="fwTabToday" onclick="loadFwPeriod('today',this)">วันนี้</button>
-        <button class="pill" id="fwTabMonth" onclick="loadFwPeriod('month:'+getMonthKey(),this)">เดือนนี้</button>
-        <button class="pill" id="fwTabYear" onclick="loadFwPeriod('year:'+new Date().getFullYear(),this)">ปีนี้</button>
-        <select class="form-input" id="fwMonthPicker" style="width:auto;font-size:12px;padding:5px 8px" onchange="loadFwPeriod('month:'+this.value,null)"></select>
-        <select class="form-input" id="fwYearPicker" style="width:auto;font-size:12px;padding:5px 8px" onchange="loadFwPeriod('year:'+this.value,null)"></select>
+        <button class="pill active" id="fwTabToday" onclick='loadFwPeriod("today",this)'>วันนี้</button>
+        <button class="pill" id="fwTabMonth" onclick='loadFwPeriod("month:"+getMonthKey(),this)'>เดือนนี้</button>
+        <button class="pill" id="fwTabYear" onclick='loadFwPeriod("year:"+new Date().getFullYear(),this)'>ปีนี้</button>
+        <select class="form-input" id="fwMonthPicker" style="width:auto;font-size:12px;padding:5px 8px" onchange='loadFwPeriod("month:"+this.value,null)'></select>
+        <select class="form-input" id="fwYearPicker" style="width:auto;font-size:12px;padding:5px 8px" onchange='loadFwPeriod("year:"+this.value,null)'></select>
       </div>
     </div>
     <div class="fw-kpi-grid">
@@ -972,8 +972,8 @@ function renderRecent(list){
       <div><div style="font-size:13px;font-weight:600">${r.name||'—'}</div>
       <div style="font-size:11px;color:var(--text3)">${r.docType==='payslip'?'สลิป':'ใบรับรอง'} · ${r.month||''}</div></div>
       <div class="badge ${r.status==='sent'?'badge-ok':r.status==='rejected'?'badge-rej':'badge-pend'}">${r.status==='sent'?'ส่งแล้ว':r.status==='rejected'?'ปฏิเสธ':'รออนุมัติ'}</div>
-      ${r.status==='pending'?`<button onclick="retryApprove('${r.requestId}')" style="background:var(--green);color:#000;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px;font-weight:600">🔄</button>`:''}
-      <button onclick="deleteRequest('${r.requestId}')" style="background:var(--red);color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑</button>
+      ${r.status==='pending'?`<button onclick='retryApprove("${r.requestId}")' style="background:var(--green);color:#000;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px;font-weight:600">🔄</button>`:''}
+      <button onclick='deleteRequest("${r.requestId}")' style="background:var(--red);color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑</button>
     </div>`).join('');
 }
 
@@ -1069,7 +1069,7 @@ async function loadRequests(){
   try{
     const list=await(await fetch(API+'/portal/requests')).json();
     if(!list.length){document.getElementById('reqTable').innerHTML='<div class="empty-msg">ยังไม่มีประวัติ</div>';return;}
-    document.getElementById('reqTable').innerHTML=`<table class="tbl-wrap"><thead><tr><th>พนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">สถานะ</th></tr></thead><tbody>${list.map(r=>`<tr><td style="font-weight:600">${r.name||'—'}</td><td>${r.docType==='payslip'?'สลิป':'ใบรับรอง'}</td><td>${r.month||'—'}</td><td style="font-size:11px;color:var(--text3)">${r.time||'—'}</td><td style="text-align:right;white-space:nowrap"><span class="badge ${r.status==='sent'?'badge-ok':r.status==='rejected'?'badge-rej':'badge-pend'}">${r.status==='sent'?'ส่งแล้ว':r.status==='rejected'?'ปฏิเสธ':'รออนุมัติ'}</span>${r.status==='pending'&&r.requestId?` <button onclick="retryApprove('${r.requestId}')" style="background:var(--green);color:#000;border:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px">🔄</button>`:''} ${r.requestId?`<button onclick="deleteRequest('${r.requestId}')" style="background:var(--red);color:#fff;border:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑</button>`:''}</td></tr>`).join('')}</tbody></table>`;
+    document.getElementById('reqTable').innerHTML=`<table class="tbl-wrap"><thead><tr><th>พนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">สถานะ</th></tr></thead><tbody>${list.map(r=>`<tr><td style="font-weight:600">${r.name||'—'}</td><td>${r.docType==='payslip'?'สลิป':'ใบรับรอง'}</td><td>${r.month||'—'}</td><td style="font-size:11px;color:var(--text3)">${r.time||'—'}</td><td style="text-align:right;white-space:nowrap"><span class="badge ${r.status==='sent'?'badge-ok':r.status==='rejected'?'badge-rej':'badge-pend'}">${r.status==='sent'?'ส่งแล้ว':r.status==='rejected'?'ปฏิเสธ':'รออนุมัติ'}</span>${r.status==='pending'&&r.requestId?` <button onclick='retryApprove("${r.requestId}")' style="background:var(--green);color:#000;border:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px">🔄</button>`:''} ${r.requestId?`<button onclick='deleteRequest("${r.requestId}")' style="background:var(--red);color:#fff;border:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px">🗑</button>`:''}</td></tr>`).join('')}</tbody></table>`;
   }catch(e){document.getElementById('reqTable').innerHTML='<div class="empty-msg">โหลดไม่สำเร็จ</div>';}
 }
 
@@ -1103,7 +1103,7 @@ async function loadPdfReady(){
     const list=await(await fetch(API+'/portal/pdf-ready')).json();
     const sec=document.getElementById('pdfReadySection'),tbody=document.getElementById('pdfReadyTbody');
     if(!sec||!tbody)return;sec.style.display=list.length?'block':'none';
-    tbody.innerHTML=list.map(p=>`<tr><td style="font-weight:600">${p.empName}</td><td>${p.label}</td><td>${p.month}</td><td style="font-size:11px;color:var(--text3)">${p.time}</td><td style="text-align:right"><a href="${p.url}" target="_blank" download style="background:var(--blue);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px">📥</a><button onclick="markPdfSent('${p.token}')" style="background:var(--green);color:#000;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✅</button></td></tr>`).join('');
+    tbody.innerHTML=list.map(p=>`<tr><td style="font-weight:600">${p.empName}</td><td>${p.label}</td><td>${p.month}</td><td style="font-size:11px;color:var(--text3)">${p.time}</td><td style="text-align:right"><a href="${p.url}" target="_blank" download style="background:var(--blue);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px">📥</a><button onclick='markPdfSent("${p.token}")' style="background:var(--green);color:#000;border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">✅</button></td></tr>`).join('');
   }catch(e){}
 }
 async function markPdfSent(token){if(!confirm('ยืนยันว่าส่งแล้ว?'))return;await fetch(API+'/portal/pdf-ready/'+token,{method:'DELETE'});loadPdfReady();}
@@ -1119,7 +1119,7 @@ async function loadPendingNotify(){
     if(!list.length){if(emptyMsg)emptyMsg.style.display='block';tableWrap.innerHTML='';setEl('pending-count-title','');return;}
     if(emptyMsg)emptyMsg.style.display='none';
     setEl('pending-count-title','('+list.length+' รายการ)');
-    tableWrap.innerHTML=`<table class="tbl-wrap"><thead><tr><th>พนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">ดำเนินการ</th></tr></thead><tbody>${list.map(n=>`<tr><td style="font-weight:600">${n.empName}</td><td>${n.docType==='payslip'?'สลิป':'ใบรับรอง'}</td><td>${n.month}</td><td style="font-size:11px;color:var(--text3)">${n.time}</td><td style="text-align:right"><button class="approve-btn" onclick="portalApprove('${n.requestId}','approve')">✅ อนุมัติ</button><button class="reject-btn" onclick="portalApprove('${n.requestId}','reject')">❌ ปฏิเสธ</button></td></tr>`).join('')}</tbody></table>`;
+    tableWrap.innerHTML=`<table class="tbl-wrap"><thead><tr><th>พนักงาน</th><th>ประเภท</th><th>เดือน</th><th>เวลา</th><th style="text-align:right">ดำเนินการ</th></tr></thead><tbody>${list.map(n=>`<tr><td style="font-weight:600">${n.empName}</td><td>${n.docType==='payslip'?'สลิป':'ใบรับรอง'}</td><td>${n.month}</td><td style="font-size:11px;color:var(--text3)">${n.time}</td><td style="text-align:right"><button class="approve-btn" onclick='portalApprove("${n.requestId}","approve")'>✅ อนุมัติ</button><button class="reject-btn" onclick='portalApprove("${n.requestId}","reject")'>❌ ปฏิเสธ</button></td></tr>`).join('')}</tbody></table>`;
   }catch(e){}
 }
 async function portalApprove(requestId,action){
@@ -1294,7 +1294,7 @@ function renderAttStats(){
 function renderHoliChips(){
   const c=document.getElementById('holiChips');
   if(!attHolidays.length){c.innerHTML='<span style="font-size:12px;color:var(--text3)">ยังไม่มีวันหยุด</span>';return;}
-  c.innerHTML=attHolidays.map(h=>'<div class="holi-chip">🏖️ '+h.date+' — '+h.name+'<span class="holi-chip-del" onclick="deleteHoliday(\''+h.date+'\')">✕</span></div>').join('');
+  c.innerHTML=attHolidays.map(h=>'<div class="holi-chip">🏖️ '+h.date+' — '+h.name+'<span class="holi-chip-del" onclick='deleteHoliday(\""+h.date+"\")'>✕</span></div>').join('');
 }
 async function addHoliday(){
   const date=document.getElementById('holiDate').value.trim(),name=document.getElementById('holiName').value.trim();
@@ -1409,7 +1409,7 @@ function renderFieldworkCards(logs){
     }).join('');
     const rp=d.logs.filter(l=>l.type==='report');
     const rh=rp.length?`<div style="margin-top:8px;padding:8px 10px;background:var(--amber-dim);border-radius:8px;border:1px solid rgba(245,166,35,.2)">${rp.map(r=>`<div style="font-size:11px;color:var(--amber)">⚠️ ${r.company||'—'}</div>`).join('')}</div>`:'';
-    return`<div class="fw-emp-card ${cc}"><div class="fw-emp-top"><div class="fw-emp-av">${(name||'?').charAt(0)}</div><div><div class="fw-emp-name">${name}</div><div class="fw-emp-team">${d.team||'—'}</div></div><div class="fw-status-badge ${sc}">${sl}</div></div>${li||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">ยังไม่มีการเช็คอิน</div>'}${rh}</div>`;
+    return`<div class="fw-emp-card ${cc}"><div class="fw-emp-top"><div class="fw-emp-av">${(name||'?').charAt(0)}</div><div><div class="fw-emp-name">${name}</div><div class="fw-emp-team">${d.team||'—'}</div></div><div class="fw-status-badge ${sc}">${sl}</div></div><div style="text-align:right;margin-bottom:8px"><button onclick='showEmpGpsHistory("${name}")' style="font-size:11px;padding:3px 10px;background:transparent;border:1px solid var(--teal);color:var(--teal);border-radius:6px;cursor:pointer;font-family:inherit">📍 ประวัติ GPS</button></div>${li||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">ยังไม่มีการเช็คอิน</div>'}${rh}</div>`;
   }).join('');
 }
 
