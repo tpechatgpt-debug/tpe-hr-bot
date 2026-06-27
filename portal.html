@@ -464,6 +464,99 @@ select.form-input{cursor:pointer}
   .sidebar-top .nav-item{gap:1px!important}
 }
 
+
+/* ══ JS-rendered component styles ══ */
+
+/* Loading / Empty */
+.loading-msg{display:flex;align-items:center;gap:10px;padding:24px;color:var(--text3);font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-msg{text-align:center;padding:32px 20px;color:var(--text3);font-size:13px}
+
+/* Upload result */
+.upload-result{padding:10px 14px;border-radius:9px;font-size:13px;font-weight:600;margin-top:8px}
+.result-ok{background:var(--green-dim);color:var(--green);border:1px solid #BBF7D0}
+.result-err{background:var(--red-dim);color:var(--red);border:1px solid #FECACA}
+
+/* Pills colored */
+.pill-green{background:var(--green-dim);color:var(--green);border-color:#BBF7D0}
+.pill-blue{background:var(--blue-dim);color:var(--blue);border-color:#BFDBFE}
+.pill-gold{background:var(--gold-dim);color:var(--gold);border-color:#FDE68A}
+.pill-red{background:var(--red-dim);color:var(--red);border-color:#FECACA}
+
+/* Mono text */
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+
+/* Table extras */
+.emp-tbl{width:100%;border-collapse:collapse}
+.total-row td{font-weight:700;background:#F8FAFC;border-top:2px solid var(--border)}
+
+/* Attendance summary badges */
+.ab{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.ab-ok{background:var(--green-dim);color:var(--green)}
+.ab-late{background:var(--red-dim);color:var(--red)}
+.ab-ot{background:var(--amber-dim);color:var(--amber)}
+.ab-leave{background:var(--purple-dim);color:var(--purple)}
+
+/* Holiday chips */
+.holi-chip{display:inline-flex;align-items:center;gap:6px;background:var(--blue-dim);color:var(--blue);border:1px solid #BFDBFE;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;margin:3px}
+.holi-chip-del{cursor:pointer;color:var(--red);font-size:10px;margin-left:2px}
+.holi-chip-del:hover{color:#991b1b}
+
+/* Month pills */
+.month-pill{display:inline-flex;align-items:center;background:var(--navy-dim);color:var(--navy);border:1px solid rgba(27,62,111,.2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;margin:3px;cursor:pointer;transition:all .15s}
+.month-pill:hover{background:var(--navy);color:#fff}
+
+/* Request items */
+.req-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .1s}
+.req-item:last-child{border-bottom:none}
+.req-item:hover{background:var(--bg)}
+.req-av{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+
+/* Approve / Reject buttons */
+.approve-btn{background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.approve-btn:hover{background:#15803D}
+.reject-btn{background:var(--red-dim);color:var(--red);border:1px solid #FECACA;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:6px;transition:all .15s}
+.reject-btn:hover{background:var(--red);color:#fff}
+
+/* Btn sizes */
+.btn-sm{padding:6px 12px!important;font-size:12px!important}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;transition:all .15s}
+.btn-ghost:hover{background:var(--bg)}
+
+/* Tab buttons */
+.tab-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text2);font-family:inherit;transition:all .15s}
+.tab-btn.active,.tab-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Fieldwork employee cards */
+.fw-emp-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);transition:all .15s}
+.fw-emp-card:hover{box-shadow:var(--shadow-md);border-color:var(--border2)}
+.fw-emp-card.in{border-left:4px solid var(--green)}
+.fw-emp-card.out{border-left:4px solid var(--blue)}
+.fw-emp-card.absent{border-left:4px solid var(--border2)}
+.fw-emp-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.fw-emp-av{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.fw-emp-name{font-size:14px;font-weight:700;color:var(--text)}
+.fw-emp-team{font-size:11px;color:var(--text3);margin-top:2px}
+.fw-status-badge{margin-left:auto;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;flex-shrink:0}
+.fw-status-in{background:var(--green-dim);color:var(--green)}
+.fw-status-out{background:var(--blue-dim);color:var(--blue)}
+.fw-status-none{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+
+/* Fieldwork log items */
+.fw-log-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.fw-log-item:last-child{border-bottom:none}
+.fw-log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fw-log-dot.in{background:var(--green)}
+.fw-log-dot.out{background:var(--blue)}
+.fw-log-time{font-size:12px;font-weight:600;color:var(--text);min-width:48px}
+.fw-log-type{font-size:11px;color:var(--text2)}
+.fw-location{font-size:11px;color:var(--teal);margin-left:auto;max-width:180px;text-align:right;line-height:1.3}
+.fw-map-link{font-size:11px;color:var(--blue);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:6px;transition:all .15s}
+.fw-map-link:hover{background:var(--blue-dim)}
+
 </style>
 </head>
 <body>
@@ -621,7 +714,7 @@ select.form-input{cursor:pointer}
       <div class="card">
         <div class="card-hdr">
           <div class="card-title">📈 รายได้รายเดือน</div>
-          <select class="form-input" id="chartMonthSel" style="width:auto;padding:6px 10px;font-size:12px" onchange="loadChartByMonth(this.value)"></select>
+          <select class="form-input" id="chartMonthSel" style="width:auto;padding:6px 10px;font-size:12px" onchange="loadPayrollMonth()"></select>
         </div>
         <canvas id="chartMonthly" height="160"></canvas>
         <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px" id="chartRangeLabel"></div>
@@ -743,7 +836,7 @@ select.form-input{cursor:pointer}
     <div class="page-hdr-title">🕐 ปฏิทินเวลาทำงาน</div>
     <div style="display:flex;gap:12px;align-items:center;margin:14px 0;flex-wrap:wrap">
       <select class="form-input" id="attYear" style="width:120px" onchange="initAttSelectors()"></select>
-      <select class="form-input" id="attMonth" style="width:140px" onchange="loadAttData()"></select>
+      <select class="form-input" id="attMonth" style="width:140px" onchange="loadAttAdmin()"></select>
       <div style="color:var(--text3);font-size:12px" id="attRange"></div>
       <div style="flex:1"></div>
       <div style="font-size:12px;color:var(--text2)" id="attStats"></div>
@@ -1346,7 +1439,27 @@ function exportFwExcel(){
   // สร้าง HTML table สำหรับ Excel
   let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0FDF4}</style></head><body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{html+='<tr>'+r.map(c=>'<td>'+String(c).replace(/&/g,'&amp;')+'</td>').join('')+'</tr>';});
-  html+='</tbody></table></body></html>';
+  html+='</tbody></table>
+<!-- Missing elements required by JS -->
+<div id="alertBar" style="display:none;background:#FEF2F2;border-bottom:2px solid #DC2626;padding:8px 20px;font-size:13px;color:#DC2626;font-weight:600">
+  <span id="alert-count"></span>
+</div>
+<div id="fwStatus" style="display:none"></div>
+<div id="holiChips" style="display:none"></div>
+<input id="holiDate" style="display:none">
+<input id="holiName" style="display:none">
+<div id="kpiPend" style="display:none"></div>
+<div id="pdfReadySection" style="display:none">
+  <table><tbody id="pdfReadyTbody"></tbody></table>
+</div>
+<div id="pending-badge" style="display:none"></div>
+<div id="pending-table-wrap" style="display:none"></div>
+<div id="yearlySection" style="display:none"></div>
+<!-- iframe tabs (portal uses iframe for dashboard/fieldwork) -->
+<iframe id="iframe-dashboard" src="about:blank" style="display:none"></iframe>
+<iframe id="iframe-fieldwork" src="about:blank" style="display:none"></iframe>
+
+</body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1408,5 +1521,25 @@ function exportFwCSV(){showToast('📥 กำลัง export...');}
 function getMonthKey(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
 
 </script>
+
+<!-- Missing elements required by JS -->
+<div id="alertBar" style="display:none;background:#FEF2F2;border-bottom:2px solid #DC2626;padding:8px 20px;font-size:13px;color:#DC2626;font-weight:600">
+  <span id="alert-count"></span>
+</div>
+<div id="fwStatus" style="display:none"></div>
+<div id="holiChips" style="display:none"></div>
+<input id="holiDate" style="display:none">
+<input id="holiName" style="display:none">
+<div id="kpiPend" style="display:none"></div>
+<div id="pdfReadySection" style="display:none">
+  <table><tbody id="pdfReadyTbody"></tbody></table>
+</div>
+<div id="pending-badge" style="display:none"></div>
+<div id="pending-table-wrap" style="display:none"></div>
+<div id="yearlySection" style="display:none"></div>
+<!-- iframe tabs (portal uses iframe for dashboard/fieldwork) -->
+<iframe id="iframe-dashboard" src="about:blank" style="display:none"></iframe>
+<iframe id="iframe-fieldwork" src="about:blank" style="display:none"></iframe>
+
 </body>
 </html>
