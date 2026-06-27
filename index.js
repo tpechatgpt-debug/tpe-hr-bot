@@ -2349,6 +2349,73 @@ async function reverseGeocode(lat, lng) {
   } catch(e) { geocodeCache[key]=''; return ''; }
 }
 
+
+// ── /eslip/fieldwork-history — ประวัติ GPS check-in ของพนักงานคนนั้น ──
+app.get('/eslip/fieldwork-history', async (req, res) => {
+  const { lineId, period } = req.query;
+  if (!lineId) return res.status(400).json({ error: 'no lineId' });
+  try {
+    const larkToken = await lark.getToken();
+    const empData = await lark.getEmployeeByLineId(larkToken, lineId).catch(() => null);
+    if (!empData) return res.status(404).json({ error: 'ไม่พบข้อมูลพนักงาน' });
+    const empName = (empData['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
+
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+
+    let rows = [];
+    try {
+      const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' });
+      rows = (r.data.values || []).slice(1);
+    } catch(e) { return res.json({ logs: [], empName }); }
+
+    // กรองเฉพาะคนนั้น
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const empNorm = normN(empName);
+    let filtered = rows.filter(r => normN(r[3]||'') === empNorm || normN(r[2]||'') === lineId);
+
+    // กรอง period
+    const now = new Date();
+    if (period === 'month') {
+      const m = String(now.getMonth()+1).padStart(2,'0');
+      const y = String(now.getFullYear());
+      filtered = filtered.filter(r => { const p=(r[0]||'').split('/'); return p[2]===y && p[1]===m; });
+    } else if (period === 'year') {
+      const y = String(now.getFullYear());
+      filtered = filtered.filter(r => (r[0]||'').split('/')[2]===y);
+    }
+
+    // reverse geocode (max 10)
+    const axios = require('axios');
+    const gpsMap = {};
+    const uniqueGPS = [...new Set(filtered.map(r=>r[8]).filter(Boolean))].slice(0,10);
+    await Promise.all(uniqueGPS.map(async gps => {
+      const [lat,lng] = gps.split(',');
+      if (!lat||!lng) return;
+      try {
+        const geo = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, { timeout: 3000, headers: { 'User-Agent': 'TPE-HR-Bot/1.0' } });
+        const a = geo.data.address || {};
+        gpsMap[gps] = [a.road||a.suburb, a.city||a.town||a.county, a.state].filter(Boolean).join(', ');
+      } catch(e) { gpsMap[gps] = gps; }
+    }));
+
+    const logs = filtered.reverse().slice(0, 100).map(r => ({
+      date: r[0]||'', time: r[1]||'', empName: r[3]||'', team: r[4]||'',
+      type: r[5]||'', jobNo: r[6]||'', note: r[7]||'',
+      gps: r[8]||'', location: r[8] ? (gpsMap[r[8]] || r[8]) : ''
+    }));
+
+    res.json({ logs, empName });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/fieldwork/history', async (req, res) => {
   const { password, date } = req.query;
   if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
