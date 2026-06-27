@@ -1440,86 +1440,13 @@ function exportFwExcel(){
   let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0FDF4}</style></head><body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{html+='<tr>'+r.map(c=>'<td>'+String(c).replace(/&/g,'&amp;')+'</td>').join('')+'</tr>';});
   html+='</tbody></table>
-<!-- Missing elements required by JS -->
-<div id="alertBar" style="display:none;background:#FEF2F2;border-bottom:2px solid #DC2626;padding:8px 20px;font-size:13px;color:#DC2626;font-weight:600">
-  <span id="alert-count"></span>
-</div>
-<div id="fwStatus" style="display:none"></div>
-<div id="holiChips" style="display:none"></div>
-<input id="holiDate" style="display:none">
-<input id="holiName" style="display:none">
-<div id="kpiPend" style="display:none"></div>
-<div id="pdfReadySection" style="display:none">
-  <table><tbody id="pdfReadyTbody"></tbody></table>
-</div>
-<div id="pending-badge" style="display:none"></div>
-<div id="pending-table-wrap" style="display:none"></div>
-<div id="yearlySection" style="display:none"></div>
-<!-- iframe tabs (portal uses iframe for dashboard/fieldwork) -->
-<iframe id="iframe-dashboard" src="about:blank" style="display:none"></iframe>
-<iframe id="iframe-fieldwork" src="about:blank" style="display:none"></iframe>
-
-</body></html>';
+  html+='</tbody></table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='Fieldwork_'+period.replace(/[^ก-๙a-zA-Z0-9]/g,'_')+'.xls';
   a.click();
 }
-
-function exportFwCsv(){
-  if(!fwRawData.length)return;
-  const rows=[['วันที่','เวลา','ชื่อ','ทีม','ประเภท','JOB','บริษัท','ตำแหน่ง','Lat','Lng']];
-  const typeMap={checkin:'เช็คอิน',checkout:'เช็คเอ้าท์',report:'รายงาน'};
-  fwRawData.forEach(l=>rows.push([l.date||'',l.time||'',l.empName||'',l.team||'',typeMap[l.type]||l.type,l.jobNo||'',l.company||'',l.locationName||'',l.lat||'',l.lng||'']));
-  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
-  a.download='Fieldwork_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
-}
-
-
-
-// ── GPS History per employee (Portal) ──
-function backToFwGrid(){
-  document.getElementById('fwHistoryCard').style.display='none';
-  document.getElementById('fwEmpGrid').style.display='';
-}
-
-async function showEmpGpsHistory(empName, lineId){
-  document.getElementById('fwEmpGrid').style.display='none';
-  const card = document.getElementById('fwHistoryCard');
-  card.style.display='block';
-  document.getElementById('fwHistoryTitle').textContent='📍 ประวัติ GPS: '+empName;
-  const tbody = document.getElementById('fwHistoryBody');
-  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">⏳ กำลังโหลด...</td></tr>';
-  try{
-    const r = await fetch(`${API}/fieldwork/history?password=${PASS}&date=`);
-    const d = await r.json();
-    const logs = (d.logs||[]).filter(l=>l.empName===empName);
-    if(!logs.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">ไม่พบประวัติ</td></tr>';return;}
-    tbody.innerHTML = logs.map(l=>{
-      const typeCell = l.type==='checkin'
-        ? '<span class="tag tag-ok">✅ Check-in</span>'
-        : '<span class="tag tag-leave">🏁 Check-out</span>';
-      const mapsLink = l.gps
-        ? `<a href="https://maps.google.com/?q=${l.gps}" target="_blank" class="btn btn-secondary" style="padding:4px 10px;font-size:11px">🗺️</a>`
-        : '—';
-      return `<tr>
-        <td>${l.date}</td>
-        <td>${l.time.slice(0,5)}</td>
-        <td>${typeCell}</td>
-        <td style="font-size:12px;max-width:200px">${l.location||l.gps||'—'}</td>
-        <td>${l.jobNo||'—'}</td>
-        <td style="font-size:12px">${l.note||'—'}</td>
-        <td>${mapsLink}</td>
-      </tr>`;
-    }).join('');
-  }catch(e){tbody.innerHTML='<tr><td colspan="7" style="color:var(--red)">❌ โหลดไม่สำเร็จ</td></tr>';}
-}
-
-function exportFwCSV(){showToast('📥 กำลัง export...');}
-function getMonthKey(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
-
 </script>
 
 <!-- Missing elements required by JS -->
