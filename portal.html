@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>TPE Operations Center</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -584,7 +584,8 @@ body.mobile-view .sel-input{min-width:0;width:100%}
 </div><!-- /app -->
 <script>
 function applyResponsiveClass(){
-  if(window.innerWidth<=768){
+  const w=document.documentElement.clientWidth||window.innerWidth;
+  if(w<=768){
     document.body.classList.add('mobile-view');
   }else{
     document.body.classList.remove('mobile-view');
@@ -592,7 +593,9 @@ function applyResponsiveClass(){
 }
 applyResponsiveClass();
 window.addEventListener('resize',applyResponsiveClass);
-window.addEventListener('orientationchange',applyResponsiveClass);
+window.addEventListener('orientationchange',()=>setTimeout(applyResponsiveClass,100));
+document.addEventListener('DOMContentLoaded',applyResponsiveClass);
+window.addEventListener('load',applyResponsiveClass);
 
 const API='https://tpe-hr-bot.onrender.com';
 const PASS='tpe2569';
