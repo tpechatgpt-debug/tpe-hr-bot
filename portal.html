@@ -243,7 +243,43 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
 @media (max-width: 380px){
   .kpi-grid,.kpi-grid-6{grid-template-columns:1fr!important}
   .nav-item{min-width:44px;padding:5px 3px!important}
-}</style>
+}
+body.mobile-view .login-left{display:none}
+body.mobile-view .login-right{width:100%;padding:36px 20px}
+body.mobile-view #app{flex-direction:column}
+body.mobile-view .topbar{padding:0 12px;height:52px}
+body.mobile-view .brand-sub,body.mobile-view .user-name{display:none}
+body.mobile-view .btn-logout{padding:5px 10px;font-size:11px}
+body.mobile-view .tab-bar{overflow-x:auto}
+body.mobile-view .tab-bar::-webkit-scrollbar{display:none}
+body.mobile-view .tab-btn{padding:10px 13px;font-size:12px}
+body.mobile-view .layout{flex-direction:column;min-height:auto;position:relative;padding-bottom:60px}
+body.mobile-view .sidebar{width:100%;flex-direction:row;padding:0;height:58px;flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:9999;border-right:none;border-top:1px solid var(--border);box-shadow:0 -2px 10px rgba(0,0,0,.12);background:#fff;overflow:visible;max-height:58px}
+body.mobile-view .sidebar-top{flex:1;display:flex;flex-direction:row;overflow-x:auto;align-items:stretch;width:100%}
+body.mobile-view .sidebar-top::-webkit-scrollbar{display:none}
+body.mobile-view .sidebar-bottom,body.mobile-view .nav-sec{display:none}
+body.mobile-view .nav-item{flex-direction:column;gap:2px;padding:6px 4px;border-radius:0;min-width:52px;font-size:9px;color:var(--text3);align-items:center;justify-content:center;flex-shrink:0;margin-bottom:0;border:none;border-bottom:2px solid transparent;white-space:nowrap}
+body.mobile-view .nav-item.on{color:#1B3E6F;background:#EFF6FF;border-bottom-color:#1B3E6F}
+body.mobile-view .nav-item .ni{font-size:18px;width:auto}
+body.mobile-view .nav-badge{position:absolute;top:2px;right:4px}
+body.mobile-view .main-area{padding:12px;overflow-y:auto}
+body.mobile-view .kpi-grid,body.mobile-view .fw-stat-row{grid-template-columns:1fr 1fr;gap:8px}
+body.mobile-view .kpi-grid-6{grid-template-columns:1fr 1fr;gap:8px}
+body.mobile-view .kpi-val{font-size:18px}
+body.mobile-view .kpi-card{padding:12px 14px}
+body.mobile-view .chart-row,body.mobile-view .two-col{grid-template-columns:1fr}
+body.mobile-view .yearly-summary{grid-template-columns:1fr 1fr}
+body.mobile-view .tbl-wrap{overflow-x:auto}
+body.mobile-view .tbl,body.mobile-view .emp-tbl{min-width:480px}
+body.mobile-view .fw-grid{grid-template-columns:1fr}
+body.mobile-view .att-cal-grid{grid-template-columns:repeat(7,42px);overflow-x:auto;width:100%;gap:2px}
+body.mobile-view .att-cal-cell{min-height:60px;padding:3px 1px;font-size:9px}
+body.mobile-view .att-cal-hdr{font-size:8px;padding:2px 0}
+body.mobile-view .cal-dnum{font-size:9px}
+body.mobile-view .cal-tin,body.mobile-view .cal-tout{font-size:7px;padding:1px 2px}
+body.mobile-view .month-row{flex-wrap:wrap;gap:6px}
+body.mobile-view .sel-input{min-width:0;width:100%}
+</style>
 </head>
 <body>
 <div class="login-wrap" id="loginWrap">
@@ -547,6 +583,17 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
   <div class="tab-content" id="tab-fieldwork"><iframe class="tab-iframe" id="iframe-fieldwork" src="about:blank"></iframe></div>
 </div><!-- /app -->
 <script>
+function applyResponsiveClass(){
+  if(window.innerWidth<=768){
+    document.body.classList.add('mobile-view');
+  }else{
+    document.body.classList.remove('mobile-view');
+  }
+}
+applyResponsiveClass();
+window.addEventListener('resize',applyResponsiveClass);
+window.addEventListener('orientationchange',applyResponsiveClass);
+
 const API='https://tpe-hr-bot.onrender.com';
 const PASS='tpe2569';
 let allEmployees=[],chartMonthly=null,chartDonut=null,chartPerEmp=null,allPayrollMonths=[];
@@ -1067,7 +1114,7 @@ function exportFwExcel(){
   const headers=['วันที่','เวลา','ชื่อพนักงาน','ทีม','ประเภท','JOB','บริษัท','ตำแหน่ง (GPS)','Lat','Lng'];
   const typeMap={checkin:'เช็คอิน',checkout:'เช็คเอ้าท์',report:'รายงาน'};
   const rows=fwRawData.map(l=>[l.date||'',l.time||'',l.empName||'',l.team||'',typeMap[l.type]||l.type,l.jobNo||'',l.company||'',l.locationName||'',l.lat||'',l.lng||'']);
-  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0F7FF}</style>body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><style>th{background:#1B3E6F;color:#fff;font-weight:bold;padding:6px 10px;border:1px solid #ccc}td{padding:5px 10px;border:1px solid #ddd}tr:nth-child(even)td{background:#F0F7FF}</style></head><body><h2 style="font-family:sans-serif">Fieldwork Check-in — '+period+'</h2><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{html+='<tr>'+r.map(c=>'<td>'+String(c).replace(/&/g,'&amp;')+'</td>').join('')+'</tr>';});
   html+='</tbody></table></body></html>';
   const blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
