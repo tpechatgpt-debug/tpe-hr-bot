@@ -222,8 +222,19 @@ body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(
   .yearly-summary{grid-template-columns:1fr 1fr!important}
   .tbl-wrap{overflow-x:auto!important}.tbl,.emp-tbl{min-width:480px}
   .fw-grid{grid-template-columns:1fr!important}
-  .att-cal-cell{min-height:52px;padding:3px 2px}
-  .att-cal-hdr{font-size:8px}.cal-dnum{font-size:10px}
+  .att-cal-grid{
+    grid-template-columns:repeat(7,42px)!important;
+    overflow-x:auto;
+    width:100%;
+    -webkit-overflow-scrolling:touch;
+    gap:2px!important;
+  }
+  .att-cal-cell{min-height:60px;padding:3px 1px;font-size:9px}
+  .att-cal-hdr{font-size:8px;padding:2px 0}
+  .cal-dnum{font-size:9px}
+  .cal-tin,.cal-tout{font-size:7px;padding:1px 2px}
+  .cal-ot-b{font-size:7px}
+  .cal-late-b{font-size:7px}
   .month-row{flex-wrap:wrap;gap:6px}
 }
 @media(max-width:380px){
