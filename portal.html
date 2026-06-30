@@ -621,18 +621,7 @@ function doLogin(){
     document.getElementById('loginWrap').style.display='none';
     const a=document.getElementById('app');a.style.display='flex';a.style.flexDirection='column';
     sessionStorage.setItem('hr_auth','1');initApp();
-    showDebugBanner();
   }else document.getElementById('loginErr').style.display='block';
-}
-function showDebugBanner(){
-  const w=document.documentElement.clientWidth||window.innerWidth;
-  const hasFunc=typeof applyResponsiveClass;
-  const bodyClass=document.body.className;
-  const banner=document.createElement('div');
-  banner.style.cssText='position:fixed;top:0;left:0;right:0;background:#000;color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:99999;white-space:pre-wrap;line-height:1.6';
-  banner.textContent='DEBUG: clientWidth='+w+' bodyClass="'+bodyClass+'" hasFunc='+hasFunc+' ua='+navigator.userAgent.slice(0,60);
-  banner.onclick=function(){banner.remove();};
-  document.body.appendChild(banner);
 }
 function logout(){sessionStorage.removeItem('hr_auth');location.reload();}
 window.onload=function(){
