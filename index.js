@@ -1932,6 +1932,33 @@ app.post('/notify-assignment', async (req, res) => {
     const team    = typeof rawTeam === 'object' ? (rawTeam?.text || rawTeam?.value || '—') : rawTeam.toString();
     console.log('[notify] team resolved:', team);
 
+    // ── คำนวณรายชื่อสมาชิก ──
+    const empsAll = await lark.getAllEmployees(larkToken);
+    const teamMemberMap2 = {};
+      empsAll.forEach(e => {
+    const t = (e['ชุด'] || '').toString().trim();
+    const n = (e['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
+    if (!t || !n) return;
+      t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => {
+    if (!teamMemberMap2[x]) teamMemberMap2[x] = [];
+     teamMemberMap2[x].push(n);
+  });
+});
+const namedRaw = Array.isArray(f['สมาชิก'])
+  ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
+  : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
+const teamMembers2 = teamMemberMap2[team] || [];
+let membersLabel;
+if (namedRaw.length === 0) {
+  membersLabel = 'ยกชุด';
+} else {
+  const matched = namedRaw.filter(m =>
+    teamMembers2.some(tm => tm.includes(m) || m.includes(tm))
+  );
+  membersLabel = matched.length > 0 ? matched.join(', ') : 'ยกชุด';
+}
+console.log('[notify] membersLabel:', membersLabel);
+
     const jobNo     = f['JOB'] || '—';
     const company   = f['บริษัท'] || '—';
     const province  = f['จังหวัด'] || '—';
@@ -1996,6 +2023,11 @@ app.post('/notify-assignment', async (req, res) => {
               { type: 'text', text: jobNo,         size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }
             ]},
             { type: 'box', layout: 'horizontal', contents: [
+              { type: 'text', text: 'รายชื่อ',    size: 'sm', color: '#888888', flex: 3 },
+              { type: 'text', text: membersLabel,  size: 'sm', flex: 5, wrap: true,
+              color: membersLabel === 'ยกชุด' ? '#C9A227' : '#111827' }
+            ]},
+            { type: 'box', layout: 'horizontal', contents: [
               { type: 'text', text: 'บริษัท',     size: 'sm', color: '#888888', flex: 3 },
               { type: 'text', text: company,       size: 'sm', flex: 5, wrap: true }
             ]},
@@ -2034,7 +2066,7 @@ const DASHBOARD_URL = 'https://tpe-hr-bot.onrender.com/dashboard';
     await axios.post(process.env.LARK_WEBHOOK_URL, {
       msg_type: 'text',
       content: {
-        text: `📋 มอบหมายงานใหม่\nทีม: ${team}\nJOB: ${jobNo}\nบริษัท: ${company}\nจังหวัด: ${province}\nรายละเอียด: ${detail}\nช่วงงาน: ${startDate} – ${endDate}\nรถ: ${car}\n📊 Dashboard: ${DASHBOARD_URL}`
+        text: `📋 มอบหมายงานใหม่\nทีม: ${team}\nรายชื่อ: ${membersLabel}\nJOB: ${jobNo}\nบริษัท: ${company}\nจังหวัด: ${province}\nรายละเอียด: ${detail}\nช่วงงาน: ${startDate} – ${endDate}\nรถ: ${car}\n📊 Dashboard: ${DASHBOARD_URL}`
       }
     }).catch(e => console.error('lark webhook error:', e.message));
 
