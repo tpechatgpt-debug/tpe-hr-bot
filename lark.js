@@ -1,4 +1,5 @@
 const axios = require('axios');
+
 const BASE_ID         = process.env.LARK_BASE_ID;
 const TABLE_ID        = process.env.LARK_TABLE_ID;
 const APP_ID          = process.env.LARK_APP_ID;
@@ -6,40 +7,79 @@ const SECRET          = process.env.LARK_APP_SECRET;
 const JOB_BASE_ID     = process.env.LARK_JOB_BASE_ID;
 const ASSIGN_TABLE_ID = process.env.LARK_ASSIGN_TABLE_ID;
 
+// ── Token cache (expires ~2 hours, refresh 5 min early) ─────────────────────
+let _tokenCache = null;
 async function getToken() {
-  const r = await axios.post('https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal',
-    { app_id: APP_ID, app_secret: SECRET });
-  return r.data.tenant_access_token;
+  const now = Date.now();
+  if (_tokenCache && now < _tokenCache.expiresAt) return _tokenCache.token;
+  const r = await axios.post(
+    'https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal',
+    { app_id: APP_ID, app_secret: SECRET }
+  );
+  const token = r.data.tenant_access_token;
+  const ttl   = (r.data.expire || 7200) * 1000;
+  _tokenCache = { token, expiresAt: now + ttl - 5 * 60 * 1000 };
+  return token;
 }
 
-async function getRecords(token) {
-  const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records?page_size=100`;
-  const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-  return r.data.data.items || [];
+// ── Paginated record fetcher ─────────────────────────────────────────────────
+async function fetchAllRecords(token, baseId, tableId) {
+  const records = [];
+  let pageToken;
+  do {
+    const params = new URLSearchParams({ page_size: '100' });
+    if (pageToken) params.set('page_token', pageToken);
+    const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${baseId}/tables/${tableId}/records?${params}`;
+    const r   = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+    const data = r.data?.data || {};
+    records.push(...(data.items || []));
+    pageToken = data.has_more ? data.page_token : undefined;
+  } while (pageToken);
+  return records;
 }
 
+const getRecords       = (token) => fetchAllRecords(token, BASE_ID, TABLE_ID);
+const getAssignRecords = (token) => fetchAllRecords(token, JOB_BASE_ID, ASSIGN_TABLE_ID);
+
+// ── helper: normalise Lark select field → string[] ──────────────────────────
+function toStringArray(val) {
+  if (!val) return [];
+  const arr = Array.isArray(val) ? val : [val];
+  return arr
+    .map(v => (typeof v === 'object' ? (v.text ?? v.value ?? '') : String(v)))
+    .filter(Boolean);
+}
+
+const normN = s => (s || '').replace(/\s+/g, '').toLowerCase();
+
+// ── findByLineId ─────────────────────────────────────────────────────────────
 async function findByLineId(token, lineId) {
   const items = await getRecords(token);
   for (const item of items) {
     const f   = item.fields;
-    const lid = f['Line ID'] || f['LineID'] || f['Line_ID'];
-    if (lid && lid.toString().trim() === lineId) return f;
+    const lid = f['Line ID'] ?? f['LineID'] ?? f['Line_ID'];
+    if (lid?.toString().trim() === lineId) return f;
   }
   return null;
 }
 
-// ── ดึง records พร้อม record_id ──────────────────────────
-async function getRecordsWithId(token) {
-  const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records?page_size=100`;
-  const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-  return r.data.data.items || [];
-}
+// alias ที่ใช้ใน eslip/fieldwork-history
+const getEmployeeByLineId = async (token, lineId) => {
+  const items = await getRecords(token);
+  for (const item of items) {
+    const f   = item.fields;
+    const lid = f['Line ID'] ?? f['LineID'] ?? f['Line_ID'];
+    if (lid?.toString().trim() === lineId) return f;
+  }
+  return null;
+};
 
+// ── register ─────────────────────────────────────────────────────────────────
 async function register(token, nameToFind, lineId) {
   const items = await getRecords(token);
   for (const item of items) {
     const dbName = item.fields['ชื่อ - นามสกุล'];
-    if (dbName && dbName.includes(nameToFind)) {
+    if (dbName?.includes(nameToFind)) {
       await axios.put(
         `https://open.larksuite.com/open-apis/bitable/v1/apps/${BASE_ID}/tables/${TABLE_ID}/records/${item.record_id}`,
         { fields: { 'Line ID': lineId } },
@@ -51,54 +91,40 @@ async function register(token, nameToFind, lineId) {
   return `❌ ไม่พบชื่อ "${nameToFind}" ครับ\nลองพิมพ์ชื่อจริงใหม่อีกครั้งนะครับ`;
 }
 
+// ── getAllEmployees ───────────────────────────────────────────────────────────
 async function getAllEmployees(token) {
   const items = await getRecords(token);
-  return items.map(item => item.fields || item);
+  return items.map(item => item.fields);
 }
 
-// ── helper: แปลง Lark field (single/multi select หรือ text) → array of strings ──
-function toStringArray(val) {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.map(v => typeof v === 'object' ? (v.text || v.value || '') : v.toString()).filter(Boolean);
-  return [val.toString()].filter(Boolean);
-}
-
-// ── getJobsToday: รองรับ ชุด และ สมาชิก แบบ Multiple select ──────────────────
+// ── getJobsToday ─────────────────────────────────────────────────────────────
 async function getJobsToday(token, team, empName) {
-  const now = Date.now();
-  const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${JOB_BASE_ID}/tables/${ASSIGN_TABLE_ID}/records?page_size=100`;
-  const r   = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-  const items = r.data?.data?.items || [];
-
-  const normN = s => (s || '').replace(/\s+/g, '').toLowerCase();
+  const now     = Date.now();
+  const items   = await getAssignRecords(token);
   const empNorm = empName ? normN(empName) : '';
 
-  return items.filter(item => {
-    const f     = item.fields;
-    const start = f['วันที่เริ่ม'] || 0;
-    const end   = f['วันสิ้นสุด'] || 0;
-    if (start > now || now > end + 86400000) return false;
+  return items
+    .filter(item => {
+      const f     = item.fields;
+      const start = f['วันที่เริ่ม'] || 0;
+      const end   = f['วันสิ้นสุด']  || 0;
+      if (start > now || now > end + 86_400_000) return false;
 
-    // ชุด → Multiple select → Array
-    const teams = toStringArray(f['ชุด']);
-
-    // สมาชิก → Multiple select → Array
-    const members = toStringArray(f['สมาชิก']);
-
-    // ถ้ามี สมาชิก → เช็คว่าชื่อช่างอยู่ใน list ไหม
-    if (members.length && empNorm) {
-      const inList = members.some(m => {
-        const mn = normN(m);
-        return mn && (mn.includes(empNorm) || empNorm.includes(mn));
-      });
-      if (inList) return true;
-      // มี สมาชิก แต่ชื่อไม่อยู่ใน list → ไม่แสดง
-      return false;
-    }
-
-    // ถ้าไม่มี สมาชิก → fallback เช็ค ชุด (รองรับหลายชุด)
-    return teams.some(t => normN(t) === normN(team));
-  }).map(item => item.fields);
+      const members = toStringArray(f['สมาชิก']);
+      if (members.length) {
+        return empNorm
+          ? members.some(m => { const mn = normN(m); return mn && (mn.includes(empNorm) || empNorm.includes(mn)); })
+          : false;
+      }
+      const teams = toStringArray(f['ชุด']);
+      return teams.some(t => normN(t) === normN(team));
+    })
+    .map(item => item.fields);
 }
 
-module.exports = { getToken, findByLineId, register, getAllEmployees, getJobsToday, getRecordsWithId };
+const getRecordsWithId = getRecords;
+
+module.exports = {
+  getToken, findByLineId, getEmployeeByLineId,
+  register, getAllEmployees, getJobsToday, getRecordsWithId,
+};
