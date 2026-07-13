@@ -1927,37 +1927,51 @@ app.post('/notify-assignment', async (req, res) => {
     console.log('[notify] recordId:', recordId);
     console.log('[notify] fields:', JSON.stringify(f));
 
-    // ── แก้: รองรับ Lark Single Select object ──
-    const rawTeam = Array.isArray(f['ชุด']) ? f['ชุด'][0] : (f['ชุด'] || '—');
-    const team    = typeof rawTeam === 'object' ? (rawTeam?.text || rawTeam?.value || '—') : rawTeam.toString();
-    console.log('[notify] team resolved:', team);
+    // ── รองรับ multi-select ชุด → ดึงทุกทีม ──
+    const rawTeams = Array.isArray(f['ชุด'])
+      ? f['ชุด'].map(t => typeof t === 'object' ? (t?.text || t?.value || '') : t.toString()).filter(Boolean)
+      : (f['ชุด'] ? [f['ชุด'].toString()] : []);
+    const team = rawTeams.join(', ') || '—';
+    console.log('[notify] teams resolved:', rawTeams);
 
-    // ── คำนวณรายชื่อสมาชิก ──
     const empsAll = await lark.getAllEmployees(larkToken);
     const teamMemberMap2 = {};
-      empsAll.forEach(e => {
-    const t = (e['ชุด'] || '').toString().trim();
-    const n = (e['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
-    if (!t || !n) return;
+    const nameToLineId   = {};
+    empsAll.forEach(e => {
+      const rawN = (e['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
+      const lid  = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      if (rawN) nameToLineId[rawN] = lid;
+      const t = (e['ชุด'] || '').toString().trim();
+      if (!t || !rawN) return;
       t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => {
-    if (!teamMemberMap2[x]) teamMemberMap2[x] = [];
-     teamMemberMap2[x].push(n);
-  });
-});
-const namedRaw = Array.isArray(f['สมาชิก'])
-  ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
-  : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
-const teamMembers2 = teamMemberMap2[team] || [];
-let membersLabel;
-if (namedRaw.length === 0) {
-  membersLabel = 'ยกชุด';
-} else {
-  const matched = namedRaw.filter(m =>
-    teamMembers2.some(tm => tm.includes(m) || m.includes(tm))
-  );
-  membersLabel = matched.length > 0 ? matched.join(', ') : 'ยกชุด';
-}
-console.log('[notify] membersLabel:', membersLabel);
+        if (!teamMemberMap2[x]) teamMemberMap2[x] = [];
+        teamMemberMap2[x].push(rawN);
+      });
+    });
+
+    const namedRaw = Array.isArray(f['สมาชิก'])
+      ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
+      : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
+
+    let membersLabel;
+    let directLineIds = [];
+
+    if (namedRaw.length === 0) {
+      membersLabel = 'ยกชุด';
+    } else {
+      const allTeamMembers = rawTeams.flatMap(t => teamMemberMap2[t] || []);
+      const matched = namedRaw.filter(m =>
+        allTeamMembers.some(tm => tm.includes(m) || m.includes(tm))
+      );
+      membersLabel = matched.length > 0 ? matched.join(', ') : 'ยกชุด';
+      matched.forEach(m => {
+        const lid = nameToLineId[m] ||
+          Object.entries(nameToLineId).find(([n]) => n.includes(m) || m.includes(n))?.[1];
+        if (lid && !directLineIds.includes(lid)) directLineIds.push(lid);
+      });
+    }
+    console.log('[notify] membersLabel:', membersLabel);
+    console.log('[notify] directLineIds:', directLineIds);
 
     const jobNo     = f['JOB'] || '—';
     const company   = f['บริษัท'] || '—';
@@ -1987,7 +2001,7 @@ console.log('[notify] membersLabel:', membersLabel);
 
     const rolesForThisTeam = [
       ...ALWAYS_NOTIFY,
-      ...(TEAM_ROLES[team] || []),
+      ...rawTeams.flatMap(t => TEAM_ROLES[t] || []),
     ];
 
     const targets = emps.filter(e => {
@@ -1997,7 +2011,7 @@ console.log('[notify] membersLabel:', membersLabel);
       return rolesForThisTeam.some(r => pos === r);
     });
 
-    console.log('[notify] TEAM_ROLES match:', TEAM_ROLES[team]);
+    console.log('[notify] TEAM_ROLES match:', rawTeams.map(t => TEAM_ROLES[t]));
     console.log('[notify] targets positions:', targets.map(e => e['ตำแหน่ง']));
 
     const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
@@ -2075,13 +2089,18 @@ const DASHBOARD_URL = 'https://tpe-hr-bot.onrender.com/dashboard';
       const pos = (e['ตำแหน่ง'] || '').toString().trim();
       return !ALWAYS_NOTIFY.some(r => pos === r);
     });
-
     for (const emp of teamTargets) {
       const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
       if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
     }
 
-    console.log(`[notify] ${jobNo} → ${team} → Lark group + LINE ${teamTargets.length} คน`);
+    const alreadySent   = new Set(targets.map(e => (e['Line ID'] || e['LineID'] || '').toString().trim()).filter(Boolean));
+    const directTargets = directLineIds.filter(lid => lid && !alreadySent.has(lid));
+    for (const lid of directTargets) {
+      await push(lid, msg).catch(e => console.error('push direct error:', lid, e.message));
+    }
+
+    console.log(`[notify] ${jobNo} → ${team} → Lark group + TEAM_ROLES ${teamTargets.length} + ระบุชื่อ ${directTargets.length} คน`);
   } catch(e) {
     console.error('/notify-assignment error:', e.message);
   }
