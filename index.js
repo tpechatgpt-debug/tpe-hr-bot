@@ -1276,6 +1276,48 @@ app.get('/admin/leave-types', async (req, res) => {
 });
 
 // เพิ่ม/ลบวันหยุด
+// Lark Webhook รับใบลา
+app.post('/lark/leave-webhook', express.json(), async (req, res) => {
+  try {
+    if (req.body?.challenge) return res.json({ challenge: req.body.challenge });
+    const event = req.body?.event || req.body;
+    const fields = event?.record?.fields || event?.fields || {};
+    const name = fields['ชื่อ-นามสกุล'] || fields['ชื่อ - นามสกุล'] || '';
+    const type = fields['ประเภทการลา'] || '';
+    const days = parseFloat(fields['ลาทั้งสิ้น'] || 0);
+    const recordId = event?.record?.record_id || event?.record_id || '';
+    const toThaiDate = ts => {
+      if (!ts) return '';
+      const d = new Date(parseInt(ts) + 7 * 60 * 60 * 1000);
+      return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+    };
+    const startDate = toThaiDate(fields['ลาตั้งเเต่วันที่'] || fields['ลาตั้งแต่วันที่']);
+    const endDate = toThaiDate(fields['จนถึงวันที่']);
+    if (!name || !type || !startDate) return res.json({ ok: true });
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sid });
+    if (!meta.data.sheets.some(s => s.properties.title === 'Leave')) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid, requestBody: { requests: [{ addSheet: { properties: { title: 'Leave' } } }] } });
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Leave!A1', valueInputOption: 'RAW', requestBody: { values: [['record_id','ชื่อ-นามสกุล','ประเภทการลา','ลาตั้งแต่วันที่','จนถึงวันที่','ลาทั้งสิ้น','บันทึกเมื่อ']] } });
+    }
+    const existing = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:A' });
+    const existingIds = (existing.data.values || []).slice(1).map(r => r[0]);
+    const row = [recordId, name, type, startDate, endDate, days, new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok'})];
+    if (recordId && existingIds.includes(recordId)) {
+      const rowIdx = existingIds.indexOf(recordId) + 2;
+      await sheets.spreadsheets.values.update({ spreadsheetId: sid, range: `Leave!A${rowIdx}:G${rowIdx}`, valueInputOption: 'RAW', requestBody: { values: [row] } });
+    } else {
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Leave!A:G', valueInputOption: 'RAW', requestBody: { values: [row] } });
+    }
+    Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
+    console.log(`[LeaveWebhook] ${name} ${type} ${startDate}`);
+    res.json({ ok: true });
+  } catch(e) { console.error('[LeaveWebhook] error:', e.message); res.status(500).json({ error: e.message }); }
+});
+
 app.post('/admin/holidays', express.json(), async (req, res) => {
   const { password, action, date, name } = req.body;
   if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
@@ -1592,76 +1634,88 @@ app.get('/eslip/temp-image-raw/:token', (req, res) => {
   res.send(entry.buffer);
 });
 
-// ── ดึงข้อมูลการลาจาก Lark Base ──────────────────────
+// ── ดึงข้อมูลการลา (Lark ก่อน → fallback Sheets) ──────
 async function getLeaveDates(larkToken, empName, empId) {
+  try {
+    // ลอง Lark ก่อน
+    const larkResult = await getLeaveDatesFromLark(larkToken, empName, empId);
+    if (Object.keys(larkResult).length > 0) return larkResult;
+    // Lark ว่าง หรือ quota หมด → fallback Sheets
+    console.log('[getLeaveDates] Lark ว่าง → fallback Sheets');
+    return await getLeaveDatesFromSheets(empName);
+  } catch(e) {
+    console.log('[getLeaveDates] Lark error → fallback Sheets:', e.message);
+    return await getLeaveDatesFromSheets(empName);
+  }
+}
+
+async function getLeaveDatesFromSheets(empName) {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    let allRecords = [];
+    try {
+      const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Leave!A:G' });
+      allRecords = (r.data.values || []).slice(1);
+    } catch(e) { return {}; }
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const empNorm = normN(empName);
+    const myLeaves = allRecords.filter(row => {
+      const rn = normN((row[1]||'').split('(')[0]);
+      return rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
+    });
+    const leaveMap = {};
+    myLeaves.forEach(row => {
+      const type = row[2] || 'ลา';
+      const startStr = row[3] || '', endStr = row[4] || startStr;
+      if (!startStr) return;
+      const parseDate = s => { const [dd,mm,yyyy] = (s||'').split('/').map(Number); if(!dd||!mm||!yyyy) return null; return new Date(Date.UTC(yyyy,mm-1,dd)); };
+      const startD = parseDate(startStr), endD = parseDate(endStr) || startD;
+      if (!startD) return;
+      for (let d=new Date(startD); d<=endD; d.setUTCDate(d.getUTCDate()+1)) {
+        const dd=String(d.getUTCDate()).padStart(2,'0'), mm=String(d.getUTCMonth()+1).padStart(2,'0');
+        leaveMap[`${dd}/${mm}/${d.getUTCFullYear()}`] = type;
+      }
+    });
+    return leaveMap;
+  } catch(e) { console.error('getLeaveDatesFromSheets:', e.message); return {}; }
+}
+
+// Lark fallback
+async function getLeaveDatesFromLark(larkToken, empName, empId) {
   try {
     const axios = require('axios');
     const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
     const empNorm = normN(empName);
-
     let allRecords = [], pageToken = '';
-    // ดึงทั้งหมด (max 500)
     for (let i = 0; i < 5; i++) {
-      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
-      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+      const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
+      const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
       const data = r.data?.data;
       allRecords = allRecords.concat(data?.items || []);
       if (!data?.has_more) break;
       pageToken = data.page_token || '';
     }
-
-    // กรองเฉพาะพนักงานคนนี้
     const myLeaves = allRecords.filter(item => {
-      const f = item.fields;
-      const rawName = (f['ชื่อ-นามสกุล'] || '').split('(')[0].trim();
-      const n = normN(rawName);
-      return n === empNorm || n.includes(empNorm) || empNorm.includes(n) ||
-             (n.length >= 4 && empNorm.includes(n.slice(0, 4)));
+      const n = normN((item.fields['ชื่อ-นามสกุล']||'').split('(')[0].trim());
+      return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
     });
-
-    // แปลง timestamp → วันที่ dd/mm/yyyy
-    const tsToDate = ts => {
-      const d = new Date(ts);
-      const dd = String(d.getDate()).padStart(2,'0');
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const yyyy = d.getFullYear();
-      return `${dd}/${mm}/${yyyy}`;
-    };
-
-    // สร้าง map วันที่ → ประเภทการลา
     const leaveMap = {};
     myLeaves.forEach(item => {
       const f = item.fields;
-      const start = f['ลาตั้งเเต่วันที่'];
-      const end   = f['จนถึงวันที่'];
-      const type  = f['ประเภทการลา'] || 'ลา';
+      const type = f['ประเภทการลา'] || 'ลา';
+      const start = f['ลาตั้งเเต่วันที่'], end = f['จนถึงวันที่'];
       if (!start) return;
-      // แปลง timestamp → วันที่ไทย (UTC+7) แล้ววนทุกวันในช่วงลา
-      const toThaiDate = ts => {
-        const d = new Date(ts + 7 * 60 * 60 * 1000); // +7 ชั่วโมง
-        const dd   = String(d.getUTCDate()).padStart(2,'0');
-        const mm   = String(d.getUTCMonth()+1).padStart(2,'0');
-        const yyyy = d.getUTCFullYear();
-        return { dd, mm, yyyy, str: `${dd}/${mm}/${yyyy}` };
-      };
-      const startTh = toThaiDate(start);
-      const endTh   = end ? toThaiDate(end) : startTh;
-      // วนทุกวัน
-      const cur = new Date(Date.UTC(parseInt(startTh.yyyy), parseInt(startTh.mm)-1, parseInt(startTh.dd)));
-      const fin = new Date(Date.UTC(parseInt(endTh.yyyy),   parseInt(endTh.mm)-1,   parseInt(endTh.dd)));
-      while (cur <= fin) {
-        const dd   = String(cur.getUTCDate()).padStart(2,'0');
-        const mm   = String(cur.getUTCMonth()+1).padStart(2,'0');
-        const yyyy = cur.getUTCFullYear();
-        leaveMap[`${dd}/${mm}/${yyyy}`] = type;
-        cur.setUTCDate(cur.getUTCDate() + 1);
+      const toTD = ts => { const d=new Date(ts+7*3600000); return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())); };
+      const startD = toTD(start), endD = end ? toTD(end) : new Date(startD);
+      for (let d=new Date(startD); d<=endD; d.setUTCDate(d.getUTCDate()+1)) {
+        const dd=String(d.getUTCDate()).padStart(2,'0'), mm=String(d.getUTCMonth()+1).padStart(2,'0');
+        leaveMap[`${dd}/${mm}/${d.getUTCFullYear()}`] = type;
       }
     });
     return leaveMap;
-  } catch(e) {
-    console.error('getLeaveDates error:', e.message);
-    return {};
-  }
+  } catch(e) { console.error('getLeaveDatesFromLark:', e.message); return {}; }
 }
 
 // Debug: ดู Leave table fields
