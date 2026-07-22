@@ -1292,7 +1292,12 @@ const getRaw = (v) => {
 };
 const name = getRaw(fields['ชื่อ-นามสกุล'] || fields['ชื่อ - นามสกุล']);
 const type = getRaw(fields['ประเภทการลา']);
-    const days = parseFloat(fields['ลาทั้งสิ้น'] || 0);
+    const daysRaw = getRaw(fields['ลาทั้งสิ้น']);
+    const daysParsed = parseFloat(daysRaw);
+    const days = isNaN(daysParsed) ? 0 : daysParsed;
+    if (isNaN(daysParsed)) {
+      console.warn('[LeaveWebhook] ลาทั้งสิ้น parse failed, raw value:', JSON.stringify(fields['ลาทั้งสิ้น']));
+    }
     const recordId = event?.record?.record_id || event?.record_id || '';
     const toThaiDate = ts => {
   if (!ts) return '';
