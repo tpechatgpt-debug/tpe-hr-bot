@@ -131,46 +131,88 @@ app.post('/webhook', async (req, res) => {
         return;
       }
       if (msg === 'เช็ควันลา') {
-  try {
-    const { google } = require('googleapis');
-    const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    const r = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.LOG_SHEET_ID,
-      range: 'Employees!A:AB',
-    });
-    const rows = (r.data.values || []);
-    const header = rows[0] || [];
-    const col = (name) => header.findIndex(h => h.trim() === name.trim());
-    const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === userId);
-    if (empRow) {
-      const g = (name) => empRow[col(name)] || '0';
-      const empForCard = {
-        'ชื่อ - นามสกุล':     g('ชื่อ - นามสกุล'),
-        'สิทธิ์พักร้อน':      g('สิทธิ์พักร้อน'),
-        'คงเหลือพักร้อน':     g('คงเหลือพักร้อน'),
-        'สิทธิ์ลากิจ':        g('สิทธิ์ลากิจ'),
-        'คงเหลือลากิจ':       g('คงเหลือลากิจ'),
-        'สิทธิ์ลาป่วย':       g('สิทธิ์ลาป่วย'),
-        'คงเหลือลาป่วย':      g('คงเหลือลาป่วย'),
-        'สิทธิ์วันเกิด':      g('สิทธิ์วันเกิด'),
-        'คงเหลือลาวันเกิด':   g('คงเหลือลาวันเกิด'),
-        'สิทธิ์ลาคลอด':      g('สิทธิ์ลาคลอด'),
-        'คงเหลือลาคลอด':     g('คงเหลือลาคลอด'),
-      };
-      await reply(replyToken, createLeaveCard(empForCard, imgUrl));
-    } else {
-      await reply(replyToken, createLeaveCard(employee, imgUrl));
-    }
-  } catch(e) {
-    console.error('เช็ควันลา Sheets error:', e.message);
-    await reply(replyToken, createLeaveCard(employee, imgUrl));
-  }
-}
-      
+        try {
+          const { google } = require('googleapis');
+          const auth = new google.auth.GoogleAuth({
+            credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+          });
+          const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+          const sid = process.env.LOG_SHEET_ID;
+          const [empR, leaveR] = await Promise.all([
+            sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' }),
+            sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }),
+          ]);
+          const empRows = empR.data.values || [];
+          const header = empRows[0] || [];
+          const col = (name) => header.findIndex(h => h.trim() === name.trim());
+          const empRow = empRows.slice(1).find(row => (row[col('Line ID')]||'').trim() === userId);
+          if (!empRow) { await reply(replyToken, createLeaveCard(employee, imgUrl)); return; }
+          const g = (name) => parseFloat(empRow[col(name)]) || 0;
+          const gs = (name) => empRow[col(name)] || '0';
+          const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
+          const thisYear = new Date().getFullYear().toString();
+          const leaveRows = (leaveR.data.values || []).slice(1);
+          const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+          const empNorm = normN(empName);
+          const myLeaves = leaveRows.filter(row => {
+            const rn = normN((row[1]||'').split('(')[0]);
+            const match = rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
+            if (!match) return false;
+            const year = (row[3]||'').split('/')[2] || '';
+            return year === thisYear;
+          });
+          const usedDays = { ลากิจ:0, ลาป่วย:0, ลาพักร้อน:0, ลาคลอด:0, ลาเนื่องในวันเกิด:0 };
+          myLeaves.forEach(row => {
+            const type = row[2] || '';
+            const days = parseFloat(row[5]) || 0;
+            if (type.includes('ลากิจ')) usedDays['ลากิจ'] += days;
+            else if (type.includes('ลาป่วย')) usedDays['ลาป่วย'] += days;
+            else if (type.includes('พักร้อน')) usedDays['ลาพักร้อน'] += days;
+            else if (type.includes('ลาคลอด')) usedDays['ลาคลอด'] += days;
+            else if (type.includes('วันเกิด')) usedDays['ลาเนื่องในวันเกิด'] += days;
+          });
+          const calc = (total, type) => Math.max(0, g(total) - usedDays[type]).toString();
+          const empForCard = {
+            'ชื่อ - นามสกุล':   empRow[col('ชื่อ - นามสกุล')] || empName,
+            'สิทธิ์พักร้อน':    gs('สิทธิ์พักร้อน'),
+            'คงเหลือพักร้อน':   calc('สิทธิ์พักร้อน', 'ลาพักร้อน'),
+            'สิทธิ์ลากิจ':      gs('สิทธิ์ลากิจ'),
+            'คงเหลือลากิจ':     calc('สิทธิ์ลากิจ', 'ลากิจ'),
+            'สิทธิ์ลาป่วย':     gs('สิทธิ์ลาป่วย'),
+            'คงเหลือลาป่วย':    calc('สิทธิ์ลาป่วย', 'ลาป่วย'),
+            'สิทธิ์วันเกิด':    gs('สิทธิ์วันเกิด'),
+            'คงเหลือลาวันเกิด': calc('สิทธิ์วันเกิด', 'ลาเนื่องในวันเกิด'),
+            'สิทธิ์ลาคลอด':    gs('สิทธิ์ลาคลอด'),
+            'คงเหลือลาคลอด':   calc('สิทธิ์ลาคลอด', 'ลาคลอด'),
+          };
+          await reply(replyToken, createLeaveCard(empForCard, imgUrl));
+        } catch(e) {
+          console.error('เช็ควันลา error:', e.message);
+          await reply(replyToken, createLeaveCard(employee, imgUrl));
+        }
+      } else {
+        await reply(replyToken, {
+          type: 'flex', altText: 'กรุณาเลือกหัวข้อที่ต้องการ',
+          contents: {
+            type: 'bubble',
+            body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
+              contents: [
+                { type: 'text', text: '📋 TPE HR Connect', weight: 'bold', size: 'lg', color: '#1E3A5F' },
+                { type: 'text', text: 'กรุณาเลือกหัวข้อที่ต้องการครับ', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
+                { type: 'separator', margin: 'md' },
+                { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: [
+                  { type: 'button', style: 'primary', color: '#1E3A5F', action: { type: 'message', label: '💰 ขอสลิปเงินเดือน', text: 'ขอสลิปเงินเดือน' }},
+                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📋 ขอใบรับรองเงินเดือน', text: 'ขอใบรับรองเงินเดือน' }},
+                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📅 เช็ควันลา', text: 'เช็ควันลา' }},
+                  { type: 'button', style: 'primary', color: '#C9A227', action: { type: 'message', label: '🔧 งานวันนี้', text: 'งานวันนี้' }},
+                ]}
+              ]
+            }
+          }
+        });
+      }
+
     } else {
       // ลงทะเบียน — ตรวจสอบ ลงเทียน ซ้ำ
       if (msg.length < 2) { await reply(replyToken, '⚠️ กรุณาพิมพ์ชื่อจริง เพื่อลงทะเบียนครับ'); return; }
