@@ -1595,9 +1595,22 @@ app.get('/eslip/employee', async (req, res) => {
   try {
     const { lineId } = req.query;
     if (!lineId) return res.status(400).json({ error: 'missing lineId' });
-    const larkToken = await lark.getToken();
-    const emp = await lark.findByLineId(larkToken, lineId);
-    if (!emp) return res.status(404).json({ error: 'not found' });
+    const larkToken = await lark.getToken().catch(() => null);
+let emp = null;
+try { if (larkToken) emp = await lark.findByLineId(larkToken, lineId); } catch(e) {}
+if (!emp) {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+  const rows = r.data.values || [];
+  const header = rows[0] || [];
+  const col = name => header.findIndex(h => h.trim() === name.trim());
+  const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
+  if (!empRow) return res.status(404).json({ error: 'not found' });
+  const g = name => empRow[col(name)] || '';
+  emp = { 'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'), 'ชุด': g('ชุด'), 'ตำแหน่ง': g('ตำแหน่ง'), 'ประเภท': g('ประเภท'), 'รหัสพนักงาน': g('รหัสพนักงาน') };
+}
     const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
     // ดึงตำแหน่งจากชื่อ เช่น "อรุณ ช่วยจวน (Graphic Designer & DBA)"
