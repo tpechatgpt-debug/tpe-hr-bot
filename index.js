@@ -769,8 +769,28 @@ app.get('/eslip/attendance', async (req, res) => {
 
     // ดึงชื่อพนักงานจาก Lark
     const larkToken = await lark.getToken();
-    const emp = await lark.findByLineId(larkToken, lineId);
-    if (!emp) return res.status(404).json({ error: 'not found' });
+    let emp = await lark.findByLineId(larkToken, lineId).catch(() => null);
+if (!emp) {
+  // fallback Sheets
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+  const rows = r.data.values || [];
+  const header = rows[0] || [];
+  const col = name => header.findIndex(h => h.trim() === name.trim());
+  const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
+  if (!empRow) return res.status(404).json({ error: 'not found' });
+  const g = name => empRow[col(name)] || '';
+  emp = {
+    'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'),
+    'ชุด':             g('ชุด'),
+    'ตำแหน่ง':        g('ตำแหน่ง'),
+    'ประเภท':          g('ประเภท'),
+    'รหัสพนักงาน':    g('รหัสพนักงาน'),
+    'Line ID':         lineId,
+  };
+}
 
     const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const posMatch = rawName.match(/[（(]([^)）]+)[)）]/);
