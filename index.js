@@ -1664,9 +1664,22 @@ app.get('/eslip/months', async (req, res) => {
 app.get('/eslip/doc', async (req, res) => {
   try {
     const { lineId, docType, month } = req.query;
-    const larkToken = await lark.getToken();
-    const emp = await lark.findByLineId(larkToken, lineId);
-    if (!emp) return res.status(404).json({ error: 'not found' });
+    const larkToken = await lark.getToken().catch(() => null);
+let emp = null;
+try { if (larkToken) emp = await lark.findByLineId(larkToken, lineId); } catch(e) {}
+if (!emp) {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+  const rows = r.data.values || [];
+  const header = rows[0] || [];
+  const col = name => header.findIndex(h => h.trim() === name.trim());
+  const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
+  if (!empRow) return res.status(404).json({ error: 'not found' });
+  const g = name => empRow[col(name)] || '';
+  emp = { 'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'), 'ประเภท': g('ประเภท') };
+}
     const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const empName = payroll.normName(rawName.split('(')[0]);
     const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
@@ -1917,9 +1930,46 @@ app.get('/eslip/data', async (req, res) => {
 app.get('/eslip/pdf', async (req, res) => {
   try {
     const { lineId, docType, month } = req.query;
-    const larkToken = await lark.getToken();
-    const emp = await lark.findByLineId(larkToken, lineId);
-    if (!emp) return res.status(404).send('not found');
+    // HTML ของเอกสาร (สำหรับแสดงใน LIFF) — ไม่ใช้ puppeteer
+app.get('/eslip/doc', async (req, res) => {
+  try {
+    const { lineId, docType, month } = req.query;
+    const larkToken = await lark.getToken().catch(() => null);
+let emp = null;
+try { if (larkToken) emp = await lark.findByLineId(larkToken, lineId); } catch(e) {}
+if (!emp) {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+  const rows = r.data.values || [];
+  const header = rows[0] || [];
+  const col = name => header.findIndex(h => h.trim() === name.trim());
+  const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
+  if (!empRow) return res.status(404).json({ error: 'not found' });
+  const g = name => empRow[col(name)] || '';
+  emp = { 'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'), 'ประเภท': g('ประเภท') };
+}
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
+    const empName = payroll.normName(rawName.split('(')[0]);
+    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
+    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
+    const empData = await payroll.getEmployeePayroll(empName, month, pt);
+    if (!empData) return res.status(404).json({ error: 'payroll not found' });
+    // สร้าง HTML โดยตรง ไม่ต้อง launch puppeteer
+    let html;
+    if (docType === 'payslip') {
+      html = payslip.buildPayslipHtml(empData);
+    } else {
+      html = cert.buildCertHtml(empData);
+    }
+    if (!html) return res.status(500).json({ error: 'buildHtml returned empty' });
+    res.json({ html });
+  } catch(e) {
+    console.error('/eslip/doc error:', e.message, e.stack?.split('\n')[1]);
+    res.status(500).json({ error: e.message });
+  }
+});
     const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const empName = payroll.normName(rawName.split('(')[0]);
     const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
