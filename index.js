@@ -131,26 +131,45 @@ app.post('/webhook', async (req, res) => {
         return;
       }
       if (msg === 'เช็ควันลา') {
-        await reply(replyToken, createLeaveCard(employee, imgUrl));
-      } else {
-        await reply(replyToken, {
-          type: 'flex', altText: 'กรุณาเลือกหัวข้อที่ต้องการ',
-          contents: {
-            type: 'bubble',
-            body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px',
-              contents: [
-                { type: 'text', text: '📋 TPE HR Connect', weight: 'bold', size: 'lg', color: '#1E3A5F' },
-                { type: 'text', text: 'กรุณาเลือกหัวข้อที่ต้องการครับ', size: 'sm', color: '#888888', margin: 'sm', wrap: true },
-                { type: 'separator', margin: 'md' },
-                { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: [
-                  { type: 'button', style: 'primary', color: '#1E3A5F', action: { type: 'message', label: '💰 ขอสลิปเงินเดือน', text: 'ขอสลิปเงินเดือน' }},
-                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📋 ขอใบรับรองเงินเดือน', text: 'ขอใบรับรองเงินเดือน' }},
-                  { type: 'button', style: 'secondary', action: { type: 'message', label: '📅 เช็ควันลา', text: 'เช็ควันลา' }},
-                  { type: 'button', style: 'primary', color: '#C9A227', action: { type: 'message', label: '🔧 งานวันนี้', text: 'งานวันนี้' }},
-                ]}
-              ]
-            }
-          }
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const r = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.LOG_SHEET_ID,
+      range: 'Employees!A:AB',
+    });
+    const rows = (r.data.values || []);
+    const header = rows[0] || [];
+    const col = (name) => header.findIndex(h => h.trim() === name.trim());
+    const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === userId);
+    if (empRow) {
+      const g = (name) => empRow[col(name)] || '0';
+      const empForCard = {
+        'ชื่อ - นามสกุล':     g('ชื่อ - นามสกุล'),
+        'สิทธิ์พักร้อน':      g('สิทธิ์พักร้อน'),
+        'คงเหลือพักร้อน':     g('คงเหลือพักร้อน'),
+        'สิทธิ์ลากิจ':        g('สิทธิ์ลากิจ'),
+        'คงเหลือลากิจ':       g('คงเหลือลากิจ'),
+        'สิทธิ์ลาป่วย':       g('สิทธิ์ลาป่วย'),
+        'คงเหลือลาป่วย':      g('คงเหลือลาป่วย'),
+        'สิทธิ์วันเกิด':      g('สิทธิ์วันเกิด'),
+        'คงเหลือลาวันเกิด':   g('คงเหลือลาวันเกิด'),
+        'สิทธิ์ลาคลอด':      g('สิทธิ์ลาคลอด'),
+        'คงเหลือลาคลอด':     g('คงเหลือลาคลอด'),
+      };
+      await reply(replyToken, createLeaveCard(empForCard, imgUrl));
+    } else {
+      await reply(replyToken, createLeaveCard(employee, imgUrl));
+    }
+  } catch(e) {
+    console.error('เช็ควันลา Sheets error:', e.message);
+    await reply(replyToken, createLeaveCard(employee, imgUrl));
+  }
+}
         });
       }
       
