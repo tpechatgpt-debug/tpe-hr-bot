@@ -1282,13 +1282,25 @@ app.post('/lark/leave-webhook', express.json(), async (req, res) => {
     if (req.body?.challenge) return res.json({ challenge: req.body.challenge });
     const event = req.body?.event || req.body;
     const fields = event?.record?.fields || event?.fields || {};
-    const name = fields['ชื่อ-นามสกุล'] || fields['ชื่อ - นามสกุล'] || '';
-    const type = fields['ประเภทการลา'] || '';
+// รองรับทั้ง object และ string จาก Lark
+const getRaw = (v) => {
+   if (!v) return '';
+   if (typeof v === 'string') return v;
+   if (Array.isArray(v)) return v.map(x => typeof x === 'object' ? (x.text||x.value||'') : x).join(', ');
+   if (typeof v === 'object') return v.text || v.value || '';
+   return String(v);
+};
+const name = getRaw(fields['ชื่อ-นามสกุล'] || fields['ชื่อ - นามสกุล']);
+const type = getRaw(fields['ประเภทการลา']);
     const days = parseFloat(fields['ลาทั้งสิ้น'] || 0);
     const recordId = event?.record?.record_id || event?.record_id || '';
     const toThaiDate = ts => {
-      if (!ts) return '';
-      const d = new Date(parseInt(ts) + 7 * 60 * 60 * 1000);
+  if (!ts) return '';
+// รองรับทั้ง timestamp number และ string dd/mm/yyyy
+  if (typeof ts === 'string' && ts.includes('/')) return ts;
+  const num = parseInt(ts);
+  if (isNaN(num)) return '';
+  const d = new Date(num + 7 * 60 * 60 * 1000);
       return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
     };
     const startDate = toThaiDate(fields['ลาตั้งเเต่วันที่'] || fields['ลาตั้งแต่วันที่']);
