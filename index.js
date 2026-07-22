@@ -2637,6 +2637,77 @@ app.post('/eslip/usage-log', express.json(), async (req, res) => {
   } catch(e) { console.log('[usage-log] error:', e.message); }
 });
 
+// ── Import ใบลาเก่าจาก Lark Sheet เข้า LOG_SHEET ─────────
+app.get('/admin/import-leave', async (req, res) => {
+  const { password } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+
+    // ── อ่านจาก Lark Leave Sheet ──────────────────────────
+    const LARK_SHEET_ID = '1cDr5mtayP2rmisAXbs0XT77JLZ_Pl9v1YW5t9_LHwSE';
+    const src = await sheets.spreadsheets.values.get({
+      spreadsheetId: LARK_SHEET_ID,
+      range: 'ชีต1!A:H',
+    });
+    const srcRows = (src.data.values || []).slice(1); // ข้าม header
+    // col: A=วันที่บันทึก B=วันที่เขียนใบลา C=ชื่อ D=ประเภท E=รายละเอียด F=ลาทั้งสิ้น G=ลาตั้งแต่ H=จนถึง
+    const parseLeaveRows = srcRows
+      .filter(r => r[2] && r[3] && r[6]) // ต้องมีชื่อ ประเภท วันที่
+      .map((r, i) => {
+        const name = (r[2] || '').split('(')[0].trim();
+        const type = r[3] || '';
+        const days = r[5] || '0';
+        const start = r[6] || '';
+        const end = r[7] || start;
+        const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+        return [`lark_${String(i+1).padStart(3,'0')}`, name, type, start, end, days, now];
+      });
+
+    // ── บันทึกลง LOG_SHEET "Leave" ────────────────────────
+    const sid = process.env.LOG_SHEET_ID;
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sid });
+    const hasLeave = meta.data.sheets.some(s => s.properties.title === 'Leave');
+    if (!hasLeave) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'Leave' } } }] }
+      });
+      await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Leave!A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [['record_id','ชื่อ-นามสกุล','ประเภทการลา','ลาตั้งแต่วันที่','จนถึงวันที่','ลาทั้งสิ้น','บันทึกเมื่อ']] }
+      });
+    }
+
+    // ตรวจซ้ำ
+    const existing = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:A' });
+    const existingIds = (existing.data.values || []).slice(1).map(r => r[0]);
+    const newRows = parseLeaveRows.filter(row => !existingIds.includes(row[0]));
+
+    if (!newRows.length) return res.json({ ok: true, message: 'มีข้อมูลครบแล้ว', total: existingIds.length - 1 });
+
+    // เขียนทีละ 100 แถว ป้องกัน timeout
+    for (let i = 0; i < newRows.length; i += 100) {
+      const chunk = newRows.slice(i, i + 100);
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: sid, range: 'Leave!A:G',
+        valueInputOption: 'RAW',
+        requestBody: { values: chunk }
+      });
+    }
+
+    Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
+    res.json({ ok: true, imported: newRows.length, total: parseLeaveRows.length, message: `Import สำเร็จ ${newRows.length} รายการ` });
+  } catch(e) {
+    console.error('/admin/import-leave error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
