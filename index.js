@@ -54,7 +54,8 @@ app.post('/webhook', async (req, res) => {
 
     if (msg === 'id') { await reply(replyToken, 'User ID: ' + userId); return; }
 
-    const larkToken = await lark.getToken();
+    let larkToken = null;
+    try { larkToken = await lark.getToken(); } catch(e) {}
 
     if (msg === 'ขอสลิปเงินเดือน' || msg === 'ขอสลีปเงินเดือน') {
       await handleDocRequest(replyToken, userId, larkToken, 'payslip'); return;
@@ -74,7 +75,37 @@ app.post('/webhook', async (req, res) => {
 
     const profile  = await getProfile(userId);
     const imgUrl   = profile?.pictureUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-    const employee = await lark.findByLineId(larkToken, userId);
+    let employee = null;
+try {
+  if (larkToken) employee = await lark.findByLineId(larkToken, userId);
+} catch(e) {
+  if (e.response?.status === 429 || e.message?.includes('429')) {
+    console.log('[webhook] Lark 429 → fallback Employees sheet');
+  }
+}
+// fallback Sheets ถ้า Lark 429
+if (!employee) {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+    const rows = r.data.values || [];
+    const header = rows[0] || [];
+    const col = name => header.findIndex(h => h.trim() === name.trim());
+    const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === userId);
+    if (empRow) {
+      const g = name => empRow[col(name)] || '';
+      employee = {
+        'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'),
+        'ชุด':             g('ชุด'),
+        'ตำแหน่ง':        g('ตำแหน่ง'),
+        'ประเภท':          g('ประเภท'),
+        'รหัสพนักงาน':    g('รหัสพนักงาน'),
+      };
+    }
+  } catch(e2) { console.error('Employees sheet fallback:', e2.message); }
+}
 
     if (employee) {
       // ตรวจว่าพิมพ์ "เช็ควันลา" ตรงๆ เท่านั้น
