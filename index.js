@@ -170,8 +170,6 @@ app.post('/webhook', async (req, res) => {
     await reply(replyToken, createLeaveCard(employee, imgUrl));
   }
 }
-        });
-      }
       
     } else {
       // ลงทะเบียน — ตรวจสอบ ลงเทียน ซ้ำ
