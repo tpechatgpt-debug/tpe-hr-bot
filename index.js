@@ -190,10 +190,7 @@ if (!employee) {
           const empNorm = normN(empName);
           const myLeaves = leaveRows.filter(row => {
           const rn = normN((row[1]||'').split('(')[0]);
-          const match = rn===empNorm || rn.includes(empNorm) || empNorm.includes(rn);
-          // ตรวจเพิ่ม: ถ้าชื่อสั้นกว่า 8 ตัว ต้อง exact match เท่านั้น
-          const strictMatch = rn.length < 8 ? rn===empNorm : match;
-            if (!match) return false;
+            if (rn !== empNorm) return false;
           const parts = (row[3]||'').split('/');
             if (parts.length !== 3) return false;
           const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
