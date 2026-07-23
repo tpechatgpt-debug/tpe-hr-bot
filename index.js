@@ -1383,6 +1383,7 @@ app.get('/admin/leave-types', async (req, res) => {
       if (!data?.has_more) break;
       pageToken = data.page_token || '';
     }
+    
     const types = [...new Set(allRecords.map(r => r.fields['ประเภทการลา']).filter(Boolean))];
     res.json({ types, total: allRecords.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -2919,8 +2920,8 @@ app.get('/admin/debug-leave', async (req, res) => {
     // ใบลาทั้งหมดใน Leave sheet
     const leaveRows = (leaveR.data.values || []).slice(1);
     const allMyLeaves = leaveRows.filter(row => {
-      const rn = normN((row[1]||'').split('(')[0]);
-      return rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
+    const rn = normN((row[1]||'').split('(')[0]);
+    return rn === empNorm;
     });
     // กรองรอบปีนี้
     const now = new Date();
