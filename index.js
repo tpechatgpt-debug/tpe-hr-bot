@@ -182,16 +182,20 @@ if (!employee) {
           const g = (name) => parseFloat(empRow[col(name)]) || 0;
           const gs = (name) => empRow[col(name)] || '0';
           const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
-          const thisYear = new Date().getFullYear().toString();
+          const now = new Date();
+          const cutoffStart = new Date(now.getFullYear() - 1, 11, 26); // 26/12/ปีก่อน
+          const cutoffEnd   = new Date(now.getFullYear(), 11, 25);      // 25/12/ปีนี้
           const leaveRows = (leaveR.data.values || []).slice(1);
           const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
           const empNorm = normN(empName);
           const myLeaves = leaveRows.filter(row => {
-            const rn = normN((row[1]||'').split('(')[0]);
-            const match = rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
+          const rn = normN((row[1]||'').split('(')[0]);
+          const match = rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
             if (!match) return false;
-            const year = (row[3]||'').split('/')[2] || '';
-            return year === thisYear;
+          const parts = (row[3]||'').split('/');
+            if (parts.length !== 3) return false;
+          const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+          return d >= cutoffStart && d <= cutoffEnd;
           });
           const usedDays = { ลากิจ:0, ลาป่วย:0, ลาพักร้อน:0, ลาคลอด:0, ลาเนื่องในวันเกิด:0 };
           myLeaves.forEach(row => {
@@ -2881,6 +2885,83 @@ app.get('/admin/import-leave', async (req, res) => {
     console.error('/admin/import-leave error:', e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+app.get('/admin/debug-leave', async (req, res) => {
+  const { password, name } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const [empR, leaveR] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' }),
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }),
+    ]);
+    const empRows = empR.data.values || [];
+    const header = empRows[0] || [];
+    const col = n => header.findIndex(h => h.trim() === n.trim());
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const searchName = normN(name || '');
+    // หาพนักงาน
+    const empRow = empRows.slice(1).find(row => normN(row[col('ชื่อ - นามสกุล')]||'').includes(searchName));
+    if (!empRow) return res.json({ error: 'ไม่พบพนักงาน', search: name });
+    const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
+    const empNorm = normN(empName);
+    // สิทธิ์
+    const rights = {
+      ลากิจ:    empRow[col('สิทธิ์ลากิจ')]    || '0',
+      ลาป่วย:   empRow[col('สิทธิ์ลาป่วย')]   || '0',
+      พักร้อน:  empRow[col('สิทธิ์พักร้อน')]  || '0',
+      วันเกิด:  empRow[col('สิทธิ์วันเกิด')]  || '0',
+      ลาคลอด:   empRow[col('สิทธิ์ลาคลอด')]  || '0',
+    };
+    // ใบลาทั้งหมดใน Leave sheet
+    const leaveRows = (leaveR.data.values || []).slice(1);
+    const allMyLeaves = leaveRows.filter(row => {
+      const rn = normN((row[1]||'').split('(')[0]);
+      return rn===empNorm||rn.includes(empNorm)||empNorm.includes(rn)||(rn.length>=4&&empNorm.includes(rn.slice(0,4)));
+    });
+    // กรองรอบปีนี้
+    const now = new Date();
+    const cutoffStart = new Date(now.getFullYear() - 1, 11, 26);
+    const cutoffEnd   = new Date(now.getFullYear(), 11, 25);
+    const inRange = allMyLeaves.filter(row => {
+      const parts = (row[3]||'').split('/');
+      if (parts.length !== 3) return false;
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+      return d >= cutoffStart && d <= cutoffEnd;
+    });
+    // นับวันแต่ละประเภท
+    const used = { ลากิจ:0, ลาป่วย:0, พักร้อน:0, วันเกิด:0, ลาคลอด:0 };
+    inRange.forEach(row => {
+      const type = row[2] || '';
+      const days = parseFloat(row[5]) || 0;
+      if (type.includes('ลากิจ')) used['ลากิจ'] += days;
+      else if (type.includes('ลาป่วย')) used['ลาป่วย'] += days;
+      else if (type.includes('พักร้อน')) used['พักร้อน'] += days;
+      else if (type.includes('วันเกิด')) used['วันเกิด'] += days;
+      else if (type.includes('ลาคลอด')) used['ลาคลอด'] += days;
+    });
+    res.json({
+      empName,
+      rights,
+      used,
+      remaining: {
+        ลากิจ:   parseFloat(rights.ลากิจ)   - used.ลากิจ,
+        ลาป่วย:  parseFloat(rights.ลาป่วย)  - used.ลาป่วย,
+        พักร้อน: parseFloat(rights.พักร้อน) - used.พักร้อน,
+        วันเกิด: parseFloat(rights.วันเกิด) - used.วันเกิด,
+        ลาคลอด:  parseFloat(rights.ลาคลอด) - used.ลาคลอด,
+      },
+      leaveRecords: inRange.map(r => ({ name: r[1], type: r[2], start: r[3], end: r[4], days: r[5] })),
+      totalRecordsFound: allMyLeaves.length,
+      totalInRange: inRange.length,
+      rangeFrom: `26/12/${now.getFullYear()-1}`,
+      rangeTo: `25/12/${now.getFullYear()}`,
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 startServer(PORT);
