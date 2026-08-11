@@ -617,11 +617,13 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
         </div>
         <div class="welfare-benefit-item">
           <span class="welfare-check">✓</span>
-          <span>ยูนิฟอร์ม / งานเลี้ยงประจำปี</span>
-        </div>
-        <div class="welfare-benefit-item" style="border-bottom:none">
-          <span class="welfare-check">✓</span>
           <span>โบนัสรายปี (ตามผลประกอบการ)</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="welfare-section-title">🎌 วันหยุดบริษัทประจำปี</div>
+        <div class="welfare-card" id="holidayList">
+          <div style="padding:16px;text-align:center;color:#9CA3AF;font-size:13px">กำลังโหลด...</div>
         </div>
       </div>
     </div>
@@ -858,7 +860,8 @@ function showPage(page){
   const checkinBtn=document.querySelector('.bnav-checkin-btn');
   if(checkinBtn)checkinBtn.classList.toggle('active-checkin', page==='field');
   if(page==='field'&&!fieldState.initialized){fieldState.initialized=true;initFieldPage();}
-  logAction(page,page);
+  if(page==='welfare')loadHolidayWelfare();
+logAction(page,page);
 }
 
 async function loadSlipMonths(){
@@ -913,6 +916,9 @@ async function loadAttendance(){
     if(d.error)throw new Error(d.error);
     attData=d.records||[];
     window._attSummary=d.summary||null;
+    window._holidays=new Set((d.holidays||[]).map(h=>h.date));
+    window._holidayNames={};
+    (d.holidays||[]).forEach(h=>{window._holidayNames[h.date]=h.name;});
     const now=new Date();
     const thisMonth=String(now.getMonth()+1).padStart(2,'0');
     const thisYear=now.getFullYear();
@@ -969,11 +975,15 @@ function renderYear(y,byYear){
     for(let i=0;i<firstDay;i++)cells.push(`<div class="cal-cell empty"></div>`);
     for(let d=1;d<=daysInMonth;d++){
       const rec=dayMap[d];
-      const dateObj=new Date(parseInt(y),m-1,d);
-      const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
-      const isToday=new Date().getDate()===d&&new Date().getMonth()===m-1&&new Date().getFullYear()===parseInt(y);
-      let cls='cal-cell';
+    const dateObj=new Date(parseInt(y),m-1,d);
+    const isSun=dateObj.getDay()===0,isSat=dateObj.getDay()===6;
+    const isToday=new Date().getDate()===d&&new Date().getMonth()===m-1&&new Date().getFullYear()===parseInt(y);
+    const dateKey=String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+    const isHoliday=window._holidays&&window._holidays.has(dateKey);
+    const holidayName=isHoliday?(window._holidayNames[dateKey]||'วันหยุด'):'';
+    let cls='cal-cell';
       if(isSun||isSat)cls+=' cal-weekend';
+      if(isHoliday)cls+=' cal-leave';
       if(isToday)cls+=' cal-today';
       if(!rec&&!isSun&&!isSat)cls+=' cal-absent';
       if(rec&&rec.late)cls+=' cal-late';
@@ -989,6 +999,7 @@ function renderYear(y,byYear){
       }
       else if(rec&&rec.isFieldwork){cls+=' cal-leave';cells.push(`<div class="${cls}" style="border-color:rgba(6,182,212,.3)!important;background:rgba(6,182,212,.08)"><div class="cal-day-num">${d}</div><div class="cal-field">📍${rec.time?rec.time.slice(0,5):''}</div>${rec.timeOut?`<div class="cal-field" style="color:#10B981;background:rgba(16,185,129,.12)">🏁${rec.timeOut.slice(0,5)}</div>`:''}</div>`);}
       else if(rec&&rec.noTimeIn){cls+=' cal-no-in';cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-no-in-badge">—</div><div class="cal-time-out" style="color:#D97706;background:rgba(217,119,6,.1)">${timeOut?timeOut.slice(0,5):''}</div></div>`);}
+      else if(isHoliday&&!rec){cells.push(`<div class="${cls}"><div class="cal-day-num">${d}</div><div class="cal-time-in" style="background:#FEF3C7;color:#D97706">🎌</div><div class="cal-time-out" style="font-size:7px;color:#D97706;background:#FEF3C7;font-weight:700;border-radius:3px;padding:1px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${holidayName.slice(0,8)}</div></div>`);}
       else{cells.push(`<div class="${cls}"><div class="cal-day-num">${d}${lateBadge}</div><div class="cal-time-in">${timeIn?timeIn.slice(0,5):''}</div><div class="cal-time-out">${timeOut?timeOut.slice(0,5):''}</div>${otBadge}</div>`);}
     }
     return`<div class="month-group"><div class="mg-header"><div class="mg-title">${MONTH_NAMES[m]} ${parseInt(y)>2400?parseInt(y):parseInt(y)+543}</div><div class="mg-stats"><span class="mg-stat mg-ok">${mrs.length} วัน</span>${lateCount>0?`<span class="mg-stat mg-late">สาย ${lateCount}</span>`:''}${otCount>0?`<span class="mg-stat" style="background:rgba(255,149,0,.15);color:var(--orange);border:1px solid rgba(255,149,0,.2)">OT ${otCount} วัน</span>`:''}</div></div><div class="cal-grid">${dayHeaders.map(d=>`<div class="cal-hdr">${d}</div>`).join('')}${cells.join('')}</div></div>`;
@@ -1230,6 +1241,34 @@ async function loadGpsHistory(period, btn) {
   } catch(e) { el.innerHTML = '<div class="fw-empty">❌ โหลดไม่สำเร็จ</div>'; }
 }
 
+async function loadHolidayWelfare(){
+  const el=document.getElementById('holidayList');
+  if(!el)return;
+  try{
+    const r=await fetch(`${API}/admin/attendance?password=tpe2569&year=${new Date().getFullYear()}&month=${new Date().getMonth()+1}`);
+    const d=await r.json();
+    const holidays=(d.holidays||[]).filter((h,i,arr)=>arr.findIndex(x=>x.date===h.date)===i).sort((a,b)=>{
+      const[ad,am,ay]=a.date.split('/').map(Number);
+      const[bd,bm,by]=b.date.split('/').map(Number);
+      return(ay*10000+am*100+ad)-(by*10000+bm*100+bd);
+    });
+    if(!holidays.length){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#9CA3AF">ยังไม่มีข้อมูลวันหยุด</div>';return;}
+    const thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    el.innerHTML=holidays.map((h,i)=>{
+      const[dd,mm,yyyy]=h.date.split('/').map(Number);
+      const thY=yyyy>2400?yyyy:yyyy+543;
+      const isLast=i===holidays.length-1;
+      return`<div class="welfare-benefit-item"${isLast?' style="border-bottom:none"':''}>
+        <span style="font-size:18px;flex-shrink:0">🎌</span>
+        <div style="flex:1">
+          <div style="font-size:13px;color:#374151">${h.name}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${dd} ${thM[mm]} พ.ศ.${thY}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#9CA3AF">โหลดไม่สำเร็จ</div>';}
+}
+  
 </script>
 </body>
 </html>
