@@ -1245,7 +1245,7 @@ async function loadHolidayWelfare(){
   const el=document.getElementById('holidayList');
   if(!el)return;
   try{
-    const r=await fetch(`${API}/admin/attendance?password=tpe2569&year=${new Date().getFullYear()}&month=${new Date().getMonth()+1}`);
+    const r=await fetch(`${API}/eslip/holidays`);
     const d=await r.json();
     const holidays=(d.holidays||[]).filter((h,i,arr)=>arr.findIndex(x=>x.date===h.date)===i).sort((a,b)=>{
       const[ad,am,ay]=a.date.split('/').map(Number);
