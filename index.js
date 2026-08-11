@@ -1126,7 +1126,21 @@ if (!emp) {
       return (by*10000+bm*100+bd) - (ay*10000+am*100+ad);
     });
 
-    res.json({ name: empName, position, records: finalRecords, summary: summary2 });
+    // ดึง Holidays
+let holidays = [];
+try {
+  const holR = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Holidays!A:B' });
+  holidays = (holR.data.values || []).slice(1).map(r => {
+    let date = r[0] || '';
+    const parts = date.split('/');
+    if (parts.length === 3 && parseInt(parts[2]) > 2400) {
+      parts[2] = String(parseInt(parts[2]) - 543);
+      date = parts.join('/');
+    }
+    return { date, name: r[1] || 'วันหยุดบริษัท' };
+  });
+} catch(e) {}
+res.json({ name: empName, position, records: finalRecords, summary: summary2, holidays });
   } catch(e) {
     console.error('/eslip/attendance error:', e.message);
     res.status(500).json({ error: e.message });
