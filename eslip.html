@@ -1258,11 +1258,18 @@ async function loadHolidayWelfare(){
       const[dd,mm,yyyy]=h.date.split('/').map(Number);
       const thY=yyyy>2400?yyyy:yyyy+543;
       const isLast=i===holidays.length-1;
-      return`<div class="welfare-benefit-item"${isLast?' style="border-bottom:none"':''}>
-        <span style="font-size:18px;flex-shrink:0">🎌</span>
+      const today = new Date(); today.setHours(0,0,0,0);
+const hDate = new Date(yyyy, mm-1, dd); hDate.setHours(0,0,0,0);
+const isPast = hDate < today;
+const isToday = hDate.getTime() === today.getTime();
+const icon = isToday ? '🎉' : isPast ? '✅' : '🎌';
+const textColor = isPast ? '#9CA3AF' : '#374151';
+const strike = isPast ? 'text-decoration:line-through;' : '';
+return`<div class="welfare-benefit-item"${isLast?' style="border-bottom:none"':''}>
+        <span style="font-size:18px;flex-shrink:0">${icon}</span>
         <div style="flex:1">
-          <div style="font-size:13px;color:#374151">${h.name}</div>
-          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${dd} ${thM[mm]} พ.ศ.${thY}</div>
+          <div style="font-size:13px;color:${textColor};${strike}">${h.name}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${dd} ${thM[mm]} พ.ศ.${thY}${isPast?' · ผ่านแล้ว':isToday?' · วันนี้':''}</div>
         </div>
       </div>`;
     }).join('');
