@@ -764,6 +764,9 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 // Cache สำหรับ attendance แยกตาม lineId (5 นาที)
 const attCache = {};
 const LEAVE_CACHE = {}; // key = lineId
+let LARK_LEAVE_ALL_CACHE = null; // cache ข้อมูลใบลาทั้งหมดจาก Lark
+let LARK_LEAVE_CACHE_TS = 0;
+const LARK_LEAVE_TTL = 10 * 60 * 1000; // 10 นาที
 
 app.get('/eslip/attendance', async (req, res) => {
   try {
@@ -1458,6 +1461,7 @@ const type = getRaw(fields['ประเภทการลา']);
       await sheets.spreadsheets.values.append({ spreadsheetId: sid, range: 'Leave!A:G', valueInputOption: 'RAW', requestBody: { values: [row] } });
     }
     Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
+    LARK_LEAVE_ALL_CACHE = null;
     console.log(`[LeaveWebhook] ${name} ${type} ${startDate}`);
     res.json({ ok: true });
   } catch(e) { console.error('[LeaveWebhook] error:', e.message); res.status(500).json({ error: e.message }); }
@@ -1868,14 +1872,24 @@ async function getLeaveDatesFromLark(larkToken, empName, empId) {
     const axios = require('axios');
     const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
     const empNorm = normN(empName);
-    let allRecords = [], pageToken = '';
-    for (let i = 0; i < 5; i++) {
-      const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
-      const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
-      const data = r.data?.data;
-      allRecords = allRecords.concat(data?.items || []);
-      if (!data?.has_more) break;
-      pageToken = data.page_token || '';
+    // ใช้ cache ถ้ายังไม่หมดอายุ
+    let allRecords;
+    const now = Date.now();
+    if (LARK_LEAVE_ALL_CACHE && (now - LARK_LEAVE_CACHE_TS) < LARK_LEAVE_TTL) {
+      allRecords = LARK_LEAVE_ALL_CACHE;
+    } else {
+      allRecords = [];
+      let pageToken = '';
+      for (let i = 0; i < 5; i++) {
+        const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
+        const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
+        const data = r.data?.data;
+        allRecords = allRecords.concat(data?.items || []);
+        if (!data?.has_more) break;
+        pageToken = data.page_token || '';
+      }
+      LARK_LEAVE_ALL_CACHE = allRecords;
+      LARK_LEAVE_CACHE_TS = now;
     }
     const myLeaves = allRecords.filter(item => {
       const n = normN((item.fields['ชื่อ-นามสกุล']||'').split('(')[0].trim());
@@ -2894,6 +2908,7 @@ app.get('/admin/import-leave', async (req, res) => {
     }
 
     Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
+    LARK_LEAVE_ALL_CACHE = null;
     res.json({ ok: true, imported: newRows.length, total: parseLeaveRows.length, message: `Import สำเร็จ ${newRows.length} รายการ` });
   } catch(e) {
     console.error('/admin/import-leave error:', e.message);
