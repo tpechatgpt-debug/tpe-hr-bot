@@ -2978,6 +2978,25 @@ app.get('/admin/debug-leave', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/eslip/holidays', async (req, res) => {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const holR = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Holidays!A:B' });
+    const holidays = (holR.data.values || []).slice(1).map(r => {
+      let date = r[0] || '';
+      const parts = date.split('/');
+      if (parts.length === 3 && parseInt(parts[2]) > 2400) {
+        parts[2] = String(parseInt(parts[2]) - 543);
+        date = parts.join('/');
+      }
+      return { date, name: r[1] || 'วันหยุดบริษัท' };
+    });
+    res.json({ holidays });
+  } catch(e) { res.json({ holidays: [] }); }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
