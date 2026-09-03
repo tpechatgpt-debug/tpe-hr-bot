@@ -1463,6 +1463,86 @@ const type = getRaw(fields['ประเภทการลา']);
     Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
     LARK_LEAVE_ALL_CACHE = null;
     console.log(`[LeaveWebhook] ${name} ${type} ${startDate}`);
+
+    // ── แจ้งวันลาคงเหลือกลับหาพนักงาน ──────────────────────
+    try {
+      const normN2 = s => (s||'').replace(/\s+/g,'').toLowerCase();
+      const nameNorm = normN2(name.split('(')[0]);
+      const empRows2 = (await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' })).data.values || [];
+      const header2 = empRows2[0] || [];
+      const col2 = n => header2.findIndex(h => h.trim() === n.trim());
+      const empRow2 = empRows2.slice(1).find(row => normN2((row[col2('ชื่อ - นามสกุล')]||'').split('(')[0]) === nameNorm);
+      if (empRow2) {
+        const lineId2 = (empRow2[col2('Line ID')]||'').trim();
+        if (lineId2) {
+          const now2 = new Date();
+          const cutoffStart2 = new Date(now2.getFullYear()-1, 11, 26);
+          const cutoffEnd2   = new Date(now2.getFullYear(), 11, 25);
+          const leaveRows2 = ((await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' })).data.values || []).slice(1);
+          const myLeaves2 = leaveRows2.filter(row => {
+            const rn = normN2((row[1]||'').split('(')[0]);
+            if (rn !== nameNorm) return false;
+            const parts = (row[3]||'').split('/');
+            if (parts.length !== 3) return false;
+            const d2 = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+            return d2 >= cutoffStart2 && d2 <= cutoffEnd2;
+          });
+          const used2 = { ลากิจ:0, ลาป่วย:0, ลาพักร้อน:0, ลาคลอด:0, ลาเนื่องในวันเกิด:0 };
+          myLeaves2.forEach(row => {
+            const t2 = row[2]||''; const d2 = parseFloat(row[5])||0;
+            if (t2.includes('ลากิจ')) used2['ลากิจ']+=d2;
+            else if (t2.includes('ลาป่วย')) used2['ลาป่วย']+=d2;
+            else if (t2.includes('พักร้อน')) used2['ลาพักร้อน']+=d2;
+            else if (t2.includes('ลาคลอด')) used2['ลาคลอด']+=d2;
+            else if (t2.includes('วันเกิด')) used2['ลาเนื่องในวันเกิด']+=d2;
+          });
+          const g2 = n => parseFloat(empRow2[col2(n)])||0;
+          const remaining = {
+            ลากิจ:   Math.max(0, g2('สิทธิ์ลากิจ')   - used2['ลากิจ']),
+            ลาป่วย:  Math.max(0, g2('สิทธิ์ลาป่วย')  - used2['ลาป่วย']),
+            พักร้อน: Math.max(0, g2('สิทธิ์พักร้อน') - used2['ลาพักร้อน']),
+            วันเกิด: Math.max(0, g2('สิทธิ์วันเกิด') - used2['ลาเนื่องในวันเกิด']),
+            ลาคลอด:  Math.max(0, g2('สิทธิ์ลาคลอด') - used2['ลาคลอด']),
+          };
+          await push(lineId2, {
+            type: 'flex', altText: `✅ บันทึกใบลาแล้ว — ${type}`,
+            contents: {
+              type: 'bubble',
+              header: { type:'box', layout:'vertical', backgroundColor:'#1B3E6F', paddingAll:'16px',
+                contents: [
+                  { type:'text', text:'✅ บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'md' },
+                  { type:'text', text:type, color:'#B8D4F0', size:'sm', margin:'xs' },
+                ]
+              },
+              body: { type:'box', layout:'vertical', spacing:'sm', paddingAll:'16px',
+                contents: [
+                  { type:'box', layout:'horizontal', contents:[{ type:'text', text:'วันที่ลา', size:'sm', color:'#888888', flex:3 }, { type:'text', text:`${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`, size:'sm', flex:5 }]},
+                  { type:'box', layout:'horizontal', contents:[{ type:'text', text:'จำนวน', size:'sm', color:'#888888', flex:3 }, { type:'text', text:`${days} วัน`, size:'sm', weight:'bold', flex:5, color:'#1B3E6F' }]},
+                  { type:'separator', margin:'md' },
+                  { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#888888', margin:'md' },
+                  { type:'box', layout:'horizontal', margin:'sm', contents:[
+                    { type:'text', text:'🚗 ลากิจ', size:'sm', flex:4 },
+                    { type:'text', text:`${remaining.ลากิจ} วัน`, size:'sm', weight:'bold', flex:3, color:'#3498DB' },
+                    { type:'text', text:'😷 ลาป่วย', size:'sm', flex:4 },
+                    { type:'text', text:`${remaining.ลาป่วย} วัน`, size:'sm', weight:'bold', flex:3, color:'#E74C3C' },
+                  ]},
+                  { type:'box', layout:'horizontal', margin:'xs', contents:[
+                    { type:'text', text:'🏖 พักร้อน', size:'sm', flex:4 },
+                    { type:'text', text:`${remaining.พักร้อน} วัน`, size:'sm', weight:'bold', flex:3, color:'#F39C12' },
+                    { type:'text', text:'🎂 วันเกิด', size:'sm', flex:4 },
+                    { type:'text', text:`${remaining.วันเกิด} วัน`, size:'sm', weight:'bold', flex:3, color:'#9B59B6' },
+                  ]},
+                ]
+              },
+              footer: { type:'box', layout:'vertical', paddingAll:'10px',
+                contents:[{ type:'text', text:'อัปเดตอัตโนมัติจากระบบ HR', size:'xxs', color:'#AAAAAA', align:'center' }]
+              }
+            }
+          }).catch(()=>{});
+        }
+      }
+    } catch(e2) { console.log('[LeaveWebhook] notify error:', e2.message); }
+
     res.json({ ok: true });
   } catch(e) { console.error('[LeaveWebhook] error:', e.message); res.status(500).json({ error: e.message }); }
 });
@@ -3010,6 +3090,78 @@ app.get('/eslip/holidays', async (req, res) => {
     });
     res.json({ holidays });
   } catch(e) { res.json({ holidays: [] }); }
+});
+
+// ── ประวัติการลาของพนักงาน (สำหรับ eslip.html) ──────────
+app.get('/eslip/leave-history', async (req, res) => {
+  try {
+    const { lineId } = req.query;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const [empR, leaveR] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' }),
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }),
+    ]);
+    const empRows = empR.data.values || [];
+    const header = empRows[0] || [];
+    const col = n => header.findIndex(h => h.trim() === n.trim());
+    const empRow = empRows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
+    if (!empRow) return res.status(404).json({ error: 'not found' });
+    const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const empNorm = normN(empName);
+    const now = new Date();
+    const cutoffStart = new Date(now.getFullYear()-1, 11, 26);
+    const cutoffEnd   = new Date(now.getFullYear(), 11, 25);
+    const leaveRows = (leaveR.data.values || []).slice(1);
+    const myLeaves = leaveRows.filter(row => {
+      const rn = normN((row[1]||'').split('(')[0]);
+      if (rn !== empNorm) return false;
+      const parts = (row[3]||'').split('/');
+      if (parts.length !== 3) return false;
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+      return d >= cutoffStart && d <= cutoffEnd;
+    });
+    const g = n => parseFloat(empRow[col(n)])||0;
+    const rights = {
+      ลากิจ:   empRow[col('สิทธิ์ลากิจ')]   || '0',
+      ลาป่วย:  empRow[col('สิทธิ์ลาป่วย')]  || '0',
+      พักร้อน: empRow[col('สิทธิ์พักร้อน')] || '0',
+      วันเกิด: empRow[col('สิทธิ์วันเกิด')] || '0',
+      ลาคลอด:  empRow[col('สิทธิ์ลาคลอด')] || '0',
+    };
+    const used = { ลากิจ:0, ลาป่วย:0, พักร้อน:0, วันเกิด:0, ลาคลอด:0 };
+    myLeaves.forEach(row => {
+      const t = row[2]||''; const d = parseFloat(row[5])||0;
+      if (t.includes('ลากิจ')) used['ลากิจ']+=d;
+      else if (t.includes('ลาป่วย')) used['ลาป่วย']+=d;
+      else if (t.includes('พักร้อน')) used['พักร้อน']+=d;
+      else if (t.includes('วันเกิด')) used['วันเกิด']+=d;
+      else if (t.includes('ลาคลอด')) used['ลาคลอด']+=d;
+    });
+    const records = myLeaves.map(row => ({
+      type: row[2]||'', start: row[3]||'', end: row[4]||'', days: parseFloat(row[5])||0,
+    })).sort((a,b) => {
+      const parseD = s => { const [dd,mm,yyyy]=(s||'').split('/').map(Number); return yyyy*10000+mm*100+dd; };
+      return parseD(b.start) - parseD(a.start);
+    });
+    res.json({
+      empName, rights, used,
+      remaining: {
+        ลากิจ:   Math.max(0, g('สิทธิ์ลากิจ')   - used['ลากิจ']),
+        ลาป่วย:  Math.max(0, g('สิทธิ์ลาป่วย')  - used['ลาป่วย']),
+        พักร้อน: Math.max(0, g('สิทธิ์พักร้อน') - used['พักร้อน']),
+        วันเกิด: Math.max(0, g('สิทธิ์วันเกิด') - used['วันเกิด']),
+        ลาคลอด:  Math.max(0, g('สิทธิ์ลาคลอด') - used['ลาคลอด']),
+      },
+      records,
+      rangeFrom: `26/12/${now.getFullYear()-1}`,
+      rangeTo: `25/12/${now.getFullYear()}`,
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 startServer(PORT);
