@@ -248,6 +248,24 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-field{font-size:8px;font-weight:700;color:#06B6D4;background:rgba(6,182,212,.12);padding:1px 3px;border-radius:4px;width:100%;text-align:center}
 .cal-no-in{background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.2)!important}
 .cal-no-in-badge{font-size:7px;font-weight:700;color:#D97706;background:rgba(217,119,6,.15);padding:1px 3px;border-radius:3px;width:100%;text-align:center}
+.leave-summary{margin:12px 18px 0;position:relative;z-index:1}
+.leave-summary-title{font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.leave-quota-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.leave-quota-card{background:#F9FAFB;border:0.5px solid #E5E7EB;border-radius:12px;padding:10px 8px;text-align:center}
+.leave-quota-icon{font-size:16px;margin-bottom:4px}
+.leave-quota-label{font-size:9px;color:#9CA3AF;font-weight:600}
+.leave-quota-vals{display:flex;align-items:baseline;justify-content:center;gap:3px;margin-top:2px}
+.leave-quota-remain{font-size:18px;font-weight:800;color:#111827}
+.leave-quota-total{font-size:10px;color:#9CA3AF}
+.leave-records-wrap{background:#fff;border:0.5px solid #E5E7EB;border-radius:12px;overflow:hidden}
+.leave-record-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:0.5px solid #F3F4F6}
+.leave-record-item:last-child{border-bottom:none}
+.leave-record-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
+.leave-record-info{flex:1}
+.leave-record-type{font-size:13px;font-weight:600;color:#111827}
+.leave-record-date{font-size:11px;color:#9CA3AF;margin-top:2px}
+.leave-record-days{font-size:13px;font-weight:700;color:#1B3E6F;flex-shrink:0}
+.leave-empty{text-align:center;padding:20px;color:#9CA3AF;font-size:12px}
 .welfare-section-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .welfare-card{background:#fff;border:0.5px solid #E5E7EB;border-radius:14px;overflow:hidden;margin-bottom:0;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .welfare-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:0.5px solid #F3F4F6}
@@ -411,6 +429,15 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
       </div>
     </div>
 
+    <!-- ── LEAVE SUMMARY ── -->
+    <div class="leave-summary" id="leaveSummaryWrap" style="display:none">
+      <div class="leave-summary-title">📅 วันลาคงเหลือ (รอบปีนี้)</div>
+      <div class="leave-quota-grid" id="leaveQuotaGrid"></div>
+      <div style="font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">ประวัติการลาล่าสุด</div>
+      <div class="leave-records-wrap" id="leaveRecordsList">
+        <div class="leave-empty">กำลังโหลด...</div>
+      </div>
+    </div>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">เดือนนี้</div>
@@ -779,6 +806,7 @@ async function loadEmp(lineId){
     loadSlipMonths();
     loadAttendance();
     preloadJobDesc();
+    loadLeaveHistory();
   }catch(e){}
 }
 
@@ -1198,6 +1226,84 @@ async function sendFieldReport(){
   }catch(e){showToast('❌ ส่งไม่สำเร็จ');}
 }
 
+async function loadLeaveHistory(){
+  if(!empData)return;
+  const wrap=document.getElementById('leaveSummaryWrap');
+  const grid=document.getElementById('leaveQuotaGrid');
+  const list=document.getElementById('leaveRecordsList');
+  try{
+    const r=await fetch(`${API}/eslip/leave-history?lineId=${empData.lineId}`);
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    wrap.style.display='block';
+    const quotas=[
+      {icon:'🚗',label:'ลากิจ',  key:'ลากิจ'},
+      {icon:'😷',label:'ลาป่วย', key:'ลาป่วย'},
+      {icon:'🏖️',label:'พักร้อน',key:'พักร้อน'},
+      {icon:'🎂',label:'วันเกิด',key:'วันเกิด'},
+      {icon:'👶',label:'ลาคลอด',key:'ลาคลอด'},
+    ].filter(q=>parseFloat(d.rights[q.key]||0)>0);
+    grid.innerHTML=quotas.map(q=>`
+      <div class="leave-quota-card">
+        <div class="leave-quota-icon">${q.icon}</div>
+        <div class="leave-quota-label">${q.label}</div>
+        <div class="leave-quota-vals">
+          <span class="leave-quota-remain">${Math.max(0,d.remaining[q.key]||0)}</span>
+          <span class="leave-quota-total">/${d.rights[q.key]||0}</span>
+        </div>
+      </div>`).join('');
+    const recs=d.records||[];
+    if(!recs.length){list.innerHTML='<div class="leave-empty">ยังไม่มีประวัติการลาในรอบปีนี้</div>';return;}
+    const thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const fmtDate=s=>{if(!s)return'';const[dd,mm,yyyy]=s.split('/').map(Number);const thY=yyyy>2400?yyyy:yyyy+543;return`${dd} ${thM[mm]||mm} ${thY}`;};
+    list.innerHTML=recs.slice(0,5).map((rec,i)=>{
+      const lb=leaveLabel(rec.type);
+      const isLast=i===Math.min(recs.length,5)-1;
+      const dateStr=rec.end&&rec.end!==rec.start?`${fmtDate(rec.start)} – ${fmtDate(rec.end)}`:fmtDate(rec.start);
+      return`<div class="leave-record-item"${isLast?' style="border-bottom:none"':''}>
+        <div class="leave-record-icon">${lb.icon}</div>
+        <div class="leave-record-info">
+          <div class="leave-record-type">${lb.label}</div>
+          <div class="leave-record-date">${dateStr}</div>
+        </div>
+        <div class="leave-record-days">${rec.days} วัน</div>
+      </div>`;
+    }).join('');
+  }catch(e){wrap.style.display='none';}
+}
+async function loadHolidayWelfare(){
+  const el=document.getElementById('holidayList');
+  if(!el)return;
+  try{
+    const r=await fetch(`${API}/eslip/holidays`);
+    const d=await r.json();
+    const holidays=(d.holidays||[]).filter((h,i,arr)=>arr.findIndex(x=>x.date===h.date)===i).sort((a,b)=>{
+      const[ad,am,ay]=a.date.split('/').map(Number);
+      const[bd,bm,by]=b.date.split('/').map(Number);
+      return(ay*10000+am*100+ad)-(by*10000+bm*100+bd);
+    });
+    if(!holidays.length){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#9CA3AF">ยังไม่มีข้อมูลวันหยุด</div>';return;}
+    const thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    el.innerHTML=holidays.map((h,i)=>{
+      const[dd,mm,yyyy]=h.date.split('/').map(Number);
+      const thY=yyyy>2400?yyyy:yyyy+543;
+      const isLast=i===holidays.length-1;
+      const today=new Date();today.setHours(0,0,0,0);
+      const hDate=new Date(yyyy,mm-1,dd);hDate.setHours(0,0,0,0);
+      const isPast=hDate<today;const isToday=hDate.getTime()===today.getTime();
+      const icon=isToday?'🎉':isPast?'✅':'🎌';
+      const textColor=isPast?'#9CA3AF':'#374151';
+      const strike=isPast?'text-decoration:line-through;':'';
+      return`<div class="welfare-benefit-item"${isLast?' style="border-bottom:none"':''}>
+        <span style="font-size:18px;flex-shrink:0">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;color:${textColor};${strike}">${h.name}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${dd} ${thM[mm]} พ.ศ.${thY}${isPast?' · ผ่านแล้ว':isToday?' · วันนี้':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#9CA3AF">โหลดไม่สำเร็จ</div>';}
+}
 const up=new URLSearchParams(window.location.search);
 const did=up.get('lineId');
 if(up.get('debug')==='1'&&did){hide();empData={lineId:did};loadEmp(did);}
