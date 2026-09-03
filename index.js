@@ -3142,8 +3142,34 @@ app.get('/eslip/leave-history', async (req, res) => {
       else if (t.includes('วันเกิด')) used['วันเกิด']+=d;
       else if (t.includes('ลาคลอด')) used['ลาคลอด']+=d;
     });
+    // ดึง note จาก Lark
+    const noteMap = {};
+    try {
+      const larkToken2 = await lark.getToken();
+      let allRecs2 = [], pt2 = '';
+      for (let i = 0; i < 5; i++) {
+        const url2 = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pt2 ? '&page_token=' + pt2 : '');
+        const r2 = await axios.get(url2, { headers: { Authorization: 'Bearer ' + larkToken2 } });
+        const data2 = r2.data?.data;
+        allRecs2 = allRecs2.concat(data2?.items || []);
+        if (!data2?.has_more) break;
+        pt2 = data2.page_token || '';
+      }
+      const normN2 = s => (s||'').replace(/\s+/g,'').toLowerCase();
+      allRecs2.filter(item => normN2((item.fields['ชื่อ-นามสกุล']||'').split('(')[0]) === empNorm)
+        .forEach(item => {
+          const f = item.fields;
+          const start = f['ลาตั้งเเต่วันที่'];
+          if (!start) return;
+          const d2 = new Date(parseInt(start) + 7*3600000);
+          const key = `${String(d2.getUTCDate()).padStart(2,'0')}/${String(d2.getUTCMonth()+1).padStart(2,'0')}/${d2.getUTCFullYear()}`;
+          if (f['รายละเอียด']) noteMap[key] = f['รายละเอียด'];
+        });
+    } catch(e2) { console.log('[leave-history] lark note error:', e2.message); }
+
     const records = myLeaves.map(row => ({
       type: row[2]||'', start: row[3]||'', end: row[4]||'', days: parseFloat(row[5])||0,
+      note: noteMap[row[3]] || '',
     })).sort((a,b) => {
       const parseD = s => { const [dd,mm,yyyy]=(s||'').split('/').map(Number); return yyyy*10000+mm*100+dd; };
       return parseD(b.start) - parseD(a.start);
