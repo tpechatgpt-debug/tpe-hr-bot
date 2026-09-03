@@ -250,22 +250,32 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .cal-no-in-badge{font-size:7px;font-weight:700;color:#D97706;background:rgba(217,119,6,.15);padding:1px 3px;border-radius:3px;width:100%;text-align:center}
 .leave-summary{margin:12px 18px 0;position:relative;z-index:1}
 .leave-summary-title{font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
-.leave-quota-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.leave-quota-card{background:#F9FAFB;border:0.5px solid #E5E7EB;border-radius:12px;padding:10px 8px;text-align:center}
-.leave-quota-icon{font-size:16px;margin-bottom:4px}
-.leave-quota-label{font-size:9px;color:#9CA3AF;font-weight:600}
-.leave-quota-vals{display:flex;align-items:baseline;justify-content:center;gap:3px;margin-top:2px}
-.leave-quota-remain{font-size:18px;font-weight:800;color:#111827}
-.leave-quota-total{font-size:10px;color:#9CA3AF}
-.leave-records-wrap{background:#fff;border:0.5px solid #E5E7EB;border-radius:12px;overflow:hidden}
-.leave-record-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:0.5px solid #F3F4F6}
-.leave-record-item:last-child{border-bottom:none}
-.leave-record-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
-.leave-record-info{flex:1}
-.leave-record-type{font-size:13px;font-weight:600;color:#111827}
-.leave-record-date{font-size:11px;color:#9CA3AF;margin-top:2px}
-.leave-record-days{font-size:13px;font-weight:700;color:#1B3E6F;flex-shrink:0}
+.leave-type-grid{display:flex;flex-direction:column;gap:6px}
+.leave-type-row{background:#fff;border:0.5px solid #E5E7EB;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.leave-type-row:active{transform:scale(.98);background:#F9FAFB}
+.leave-type-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.leave-type-info{flex:1}
+.leave-type-label{font-size:13px;font-weight:600;color:#111827}
+.leave-type-sub{font-size:11px;color:#9CA3AF;margin-top:2px}
+.leave-type-days{font-size:16px;font-weight:800;color:#1B3E6F;flex-shrink:0}
+.leave-type-arrow{color:#D1D5DB;font-size:18px;flex-shrink:0}
 .leave-empty{text-align:center;padding:20px;color:#9CA3AF;font-size:12px}
+/* modal ประวัติการลา */
+.leave-modal{display:none;position:fixed;inset:0;z-index:300;flex-direction:column}
+.leave-modal.show{display:flex}
+.leave-modal-overlay{position:absolute;inset:0;background:rgba(17,24,39,.5);backdrop-filter:blur(4px)}
+.leave-modal-sheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;max-height:85vh;display:flex;flex-direction:column;animation:slideUp .3s ease;box-shadow:0 -4px 20px rgba(0,0,0,.08)}
+.leave-modal-header{padding:16px 20px 12px;border-bottom:0.5px solid #E5E7EB;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.leave-modal-title{flex:1;font-size:16px;font-weight:700;color:#111827}
+.leave-modal-close{width:32px;height:32px;border-radius:10px;background:#F9FAFB;border:0.5px solid #E5E7EB;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:#374151}
+.leave-modal-body{flex:1;overflow-y:auto;padding:12px 20px 20px}
+.leave-history-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:0.5px solid #F3F4F6}
+.leave-history-item:last-child{border-bottom:none}
+.leave-history-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leave-history-info{flex:1}
+.leave-history-date{font-size:13px;font-weight:600;color:#111827}
+.leave-history-days{font-size:11px;color:#9CA3AF;margin-top:2px}
+.leave-history-badge{font-size:12px;font-weight:700;flex-shrink:0}
 .welfare-section-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .welfare-card{background:#fff;border:0.5px solid #E5E7EB;border-radius:14px;overflow:hidden;margin-bottom:0;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .welfare-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:0.5px solid #F3F4F6}
@@ -431,11 +441,20 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 
     <!-- ── LEAVE SUMMARY ── -->
     <div class="leave-summary" id="leaveSummaryWrap" style="display:none">
-      <div class="leave-summary-title">📅 วันลาคงเหลือ (รอบปีนี้)</div>
-      <div class="leave-quota-grid" id="leaveQuotaGrid"></div>
-      <div style="font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">ประวัติการลาล่าสุด</div>
-      <div class="leave-records-wrap" id="leaveRecordsList">
+      <div class="leave-summary-title">📋 สรุปการลา (รอบปีนี้)</div>
+      <div class="leave-type-grid" id="leaveTypeGrid">
         <div class="leave-empty">กำลังโหลด...</div>
+      </div>
+    </div>
+    <!-- LEAVE HISTORY MODAL -->
+    <div class="leave-modal" id="leaveModal">
+      <div class="leave-modal-overlay" onclick="closeLeaveModal()"></div>
+      <div class="leave-modal-sheet">
+        <div class="leave-modal-header">
+          <div class="leave-modal-title" id="leaveModalTitle">ประวัติการลา</div>
+          <div class="leave-modal-close" onclick="closeLeaveModal()">✕</div>
+        </div>
+        <div class="leave-modal-body" id="leaveModalBody"></div>
       </div>
     </div>
     <div class="stats-grid">
@@ -1226,51 +1245,62 @@ async function sendFieldReport(){
   }catch(e){showToast('❌ ส่งไม่สำเร็จ');}
 }
 
+let _leaveData = null;
 async function loadLeaveHistory(){
   if(!empData)return;
   const wrap=document.getElementById('leaveSummaryWrap');
-  const grid=document.getElementById('leaveQuotaGrid');
-  const list=document.getElementById('leaveRecordsList');
+  const grid=document.getElementById('leaveTypeGrid');
   try{
     const r=await fetch(`${API}/eslip/leave-history?lineId=${empData.lineId}`);
     const d=await r.json();
     if(d.error)throw new Error(d.error);
+    _leaveData=d;
     wrap.style.display='block';
-    const quotas=[
-      {icon:'🚗',label:'ลากิจ',  key:'ลากิจ'},
-      {icon:'😷',label:'ลาป่วย', key:'ลาป่วย'},
-      {icon:'🏖️',label:'พักร้อน',key:'พักร้อน'},
-      {icon:'🎂',label:'วันเกิด',key:'วันเกิด'},
-      {icon:'👶',label:'ลาคลอด',key:'ลาคลอด'},
-    ].filter(q=>parseFloat(d.rights[q.key]||0)>0);
-    grid.innerHTML=quotas.map(q=>`
-      <div class="leave-quota-card">
-        <div class="leave-quota-icon">${q.icon}</div>
-        <div class="leave-quota-label">${q.label}</div>
-        <div class="leave-quota-vals">
-          <span class="leave-quota-remain">${Math.max(0,d.remaining[q.key]||0)}</span>
-          <span class="leave-quota-total">/${d.rights[q.key]||0}</span>
-        </div>
-      </div>`).join('');
     const recs=d.records||[];
-    if(!recs.length){list.innerHTML='<div class="leave-empty">ยังไม่มีประวัติการลาในรอบปีนี้</div>';return;}
-    const thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    const fmtDate=s=>{if(!s)return'';const[dd,mm,yyyy]=s.split('/').map(Number);const thY=yyyy>2400?yyyy:yyyy+543;return`${dd} ${thM[mm]||mm} ${thY}`;};
-    list.innerHTML=recs.slice(0,5).map((rec,i)=>{
+    if(!recs.length){grid.innerHTML='<div class="leave-empty">ยังไม่มีประวัติการลาในรอบปีนี้</div>';return;}
+    // รวมวันตามประเภท
+    const typeMap={};
+    recs.forEach(rec=>{
       const lb=leaveLabel(rec.type);
-      const isLast=i===Math.min(recs.length,5)-1;
-      const dateStr=rec.end&&rec.end!==rec.start?`${fmtDate(rec.start)} – ${fmtDate(rec.end)}`:fmtDate(rec.start);
-      return`<div class="leave-record-item"${isLast?' style="border-bottom:none"':''}>
-        <div class="leave-record-icon">${lb.icon}</div>
-        <div class="leave-record-info">
-          <div class="leave-record-type">${lb.label}</div>
-          <div class="leave-record-date">${dateStr}</div>
+      const key=lb.label;
+      if(!typeMap[key])typeMap[key]={icon:lb.icon,label:lb.label,color:lb.color,days:0,records:[]};
+      typeMap[key].days+=rec.days;
+      typeMap[key].records.push(rec);
+    });
+    const types=Object.values(typeMap).sort((a,b)=>b.days-a.days);
+    grid.innerHTML=types.map(t=>`
+      <div class="leave-type-row" onclick="openLeaveModal('${t.label}')">
+        <div class="leave-type-icon">${t.icon}</div>
+        <div class="leave-type-info">
+          <div class="leave-type-label">${t.label}</div>
+          <div class="leave-type-sub">${t.records.length} ครั้ง</div>
         </div>
-        <div class="leave-record-days">${rec.days} วัน</div>
-      </div>`;
-    }).join('');
+        <div class="leave-type-days">${t.days} วัน</div>
+        <div class="leave-type-arrow">›</div>
+      </div>`).join('');
   }catch(e){wrap.style.display='none';}
 }
+function openLeaveModal(typeLabel){
+  if(!_leaveData)return;
+  const recs=(_leaveData.records||[]).filter(r=>leaveLabel(r.type).label===typeLabel);
+  const lb=leaveLabel(recs[0]?.type||'');
+  document.getElementById('leaveModalTitle').textContent=lb.icon+' '+typeLabel;
+  const thM=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const fmtDate=s=>{if(!s)return'';const[dd,mm,yyyy]=s.split('/').map(Number);const thY=yyyy>2400?yyyy:yyyy+543;return`${dd} ${thM[mm]||mm} ${thY}`;};
+  document.getElementById('leaveModalBody').innerHTML=recs.length?recs.map((rec,i)=>{
+    const isLast=i===recs.length-1;
+    const dateStr=rec.end&&rec.end!==rec.start?`${fmtDate(rec.start)} – ${fmtDate(rec.end)}`:fmtDate(rec.start);
+    return`<div class="leave-history-item"${isLast?' style="border-bottom:none"':''}>
+      <div class="leave-history-dot" style="background:${lb.color}"></div>
+      <div class="leave-history-info">
+        <div class="leave-history-date">${dateStr}</div>
+        <div class="leave-history-days">${rec.days} วัน</div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="leave-empty">ไม่มีข้อมูล</div>';
+  document.getElementById('leaveModal').classList.add('show');
+}
+function closeLeaveModal(){document.getElementById('leaveModal').classList.remove('show');}
 async function loadHolidayWelfare(){
   const el=document.getElementById('holidayList');
   if(!el)return;
