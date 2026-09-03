@@ -1295,6 +1295,7 @@ function openLeaveModal(typeLabel){
       <div class="leave-history-info">
         <div class="leave-history-date">${dateStr}</div>
         <div class="leave-history-days">${rec.days} วัน</div>
+      ${rec.note?`<div style="font-size:11px;color:#6B7280;margin-top:3px">📝 ${rec.note}</div>`:''}
       </div>
     </div>`;
   }).join(''):'<div class="leave-empty">ไม่มีข้อมูล</div>';
