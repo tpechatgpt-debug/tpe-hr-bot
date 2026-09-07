@@ -3220,6 +3220,73 @@ app.get('/eslip/leave-history', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/admin/test-leave-notify', async (req, res) => {
+  const { password, lineId } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    await push(lineId, {
+      type: 'flex', altText: '✅ ทดสอบแจ้งใบลา',
+      contents: {
+        type: 'bubble', size: 'kilo',
+        header: { type:'box', layout:'vertical', backgroundColor:'#3498DB', paddingAll:'20px',
+          contents:[
+            { type:'box', layout:'horizontal', alignItems:'center', contents:[
+              { type:'text', text:'📋', size:'xxl', flex:0 },
+              { type:'box', layout:'vertical', flex:1, paddingStart:'12px', contents:[
+                { type:'text', text:'ทดสอบแจ้งใบลา', color:'#ffffff', weight:'bold', size:'lg' },
+                { type:'text', text:'ลากิจ', color:'rgba(255,255,255,0.8)', size:'sm', margin:'xs' },
+              ]},
+            ]},
+          ]
+        },
+        body: { type:'box', layout:'vertical', paddingAll:'18px',
+          contents:[
+            { type:'box', layout:'horizontal', paddingBottom:'12px',
+              contents:[
+                { type:'box', layout:'vertical', flex:1, alignItems:'center',
+                  contents:[
+                    { type:'text', text:'📅 วันที่ลา', size:'xs', color:'#9CA3AF', align:'center' },
+                    { type:'text', text:'08/09/2026', size:'sm', weight:'bold', color:'#111827', margin:'xs', align:'center' },
+                  ]
+                },
+                { type:'separator', direction:'vertical' },
+                { type:'box', layout:'vertical', flex:1, alignItems:'center',
+                  contents:[
+                    { type:'text', text:'⏱ จำนวน', size:'xs', color:'#9CA3AF', align:'center' },
+                    { type:'text', text:'1 วัน', size:'xl', weight:'bold', color:'#3498DB', margin:'xs', align:'center' },
+                  ]
+                },
+              ]
+            },
+            { type:'separator' },
+            { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#9CA3AF', margin:'md', align:'center' },
+            { type:'box', layout:'horizontal', margin:'sm', spacing:'sm',
+              contents:[
+                { type:'box', layout:'vertical', flex:1, backgroundColor:'#F0FDF4', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                  contents:[{ type:'text', text:'🚗', size:'lg', align:'center' }, { type:'text', text:'ลากิจ', size:'xxs', color:'#6B7280', align:'center', margin:'xs' }, { type:'text', text:'3', size:'lg', weight:'bold', color:'#16A34A', align:'center' }]
+                },
+                { type:'box', layout:'vertical', flex:1, backgroundColor:'#FEF2F2', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                  contents:[{ type:'text', text:'😷', size:'lg', align:'center' }, { type:'text', text:'ลาป่วย', size:'xxs', color:'#6B7280', align:'center', margin:'xs' }, { type:'text', text:'30', size:'lg', weight:'bold', color:'#DC2626', align:'center' }]
+                },
+                { type:'box', layout:'vertical', flex:1, backgroundColor:'#F5F3FF', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                  contents:[{ type:'text', text:'🏖️', size:'lg', align:'center' }, { type:'text', text:'พักร้อน', size:'xxs', color:'#6B7280', align:'center', margin:'xs' }, { type:'text', text:'6', size:'lg', weight:'bold', color:'#7C3AED', align:'center' }]
+                },
+                { type:'box', layout:'vertical', flex:1, backgroundColor:'#FFFBEB', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                  contents:[{ type:'text', text:'🎂', size:'lg', align:'center' }, { type:'text', text:'วันเกิด', size:'xxs', color:'#6B7280', align:'center', margin:'xs' }, { type:'text', text:'1', size:'lg', weight:'bold', color:'#D97706', align:'center' }]
+                },
+              ]
+            },
+          ]
+        },
+        footer: { type:'box', layout:'vertical', paddingAll:'12px', backgroundColor:'#F9FAFB',
+          contents:[{ type:'text', text:'ธนพลเอ็นจิเนียริ่ง · ระบบ HR อัตโนมัติ', size:'xxs', color:'#9CA3AF', align:'center' }]
+        }
+      }
+    });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
