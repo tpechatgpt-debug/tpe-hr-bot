@@ -1509,89 +1509,80 @@ const type = getRaw(fields['ประเภทการลา']);
           };
           const leaveIcon = type.includes('ป่วย')?'🤒':type.includes('กิจ')?'📋':type.includes('พักร้อน')?'🏖':type.includes('เกิด')?'🎂':type.includes('คลอด')?'👶':'📅';
           const leaveColor = type.includes('ป่วย')?'#E74C3C':type.includes('กิจ')?'#3498DB':type.includes('พักร้อน')?'#8B5CF6':type.includes('เกิด')?'#F59E0B':type.includes('คลอด')?'#EC4899':'#1B3E6F';
-          const remainByType = type.includes('ป่วย')?remaining.ลาป่วย:type.includes('กิจ')?remaining.ลากิจ:type.includes('พักร้อน')?remaining.พักร้อน:type.includes('เกิด')?remaining.วันเกิด:type.includes('คลอด')?remaining.ลาคลอด:null;
+          const dateStr = `${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`;
           await push(lineId2, {
             type: 'flex', altText: `${leaveIcon} บันทึกใบลาแล้ว — ${type}`,
             contents: {
               type: 'bubble',
-              header: {
-                type:'box', layout:'vertical', paddingAll:'20px',
-                backgroundColor: leaveColor,
-                contents: [
+              header: { type:'box', layout:'vertical', backgroundColor:leaveColor, paddingAll:'20px',
+                contents:[
                   { type:'box', layout:'horizontal', alignItems:'center', contents:[
-                    { type:'box', layout:'vertical', flex:0,
-                      contents:[{ type:'text', text:leaveIcon, size:'xxl' }]
-                    },
+                    { type:'text', text:leaveIcon, size:'xxl', flex:0 },
                     { type:'box', layout:'vertical', flex:1, paddingStart:'12px',
                       contents:[
                         { type:'text', text:'บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'lg' },
-                        { type:'text', text:type, color:'#CCDCF0', size:'sm', margin:'xs' },
+                        { type:'text', text:type, color:'#ffffff', size:'sm', margin:'xs' },
                       ]
                     },
                   ]},
                 ]
               },
-              body: {
-                type:'box', layout:'vertical', paddingAll:'18px', spacing:'none',
-                contents: [
-                  { type:'box', layout:'horizontal', paddingBottom:'12px',
+              body: { type:'box', layout:'vertical', paddingAll:'16px', spacing:'md',
+                contents:[
+                  { type:'box', layout:'horizontal', spacing:'md',
                     contents:[
                       { type:'box', layout:'vertical', flex:1, alignItems:'center',
                         contents:[
                           { type:'text', text:'📅 วันที่ลา', size:'xs', color:'#9CA3AF', align:'center' },
-                          { type:'text', text:`${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`, size:'sm', weight:'bold', color:'#111827', margin:'xs', align:'center', wrap:true },
+                          { type:'text', text:dateStr, size:'sm', weight:'bold', color:'#111827', margin:'xs', align:'center', wrap:true },
                         ]
                       },
-                      { type:'box', layout:'vertical', flex:0, width:'1px', backgroundColor:'#E5E7EB' },
                       { type:'box', layout:'vertical', flex:1, alignItems:'center',
                         contents:[
-                          { type:'text', text:'⏱ จำนวน', size:'xs', color:'#9CA3AF', align:'center' },
+                          { type:'text', text:'จำนวน', size:'xs', color:'#9CA3AF', align:'center' },
                           { type:'text', text:`${days} วัน`, size:'xl', weight:'bold', color:leaveColor, margin:'xs', align:'center' },
                         ]
                       },
                     ]
                   },
                   { type:'separator' },
-                  { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#9CA3AF', margin:'md', align:'center' },
-                  { type:'box', layout:'horizontal', margin:'sm', spacing:'sm',
+                  { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#9CA3AF', align:'center' },
+                  { type:'box', layout:'horizontal', spacing:'sm',
                     contents:[
-                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F0FDF4', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F0FDF4', cornerRadius:'10px', paddingAll:'8px', alignItems:'center',
                         contents:[
-                          { type:'text', text:'🚗', size:'lg', align:'center' },
+                          { type:'text', text:'🚗', size:'md', align:'center' },
                           { type:'text', text:'ลากิจ', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
-                          { type:'text', text:`${remaining.ลากิจ}`, size:'lg', weight:'bold', color:'#16A34A', align:'center' },
+                          { type:'text', text:String(remaining.ลากิจ), size:'lg', weight:'bold', color:'#16A34A', align:'center' },
                         ]
                       },
-                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FEF2F2', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FEF2F2', cornerRadius:'10px', paddingAll:'8px', alignItems:'center',
                         contents:[
-                          { type:'text', text:'😷', size:'lg', align:'center' },
+                          { type:'text', text:'😷', size:'md', align:'center' },
                           { type:'text', text:'ลาป่วย', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
-                          { type:'text', text:`${remaining.ลาป่วย}`, size:'lg', weight:'bold', color:'#DC2626', align:'center' },
+                          { type:'text', text:String(remaining.ลาป่วย), size:'lg', weight:'bold', color:'#DC2626', align:'center' },
                         ]
                       },
-                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F5F3FF', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F5F3FF', cornerRadius:'10px', paddingAll:'8px', alignItems:'center',
                         contents:[
-                          { type:'text', text:'🏖', size:'lg', align:'center' },
+                          { type:'text', text:'🏖', size:'md', align:'center' },
                           { type:'text', text:'พักร้อน', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
-                          { type:'text', text:`${remaining.พักร้อน}`, size:'lg', weight:'bold', color:'#7C3AED', align:'center' },
+                          { type:'text', text:String(remaining.พักร้อน), size:'lg', weight:'bold', color:'#7C3AED', align:'center' },
                         ]
                       },
-                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FFFBEB', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FFFBEB', cornerRadius:'10px', paddingAll:'8px', alignItems:'center',
                         contents:[
-                          { type:'text', text:'🎂', size:'lg', align:'center' },
+                          { type:'text', text:'🎂', size:'md', align:'center' },
                           { type:'text', text:'วันเกิด', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
-                          { type:'text', text:`${remaining.วันเกิด}`, size:'lg', weight:'bold', color:'#D97706', align:'center' },
+                          { type:'text', text:String(remaining.วันเกิด), size:'lg', weight:'bold', color:'#D97706', align:'center' },
                         ]
                       },
                     ]
                   },
                 ]
               },
-              footer: {
-                type:'box', layout:'vertical', paddingAll:'12px', backgroundColor:'#F9FAFB',
-                contents:[
-                  { type:'text', text:'ธนพลเอ็นจิเนียริ่ง · ระบบ HR อัตโนมัติ', size:'xxs', color:'#9CA3AF', align:'center' },
-                ]
+              footer: { type:'box', layout:'vertical', paddingAll:'12px', backgroundColor:'#F9FAFB',
+                contents:[{ type:'text', text:'ธนพลเอ็นจิเนียริ่ง · ระบบ HR อัตโนมัติ', size:'xxs', color:'#9CA3AF', align:'center' }]
               }
             }
           }).catch(e3 => { console.log('[LeaveWebhook] push error:', e3.message, JSON.stringify(e3.response?.data)); });
