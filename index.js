@@ -1508,7 +1508,7 @@ const type = getRaw(fields['ประเภทการลา']);
             ลาคลอด:  Math.max(0, g2('สิทธิ์ลาคลอด') - used2['ลาคลอด']),
           };
           const leaveIcon = type.includes('ป่วย')?'🤒':type.includes('กิจ')?'📋':type.includes('พักร้อน')?'🏖':type.includes('เกิด')?'🎂':type.includes('คลอด')?'👶':'📅';
-          const leaveColor = type.includes('ป่วย')?'#E74C3C':type.includes('กิจ')?'#3498DB':type.includes('พักร้อน')?'#8B5CF6':type.includes('เกิด')?'#F59E0B':type.includes('คลอด')?'#EC4899':'#1B3E6F';
+          const leaveColor = type.includes('กิจ')?'#DC2626':type.includes('ป่วย')?'#2563EB':type.includes('พักร้อน')?'#16A34A':type.includes('ไม่รับค่าจ้าง')?'#7C3AED':type.includes('เกิด')?'#EC4899':type.includes('คลอด')?'#EC4899':'#1B3E6F';
           const dateStr = `${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`;
           await push(lineId2, {
             type: 'flex', altText: `${leaveIcon} บันทึกใบลาแล้ว — ${type}`,
