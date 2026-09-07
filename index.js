@@ -1504,38 +1504,91 @@ const type = getRaw(fields['ประเภทการลา']);
             วันเกิด: Math.max(0, g2('สิทธิ์วันเกิด') - used2['ลาเนื่องในวันเกิด']),
             ลาคลอด:  Math.max(0, g2('สิทธิ์ลาคลอด') - used2['ลาคลอด']),
           };
+          const leaveIcon = type.includes('ป่วย')?'🤒':type.includes('กิจ')?'📋':type.includes('พักร้อน')?'🏖️':type.includes('เกิด')?'🎂':type.includes('คลอด')?'👶':'📅';
+          const leaveColor = type.includes('ป่วย')?'#E74C3C':type.includes('กิจ')?'#3498DB':type.includes('พักร้อน')?'#8B5CF6':type.includes('เกิด')?'#F59E0B':type.includes('คลอด')?'#EC4899':'#1B3E6F';
+          const remainByType = type.includes('ป่วย')?remaining.ลาป่วย:type.includes('กิจ')?remaining.ลากิจ:type.includes('พักร้อน')?remaining.พักร้อน:type.includes('เกิด')?remaining.วันเกิด:type.includes('คลอด')?remaining.ลาคลอด:null;
           await push(lineId2, {
-            type: 'flex', altText: `✅ บันทึกใบลาแล้ว — ${type}`,
+            type: 'flex', altText: `${leaveIcon} บันทึกใบลาแล้ว — ${type}`,
             contents: {
-              type: 'bubble',
-              header: { type:'box', layout:'vertical', backgroundColor:'#1B3E6F', paddingAll:'16px',
+              type: 'bubble', size: 'kilo',
+              header: {
+                type:'box', layout:'vertical', paddingAll:'20px',
+                backgroundColor: leaveColor,
                 contents: [
-                  { type:'text', text:'✅ บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'md' },
-                  { type:'text', text:type, color:'#B8D4F0', size:'sm', margin:'xs' },
-                ]
-              },
-              body: { type:'box', layout:'vertical', spacing:'sm', paddingAll:'16px',
-                contents: [
-                  { type:'box', layout:'horizontal', contents:[{ type:'text', text:'วันที่ลา', size:'sm', color:'#888888', flex:3 }, { type:'text', text:`${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`, size:'sm', flex:5 }]},
-                  { type:'box', layout:'horizontal', contents:[{ type:'text', text:'จำนวน', size:'sm', color:'#888888', flex:3 }, { type:'text', text:`${days} วัน`, size:'sm', weight:'bold', flex:5, color:'#1B3E6F' }]},
-                  { type:'separator', margin:'md' },
-                  { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#888888', margin:'md' },
-                  { type:'box', layout:'horizontal', margin:'sm', contents:[
-                    { type:'text', text:'🚗 ลากิจ', size:'sm', flex:4 },
-                    { type:'text', text:`${remaining.ลากิจ} วัน`, size:'sm', weight:'bold', flex:3, color:'#3498DB' },
-                    { type:'text', text:'😷 ลาป่วย', size:'sm', flex:4 },
-                    { type:'text', text:`${remaining.ลาป่วย} วัน`, size:'sm', weight:'bold', flex:3, color:'#E74C3C' },
-                  ]},
-                  { type:'box', layout:'horizontal', margin:'xs', contents:[
-                    { type:'text', text:'🏖 พักร้อน', size:'sm', flex:4 },
-                    { type:'text', text:`${remaining.พักร้อน} วัน`, size:'sm', weight:'bold', flex:3, color:'#F39C12' },
-                    { type:'text', text:'🎂 วันเกิด', size:'sm', flex:4 },
-                    { type:'text', text:`${remaining.วันเกิด} วัน`, size:'sm', weight:'bold', flex:3, color:'#9B59B6' },
+                  { type:'box', layout:'horizontal', alignItems:'center', contents:[
+                    { type:'box', layout:'vertical', flex:0,
+                      contents:[{ type:'text', text:leaveIcon, size:'xxl' }]
+                    },
+                    { type:'box', layout:'vertical', flex:1, paddingStart:'12px',
+                      contents:[
+                        { type:'text', text:'บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'lg' },
+                        { type:'text', text:type, color:'rgba(255,255,255,0.8)', size:'sm', margin:'xs' },
+                      ]
+                    },
                   ]},
                 ]
               },
-              footer: { type:'box', layout:'vertical', paddingAll:'10px',
-                contents:[{ type:'text', text:'อัปเดตอัตโนมัติจากระบบ HR', size:'xxs', color:'#AAAAAA', align:'center' }]
+              body: {
+                type:'box', layout:'vertical', paddingAll:'18px', spacing:'none',
+                contents: [
+                  { type:'box', layout:'horizontal', paddingBottom:'12px',
+                    contents:[
+                      { type:'box', layout:'vertical', flex:1, alignItems:'center',
+                        contents:[
+                          { type:'text', text:'📅 วันที่ลา', size:'xs', color:'#9CA3AF', align:'center' },
+                          { type:'text', text:`${startDate}${endDate&&endDate!==startDate?' – '+endDate:''}`, size:'sm', weight:'bold', color:'#111827', margin:'xs', align:'center', wrap:true },
+                        ]
+                      },
+                      { type:'separator', direction:'vertical' },
+                      { type:'box', layout:'vertical', flex:1, alignItems:'center',
+                        contents:[
+                          { type:'text', text:'⏱ จำนวน', size:'xs', color:'#9CA3AF', align:'center' },
+                          { type:'text', text:`${days} วัน`, size:'xl', weight:'bold', color:leaveColor, margin:'xs', align:'center' },
+                        ]
+                      },
+                    ]
+                  },
+                  { type:'separator' },
+                  { type:'text', text:'วันลาคงเหลือหลังลาครั้งนี้', size:'xs', color:'#9CA3AF', margin:'md', align:'center' },
+                  { type:'box', layout:'horizontal', margin:'sm', spacing:'sm',
+                    contents:[
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F0FDF4', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                        contents:[
+                          { type:'text', text:'🚗', size:'lg', align:'center' },
+                          { type:'text', text:'ลากิจ', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
+                          { type:'text', text:`${remaining.ลากิจ}`, size:'lg', weight:'bold', color:'#16A34A', align:'center' },
+                        ]
+                      },
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FEF2F2', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                        contents:[
+                          { type:'text', text:'😷', size:'lg', align:'center' },
+                          { type:'text', text:'ลาป่วย', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
+                          { type:'text', text:`${remaining.ลาป่วย}`, size:'lg', weight:'bold', color:'#DC2626', align:'center' },
+                        ]
+                      },
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#F5F3FF', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                        contents:[
+                          { type:'text', text:'🏖️', size:'lg', align:'center' },
+                          { type:'text', text:'พักร้อน', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
+                          { type:'text', text:`${remaining.พักร้อน}`, size:'lg', weight:'bold', color:'#7C3AED', align:'center' },
+                        ]
+                      },
+                      { type:'box', layout:'vertical', flex:1, backgroundColor:'#FFFBEB', cornerRadius:'10px', paddingAll:'10px', alignItems:'center',
+                        contents:[
+                          { type:'text', text:'🎂', size:'lg', align:'center' },
+                          { type:'text', text:'วันเกิด', size:'xxs', color:'#6B7280', align:'center', margin:'xs' },
+                          { type:'text', text:`${remaining.วันเกิด}`, size:'lg', weight:'bold', color:'#D97706', align:'center' },
+                        ]
+                      },
+                    ]
+                  },
+                ]
+              },
+              footer: {
+                type:'box', layout:'vertical', paddingAll:'12px', backgroundColor:'#F9FAFB',
+                contents:[
+                  { type:'text', text:'ธนพลเอ็นจิเนียริ่ง · ระบบ HR อัตโนมัติ', size:'xxs', color:'#9CA3AF', align:'center' },
+                ]
               }
             }
           }).catch(()=>{});
@@ -3142,34 +3195,8 @@ app.get('/eslip/leave-history', async (req, res) => {
       else if (t.includes('วันเกิด')) used['วันเกิด']+=d;
       else if (t.includes('ลาคลอด')) used['ลาคลอด']+=d;
     });
-    // ดึง note จาก Lark
-    const noteMap = {};
-    try {
-      const larkToken2 = await lark.getToken();
-      let allRecs2 = [], pt2 = '';
-      for (let i = 0; i < 5; i++) {
-        const url2 = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pt2 ? '&page_token=' + pt2 : '');
-        const r2 = await axios.get(url2, { headers: { Authorization: 'Bearer ' + larkToken2 } });
-        const data2 = r2.data?.data;
-        allRecs2 = allRecs2.concat(data2?.items || []);
-        if (!data2?.has_more) break;
-        pt2 = data2.page_token || '';
-      }
-      const normN2 = s => (s||'').replace(/\s+/g,'').toLowerCase();
-      allRecs2.filter(item => normN2((item.fields['ชื่อ-นามสกุล']||'').split('(')[0]) === empNorm)
-        .forEach(item => {
-          const f = item.fields;
-          const start = f['ลาตั้งเเต่วันที่'];
-          if (!start) return;
-          const d2 = new Date(parseInt(start) + 7*3600000);
-          const key = `${String(d2.getUTCDate()).padStart(2,'0')}/${String(d2.getUTCMonth()+1).padStart(2,'0')}/${d2.getUTCFullYear()}`;
-          if (f['รายละเอียด']) noteMap[key] = f['รายละเอียด'];
-        });
-    } catch(e2) { console.log('[leave-history] lark note error:', e2.message); }
-
     const records = myLeaves.map(row => ({
       type: row[2]||'', start: row[3]||'', end: row[4]||'', days: parseFloat(row[5])||0,
-      note: noteMap[row[3]] || '',
     })).sort((a,b) => {
       const parseD = s => { const [dd,mm,yyyy]=(s||'').split('/').map(Number); return yyyy*10000+mm*100+dd; };
       return parseD(b.start) - parseD(a.start);
