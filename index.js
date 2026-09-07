@@ -3279,6 +3279,32 @@ app.get('/admin/test-leave-notify', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message, detail: e.response?.data }); }
 });
 
+
+app.get('/admin/test-leave-webhook', async (req, res) => {
+  const { password, name, type, days } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  // จำลอง webhook body เหมือน Lark ส่งมาจริง
+  const fakeBody = {
+    fields: {
+      'ชื่อ-นามสกุล': name || 'ปภัสสนันท์ เรืองฤทธิวรรณ (HR)',
+      'ประเภทการลา': type || 'ลาป่วย',
+      'ลาตั้งเเต่วันที่': Date.now(),
+      'จนถึงวันที่': Date.now(),
+      'ลาทั้งสิ้น': days || '1',
+    }
+  };
+  // call webhook handler โดยตรง
+  try {
+    const r = await fetch(`https://tpe-hr-bot.onrender.com/lark/leave-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fakeBody),
+    });
+    const d = await r.json();
+    res.json({ ok: true, webhookResponse: d });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 startServer(PORT);
 
 // เริ่ม GramJS แยก async block
