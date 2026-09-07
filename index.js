@@ -1594,10 +1594,10 @@ const type = getRaw(fields['ประเภทการลา']);
                 ]
               }
             }
-          }).catch(()=>{});
+          }).catch(e3 => { console.log('[LeaveWebhook] push error:', e3.message, JSON.stringify(e3.response?.data)); });
         }
       }
-    } catch(e2) { console.log('[LeaveWebhook] notify error:', e2.message); }
+    } catch(e2) { console.log('[LeaveWebhook] notify error:', e2.message, e2.stack); }
 
     res.json({ ok: true });
   } catch(e) { console.error('[LeaveWebhook] error:', e.message); res.status(500).json({ error: e.message }); }
