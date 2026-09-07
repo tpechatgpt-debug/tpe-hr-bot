@@ -1468,11 +1468,14 @@ const type = getRaw(fields['ประเภทการลา']);
     try {
       const normN2 = s => (s||'').replace(/\s+/g,'').toLowerCase();
       const nameNorm = normN2(name.split('(')[0]);
+      console.log('[LeaveWebhook] notify: nameNorm=', nameNorm);
       const empRows2 = (await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' })).data.values || [];
       const header2 = empRows2[0] || [];
       const col2 = n => header2.findIndex(h => h.trim() === n.trim());
       const empRow2 = empRows2.slice(1).find(row => normN2((row[col2('ชื่อ - นามสกุล')]||'').split('(')[0]) === nameNorm);
+      console.log('[LeaveWebhook] empRow2 found:', !!empRow2);
       if (empRow2) {
+        console.log('[LeaveWebhook] lineId2:', (empRow2[col2('Line ID')]||'').trim());
         const lineId2 = (empRow2[col2('Line ID')]||'').trim();
         if (lineId2) {
           const now2 = new Date();
