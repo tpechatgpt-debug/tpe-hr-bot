@@ -1525,7 +1525,7 @@ const type = getRaw(fields['ประเภทการลา']);
                     { type:'box', layout:'vertical', flex:1, paddingStart:'12px',
                       contents:[
                         { type:'text', text:'บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'lg' },
-                        { type:'text', text:type, color:'rgba(255,255,255,0.8)', size:'sm', margin:'xs' },
+                        { type:'text', text:type, color:'#CCDCF0', size:'sm', margin:'xs' },
                       ]
                     },
                   ]},
@@ -2680,7 +2680,7 @@ app.post('/fieldwork/checkin', async (req, res) => {
     const msg = { type:'flex', altText:`✅ ${empName} เช็คอินหน้างาน`, contents:{ type:'bubble',
       header:{ type:'box', layout:'vertical', backgroundColor:'#1B7F4E', paddingAll:'16px', contents:[
         { type:'text', text:'✅ เช็คอินหน้างาน', color:'#ffffff', weight:'bold', size:'md' },
-        { type:'text', text:thTime, color:'rgba(255,255,255,0.7)', size:'xs', margin:'xs' }]},
+        { type:'text', text:thTime, color:'#B0C4D8', size:'xs', margin:'xs' }]},
       body:{ type:'box', layout:'vertical', spacing:'sm', paddingAll:'16px', contents:[
         { type:'box', layout:'horizontal', contents:[{ type:'text', text:'พนักงาน', size:'sm', color:'#888888', flex:3 }, { type:'text', text:empName||'—', size:'sm', weight:'bold', flex:5 }]},
         { type:'box', layout:'horizontal', contents:[{ type:'text', text:'ทีม', size:'sm', color:'#888888', flex:3 }, { type:'text', text:team||'—', size:'sm', flex:5 }]},
@@ -2723,7 +2723,7 @@ app.post('/fieldwork/checkout', async (req, res) => {
     const msg = { type:'flex', altText:`🏁 ${empName} เช็คเอ้าท์หน้างาน`, contents:{ type:'bubble',
       header:{ type:'box', layout:'vertical', backgroundColor:'#CF3636', paddingAll:'16px', contents:[
         { type:'text', text:'🏁 เช็คเอ้าท์หน้างาน', color:'#ffffff', weight:'bold', size:'md' },
-        { type:'text', text:thTime, color:'rgba(255,255,255,0.7)', size:'xs', margin:'xs' }]},
+        { type:'text', text:thTime, color:'#B0C4D8', size:'xs', margin:'xs' }]},
       body:{ type:'box', layout:'vertical', spacing:'sm', paddingAll:'16px', contents:[
         { type:'box', layout:'horizontal', contents:[{ type:'text', text:'พนักงาน', size:'sm', color:'#888888', flex:3 }, { type:'text', text:empName||'—', size:'sm', weight:'bold', flex:5 }]},
         { type:'box', layout:'horizontal', contents:[{ type:'text', text:'ทีม', size:'sm', color:'#888888', flex:3 }, { type:'text', text:team||'—', size:'sm', flex:5 }]},
@@ -2747,7 +2747,7 @@ app.post('/fieldwork/report', async (req, res) => {
     const mapsUrl = lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : null;
     await axios.post(process.env.LARK_WEBHOOK_URL, { msg_type:'text', content:{ text:`⚠️ รายงานปัญหาหน้างาน\nจาก: ${empName||lineId}\nทีม: ${team||'—'}\nJOB: ${jobNo||'—'}\nปัญหา: ${message}\nเวลา: ${thTime}${mapsUrl?`\n📍 ${mapsUrl}`:''}` }}).catch(()=>{});
     await push(HR_USER_ID, { type:'flex', altText:`⚠️ รายงานปัญหาจาก ${empName}`, contents:{ type:'bubble',
-      header:{ type:'box', layout:'vertical', backgroundColor:'#C9A227', paddingAll:'16px', contents:[{ type:'text', text:'⚠️ รายงานปัญหาหน้างาน', color:'#ffffff', weight:'bold', size:'md' }, { type:'text', text:thTime, color:'rgba(255,255,255,0.7)', size:'xs', margin:'xs' }]},
+      header:{ type:'box', layout:'vertical', backgroundColor:'#C9A227', paddingAll:'16px', contents:[{ type:'text', text:'⚠️ รายงานปัญหาหน้างาน', color:'#ffffff', weight:'bold', size:'md' }, { type:'text', text:thTime, color:'#B0C4D8', size:'xs', margin:'xs' }]},
       body:{ type:'box', layout:'vertical', spacing:'sm', paddingAll:'16px', contents:[
         { type:'box', layout:'horizontal', contents:[{ type:'text', text:'จาก', size:'sm', color:'#888888', flex:2 }, { type:'text', text:empName||'—', size:'sm', weight:'bold', flex:5 }]},
         jobNo ? { type:'box', layout:'horizontal', contents:[{ type:'text', text:'JOB', size:'sm', color:'#888888', flex:2 }, { type:'text', text:jobNo, size:'sm', flex:5 }]} : null,
@@ -3236,7 +3236,7 @@ app.get('/admin/test-leave-notify', async (req, res) => {
               { type:'text', text:'📋', size:'xxl', flex:0 },
               { type:'box', layout:'vertical', flex:1, paddingStart:'12px', contents:[
                 { type:'text', text:'บันทึกใบลาแล้ว', color:'#ffffff', weight:'bold', size:'lg' },
-                { type:'text', text:'ลากิจ', color:'rgba(255,255,255,0.8)', size:'sm', margin:'xs' },
+                { type:'text', text:'ลากิจ', color:'#CCDCF0', size:'sm', margin:'xs' },
               ]},
             ]},
           ]
