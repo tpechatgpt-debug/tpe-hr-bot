@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TPE Team Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F6F8;--surface:#FFF;--border:#E4E7EC;--border2:#CDD2DB;
+  --navy:#1A3358;--gold:#C9952A;--gold2:#F5B945;
+  --text:#111827;--text2:#374151;--text3:#6B7280;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:15px}
+.topbar-name{font-size:15px;font-weight:700;color:#fff}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(255,255,255,.5)}
+.btn-icon{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 14px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-icon:hover{background:rgba(255,255,255,.18)}
+.btn-icon.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Main layout ── */
+.main{padding:20px 24px 40px;max-width:1400px;margin:0 auto}
+
+/* ── Controls ── */
+.controls{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;box-shadow:var(--shadow)}
+.nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.nav-btn:hover{background:var(--border)}
+.month-label{font-size:16px;font-weight:700;color:var(--navy);min-width:160px;text-align:center}
+.today-btn{border:1px solid var(--border2);background:var(--bg);border-radius:8px;padding:6px 14px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;transition:all .1s}
+.today-btn:hover{background:var(--border)}
+.divider{width:1px;height:24px;background:var(--border);margin:0 4px}
+.filter-select{border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none;cursor:pointer;min-width:160px}
+.view-toggle{display:flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden;margin-left:auto}
+.view-btn{padding:7px 16px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;color:var(--text3);background:var(--bg);border:none;cursor:pointer;transition:all .15s}
+.view-btn.active{background:var(--navy);color:#fff}
+
+/* ── Legend ── */
+.legend-wrap{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 10px;border-radius:20px;border:1px solid transparent;transition:all .15s;user-select:none}
+.legend-item:hover{border-color:var(--border2)}
+.legend-item.muted{opacity:.35}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* ── Calendar grid ── */
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);background:var(--bg)}
+.cal-dow{text-align:center;padding:10px 0;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.04em}
+.cal-dow.weekend{color:#DC2626}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-cell{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative;vertical-align:top;transition:background .1s}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell.other-month{background:#FAFBFC}
+.cal-cell.today{background:#EFF6FF}
+.cal-cell.today .day-num{background:var(--navy);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.cal-cell.weekend .day-num{color:#DC2626}
+.day-num{font-size:13px;font-weight:600;color:var(--text2);line-height:1;margin-bottom:4px;display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center}
+.cal-cell.other-month .day-num{color:var(--text3)}
+
+/* ── Events ── */
+.event-chip{display:block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .15s;color:#fff;position:relative}
+.event-chip:hover{opacity:.85}
+.event-chip.start{border-radius:10px 4px 4px 10px}
+.event-chip.end{border-radius:4px 10px 10px 4px}
+.event-chip.mid{border-radius:0}
+.event-chip.single{border-radius:10px}
+.event-more{font-size:10px;color:var(--text3);padding:1px 4px;cursor:pointer;font-weight:500}
+.event-more:hover{color:var(--navy)}
+
+/* ── List view ── */
+.list-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.list-group-hdr{padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.list-row{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:rgba(26,51,88,.02)}
+.list-color-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0}
+.list-main{flex:1;min-width:0}
+.list-job{font-size:12px;font-weight:700;color:var(--navy);font-family:'IBM Plex Mono',monospace}
+.list-company{font-size:13px;font-weight:500;color:var(--text);margin-top:1px}
+.list-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.list-team-col{display:flex;flex-direction:column;gap:3px;min-width:140px}
+.team-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.list-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;min-width:140px;text-align:right}
+.badge{display:inline-flex;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-plan{background:#EFF6FF;color:#2563EB}
+.badge-doing{background:#FEF3C7;color:#D97706}
+.badge-done{background:#EAF7F0;color:#16A765}
+
+/* ── Detail panel ── */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.detail-overlay.show{opacity:1;pointer-events:all}
+.detail-panel{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:translateY(8px);transition:transform .2s}
+.detail-overlay.show .detail-panel{transform:translateY(0)}
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.detail-job{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--navy)}
+.detail-company{font-size:18px;font-weight:700;color:var(--text);margin-top:4px}
+.detail-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:18px;color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.detail-close:hover{background:var(--border)}
+.detail-rows{display:flex;flex-direction:column;gap:10px}
+.detail-row{display:flex;gap:10px;align-items:flex-start}
+.detail-icon{font-size:14px;width:20px;flex-shrink:0;margin-top:1px}
+.detail-val{font-size:13px;color:var(--text2)}
+.detail-val strong{color:var(--text);font-weight:600}
+.share-row{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.share-btn{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;text-align:center}
+.share-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ── Share URL bar ── */
+.share-bar{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;box-shadow:var(--shadow)}
+.share-bar-label{font-size:11px;color:var(--text3);white-space:nowrap}
+.share-url{flex:1;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{font-size:11px;font-weight:600;color:var(--navy);background:none;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.copy-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.copy-btn.copied{background:#16A765;color:#fff;border-color:#16A765}
+
+/* ── Loading / Empty ── */
+.loading-wrap{display:flex;align-items:center;justify-content:center;min-height:300px;gap:10px;color:var(--text3);font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
+.empty-wrap{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">📅</div>
+    <div>
+      <div class="topbar-name">TPE Team Calendar</div>
+      <div class="topbar-sub">ปฏิทินคิวช่างธนพลเอ็นจิเนียริ่ง</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-time" id="clock">—</div>
+    <a href="/dashboard" class="btn-icon">🏗 Dashboard</a>
+    <button class="btn-icon" id="btnRefresh" onclick="loadData()">
+      <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/>
+      </svg>
+      รีเฟรช
+    </button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Share bar -->
+  <div class="share-bar">
+    <span class="share-bar-label">🔗 ลิงก์ปฏิทินชุดนี้:</span>
+    <span class="share-url" id="shareUrl">—</span>
+    <button class="copy-btn" id="copyBtn" onclick="copyShareUrl()">คัดลอก</button>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
+    <div class="month-label" id="monthLabel">—</div>
+    <button class="nav-btn" onclick="shiftMonth(1)">›</button>
+    <button class="today-btn" onclick="goToday()">วันนี้</button>
+    <div class="divider"></div>
+    <select class="filter-select" id="filterTeam" onchange="onFilterChange()">
+      <option value="">ทุกชุด</option>
+    </select>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btnCal" onclick="setView('cal')">📅 ปฏิทิน</button>
+      <button class="view-btn" id="btnList" onclick="setView('list')">📋 รายการ</button>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-wrap" id="legend"></div>
+
+  <!-- Calendar view -->
+  <div id="calView">
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <div class="cal-dow">อา</div>
+        <div class="cal-dow">จ</div>
+        <div class="cal-dow">อ</div>
+        <div class="cal-dow">พ</div>
+        <div class="cal-dow">พฤ</div>
+        <div class="cal-dow">ศ</div>
+        <div class="cal-dow weekend">ส</div>
+      </div>
+      <div class="cal-grid" id="calGrid">
+        <div class="loading-wrap" style="grid-column:1/-1"><div class="spinner"></div> กำลังโหลด...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List view -->
+  <div id="listView" style="display:none">
+    <div class="list-wrap" id="listInner">
+      <div class="loading-wrap"><div class="spinner"></div> กำลังโหลด...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<script>
+const API = 'https://tpe-hr-bot.onrender.com';
+const TEAM_COLORS = ['#1A3358','#C9952A','#16A765','#2563EB','#7C3AED','#DC2626','#0891B2','#D97706','#059669','#9333EA'];
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+let allData = [];
+let teamColorMap = {};
+let mutedTeams = new Set();
+let curYear = new Date().getFullYear();
+let curMonth = new Date().getMonth();
+let curView = 'cal';
+let curTeamFilter = '';
+
+// ── Init from URL params ──
+(function() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('team')) curTeamFilter = p.get('team');
+  if (p.get('month')) {
+    const [y, m] = p.get('month').split('-').map(Number);
+    if (y && m) { curYear = y; curMonth = m - 1; }
+  }
+  if (p.get('view') === 'list') curView = 'list';
+})();
+
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('th-TH', {
+    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short'
+  });
+}
+setInterval(updateClock, 1000); updateClock();
+
+function tsToDateUTC(ts) {
+  if (!ts) return null;
+  const d = new Date(ts + 7 * 3600000);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = tsToDateUTC(ts);
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()+543}`;
+}
+function isoDate(d) {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+function parseTeams(t) {
+  return (t||'').split('||').map(x=>x.trim()).filter(Boolean);
+}
+
+// ── Load ──
+async function loadData() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  try {
+    const r = await fetch(`${API}/api/dashboard`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error||'error');
+    allData = d.assignments || [];
+    buildColorMap();
+    updateTeamFilter();
+    buildLegend();
+    render();
+    updateShareUrl();
+  } catch(e) {
+    document.getElementById('calGrid').innerHTML = `<div class="empty-wrap" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><p>โหลดไม่สำเร็จ: ${e.message}</p></div>`;
+  } finally { btn.classList.remove('spinning'); }
+}
+
+function buildColorMap() {
+  const teams = [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  teams.forEach((t, i) => { teamColorMap[t] = TEAM_COLORS[i % TEAM_COLORS.length]; });
+}
+
+function getColor(team) { return teamColorMap[team] || '#6B7280'; }
+
+// ── Filter & nav ──
+function updateTeamFilter() {
+  const teams = [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  const sel = document.getElementById('filterTeam');
+  const cur = curTeamFilter;
+  sel.innerHTML = '<option value="">ทุกชุด</option>' + teams.map(t =>
+    `<option value="${t}"${t===cur?' selected':''}>${t}</option>`
+  ).join('');
+}
+
+function onFilterChange() {
+  curTeamFilter = document.getElementById('filterTeam').value;
+  buildLegend();
+  render();
+  updateShareUrl();
+}
+
+function filteredData() {
+  return allData.filter(a => {
+    if (!curTeamFilter) return true;
+    return parseTeams(a.team).includes(curTeamFilter);
+  });
+}
+
+function shiftMonth(d) {
+  curMonth += d;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  if (curMonth < 0) { curMonth = 11; curYear--; }
+  render();
+  updateShareUrl();
+}
+
+function goToday() {
+  curYear = new Date().getFullYear();
+  curMonth = new Date().getMonth();
+  render();
+  updateShareUrl();
+}
+
+// ── Legend ──
+function buildLegend() {
+  const teams = curTeamFilter
+    ? [curTeamFilter]
+    : [...new Set(allData.flatMap(a => parseTeams(a.team)))].sort();
+  document.getElementById('legend').innerHTML = teams.map(t =>
+    `<div class="legend-item${mutedTeams.has(t)?' muted':''}" onclick="toggleMute('${t}')" title="คลิกเพื่อซ่อน/แสดง">
+      <div class="legend-dot" style="background:${getColor(t)}"></div>${t}
+    </div>`
+  ).join('');
+}
+
+function toggleMute(team) {
+  mutedTeams.has(team) ? mutedTeams.delete(team) : mutedTeams.add(team);
+  buildLegend();
+  render();
+}
+
+// ── View toggle ──
+function setView(v) {
+  curView = v;
+  document.getElementById('calView').style.display = v === 'cal' ? '' : 'none';
+  document.getElementById('listView').style.display = v === 'list' ? '' : 'none';
+  document.getElementById('btnCal').classList.toggle('active', v==='cal');
+  document.getElementById('btnList').classList.toggle('active', v==='list');
+  render();
+  updateShareUrl();
+}
+
+// ── Main render ──
+function render() {
+  document.getElementById('monthLabel').textContent = `${TH_MONTHS[curMonth]} ${curYear+543}`;
+  if (curView === 'cal') renderCal();
+  else renderList();
+}
+
+// ── Calendar render ──
+function renderCal() {
+  const data = filteredData().filter(a => !parseTeams(a.team).some(t => mutedTeams.has(t)));
+  const today = new Date();
+  const todayStr = isoDate(new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())));
+  const firstDay = new Date(Date.UTC(curYear, curMonth, 1));
+  const lastDay = new Date(Date.UTC(curYear, curMonth+1, 0));
+  const startDow = firstDay.getUTCDay(); // 0=Sun
+  const totalDays = lastDay.getUTCDate();
+
+  // สร้าง map: dateStr → list of events
+  const eventMap = {};
+  data.forEach(a => {
+    const s = tsToDateUTC(a.startDate);
+    const e = tsToDateUTC(a.endDate);
+    if (!s || !e) return;
+    const teams = parseTeams(a.team);
+    teams.forEach(team => {
+      if (mutedTeams.has(team)) return;
+      // วนทุกวันในช่วง
+      const cur = new Date(s);
+      while (cur <= e) {
+        const ds = isoDate(cur);
+        const [cy, cm] = ds.split('-').map(Number);
+        if (cy === curYear && cm === curMonth+1) {
+          if (!eventMap[ds]) eventMap[ds] = [];
+          // ตรวจซ้ำ (งานเดียวกัน หลายชุด)
+          const existing = eventMap[ds].find(ev => ev.id === a.id && ev.team === team);
+          if (!existing) {
+            const dayIndex = cur.getUTCDate();
+            const isStart = isoDate(s) === ds;
+            const isEnd = isoDate(e) === ds;
+            const pos = isStart && isEnd ? 'single' : isStart ? 'start' : isEnd ? 'end' : 'mid';
+            eventMap[ds].push({ ...a, team, color: getColor(team), pos });
+          }
+        }
+        cur.setUTCDate(cur.getUTCDate()+1);
+      }
+    });
+  });
+
+  // สร้าง cells
+  let cells = '';
+  // เติม empty ก่อนวันที่ 1
+  for (let i = 0; i < startDow; i++) {
+    const prevDate = new Date(Date.UTC(curYear, curMonth, 1-startDow+i));
+    const ds = isoDate(prevDate);
+    cells += `<div class="cal-cell other-month">
+      <div class="day-num">${prevDate.getUTCDate()}</div>
+      ${(eventMap[ds]||[]).slice(0,2).map(renderChip).join('')}
+    </div>`;
+  }
+  // วันในเดือน
+  for (let d = 1; d <= totalDays; d++) {
+    const ds = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = ds === todayStr;
+    const dow = new Date(curYear, curMonth, d).getDay();
+    const isWE = dow === 0 || dow === 6;
+    const evs = eventMap[ds] || [];
+    const shown = evs.slice(0, 3);
+    const extra = evs.length - shown.length;
+    cells += `<div class="cal-cell${isToday?' today':''}${isWE?' weekend':''}">
+      <div class="day-num">${d}</div>
+      ${shown.map(renderChip).join('')}
+      ${extra > 0 ? `<div class="event-more" onclick="showMore('${ds}')">+${extra} เพิ่มเติม</div>` : ''}
+    </div>`;
+  }
+  // เติม empty หลังสุด
+  const endDow = lastDay.getUTCDay();
+  for (let i = endDow+1; i <= 6; i++) {
+    const nextDate = new Date(Date.UTC(curYear, curMonth+1, i-endDow));
+    const ds = isoDate(nextDate);
+    cells += `<div class="cal-cell other-month">
+      <div class="day-num">${nextDate.getUTCDate()}</div>
+      ${(eventMap[ds]||[]).slice(0,2).map(renderChip).join('')}
+    </div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = cells;
+}
+
+function renderChip(ev) {
+  const label = ev.jobNo && ev.jobNo !== '—' ? ev.jobNo : (ev.company||'').slice(0,12);
+  return `<div class="event-chip ${ev.pos}" style="background:${ev.color}" onclick='openDetail(${JSON.stringify(ev).replace(/'/g,"\\'")})'>${label}</div>`;
+}
+
+// ── List render ──
+function renderList() {
+  const data = filteredData().filter(a => !parseTeams(a.team).some(t => mutedTeams.has(t)));
+
+  // จัดกลุ่มตามเดือน
+  const monthData = data.filter(a => {
+    const s = tsToDateUTC(a.startDate);
+    const e = tsToDateUTC(a.endDate);
+    if (!s || !e) return false;
+    const monthStart = new Date(Date.UTC(curYear, curMonth, 1));
+    const monthEnd = new Date(Date.UTC(curYear, curMonth+1, 0));
+    return s <= monthEnd && e >= monthStart;
+  }).sort((a,b) => (a.startDate||0) - (b.startDate||0));
+
+  if (!monthData.length) {
+    document.getElementById('listInner').innerHTML = `<div class="empty-wrap"><div class="empty-icon">📭</div><p>ไม่มีงานในเดือนนี้</p></div>`;
+    return;
+  }
+
+  const bc = {'วางแผน':'badge-plan','กำลังทำ':'badge-doing','เสร็จแล้ว':'badge-done'};
+  let html = '';
+  let lastWeek = '';
+  monthData.forEach(a => {
+    const s = tsToDateUTC(a.startDate);
+    if (!s) return;
+    const weekStart = new Date(s);
+    weekStart.setUTCDate(s.getUTCDate() - s.getUTCDay());
+    const wk = isoDate(weekStart);
+    if (wk !== lastWeek) {
+      lastWeek = wk;
+      html += `<div class="list-group-hdr">สัปดาห์ ${String(weekStart.getUTCDate()).padStart(2,'0')}/${String(weekStart.getUTCMonth()+1).padStart(2,'0')}/${weekStart.getUTCFullYear()+543}</div>`;
+    }
+    const teams = parseTeams(a.team);
+    const mainTeam = teams[0] || '';
+    const color = getColor(mainTeam);
+    html += `<div class="list-row" onclick='openDetail(${JSON.stringify(a).replace(/'/g,"\\'")})'">
+      <div class="list-color-bar" style="background:${color}"></div>
+      <div class="list-main">
+        <div class="list-job">${a.jobNo||'—'}</div>
+        <div class="list-company">${a.company||'—'}</div>
+        <div class="list-meta">${a.province||''} ${a.detail ? '· '+a.detail.slice(0,40)+'...' : ''}</div>
+      </div>
+      <div class="list-team-col">
+        ${teams.map(t => `<span class="team-pill" style="background:${getColor(t)}20;color:${getColor(t)};border:1px solid ${getColor(t)}40">${t}</span>`).join('')}
+      </div>
+      <div style="text-align:right">
+        <span class="badge ${bc[a.status]||'badge-plan'}">${a.status||'วางแผน'}</span>
+        <div class="list-date" style="margin-top:4px">${fmtDate(a.startDate)} – ${fmtDate(a.endDate)}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('listInner').innerHTML = html;
+}
+
+// ── Detail panel ──
+function openDetail(ev) {
+  const teams = parseTeams(ev.team||'');
+  const mainColor = getColor(ev.team ? parseTeams(ev.team)[0] : '');
+  const members = ev.teamBreakdown && ev.teamBreakdown.length
+    ? ev.teamBreakdown.map(tb => `${tb.team}: ${tb.allTeam ? 'ทั้งชุด' : tb.members.join(', ')}`).join('\n')
+    : (ev.membersAllTeam ? 'ทั้งชุด' : (ev.members||'—'));
+
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-job">${ev.jobNo||'—'}</div>
+        <div class="detail-company">${ev.company||'—'}</div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">×</button>
+    </div>
+    <div class="detail-rows">
+      <div class="detail-row"><span class="detail-icon">🏷</span><div class="detail-val">
+        ${teams.map(t => `<span class="team-pill" style="background:${getColor(t)}20;color:${getColor(t)};border:1px solid ${getColor(t)}40;margin-right:4px">${t}</span>`).join('')}
+      </div></div>
+      <div class="detail-row"><span class="detail-icon">📍</span><div class="detail-val">${ev.province||'—'}</div></div>
+      <div class="detail-row"><span class="detail-icon">📅</span><div class="detail-val"><strong>${fmtDate(ev.startDate)}</strong> – <strong>${fmtDate(ev.endDate)}</strong></div></div>
+      <div class="detail-row"><span class="detail-icon">👥</span><div class="detail-val" style="white-space:pre-line">${members}</div></div>
+      <div class="detail-row"><span class="detail-icon">📝</span><div class="detail-val">${ev.detail||'—'}</div></div>
+      <div class="detail-row"><span class="detail-icon">🚗</span><div class="detail-val">${ev.car||'—'}</div></div>
+    </div>
+    <div class="share-row">
+      <button class="share-btn" onclick="copyJobLink('${ev.jobNo||''}')">🔗 คัดลอกลิงก์งานนี้</button>
+    </div>`;
+  document.getElementById('detailOverlay').classList.add('show');
+}
+
+function closeDetail(e) {
+  if (!e || e.target === document.getElementById('detailOverlay')) {
+    document.getElementById('detailOverlay').classList.remove('show');
+  }
+}
+
+function showMore(ds) {
+  // เปิด list view กรองวันนั้น (future: day popup)
+  setView('list');
+}
+
+// ── Share URL ──
+function buildUrl() {
+  const p = new URLSearchParams();
+  if (curTeamFilter) p.set('team', curTeamFilter);
+  p.set('month', `${curYear}-${String(curMonth+1).padStart(2,'0')}`);
+  if (curView !== 'cal') p.set('view', curView);
+  return location.origin + location.pathname + '?' + p.toString();
+}
+
+function updateShareUrl() {
+  const url = buildUrl();
+  document.getElementById('shareUrl').textContent = url;
+}
+
+function copyShareUrl() {
+  navigator.clipboard.writeText(buildUrl()).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ คัดลอกแล้ว';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'คัดลอก'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyJobLink(jobNo) {
+  const url = buildUrl() + (curTeamFilter ? '' : '') + '#' + encodeURIComponent(jobNo);
+  navigator.clipboard.writeText(url).then(() => alert('คัดลอกลิงก์แล้ว'));
+}
+
+setInterval(loadData, 5 * 60 * 1000);
+loadData();
+</script>
+</body>
+</html>
