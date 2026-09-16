@@ -2361,7 +2361,10 @@ app.post('/notify-assignment', async (req, res) => {
     console.log('[notify] membersLabel:', membersLabel);
     console.log('[notify] directLineIds:', directLineIds);
 
-    const jobNo     = f['JOB'] || '—';
+    const jobNo       = f['JOB'] || '—';
+    const RENDER_URL  = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+    const DASHBOARD_URL = `${RENDER_URL}/dashboard`;
+    const CALENDAR_URL  = `${RENDER_URL}/calendar`;
     const company   = f['บริษัท'] || '—';
     const province  = f['จังหวัด'] || '—';
     const detail    = f['รายละเอียดงาน'] || '—';
@@ -2452,19 +2455,26 @@ app.post('/notify-assignment', async (req, res) => {
           ]
         },
         footer: {
-          type: 'box', layout: 'vertical', paddingAll: '10px',
-          contents: [{
-            type: 'text',
-            text: `TPE Job Queue · ${now}`,
-            size: 'xxs', color: '#AAAAAA', align: 'center'
-          }]
+          type: 'box', layout: 'vertical', paddingAll: '10px', spacing: 'sm',
+          contents: [
+            {
+              type: 'button', style: 'primary', color: '#1A3358', height: 'sm',
+              action: {
+                type: 'uri', label: '📅 ดูปฏิทินชุด',
+                uri: `${RENDER_URL}/calendar?team=${encodeURIComponent(team)}&month=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`
+              }
+            },
+            {
+              type: 'text',
+              text: `TPE Job Queue · ${now}`,
+              size: 'xxs', color: '#AAAAAA', align: 'center'
+            }
+          ]
         }
       }
     };
 
-const DASHBOARD_URL = 'https://tpe-hr-bot.onrender.com/dashboard';
-
-    // ส่ง Lark Group (ALWAYS_NOTIFY)
+// ส่ง Lark Group (ALWAYS_NOTIFY)
     await axios.post(process.env.LARK_WEBHOOK_URL, {
       msg_type: 'text',
       content: {
@@ -2489,47 +2499,147 @@ const DASHBOARD_URL = 'https://tpe-hr-bot.onrender.com/dashboard';
     }
 
     console.log(`[notify] ${jobNo} → ${team} → Lark group + TEAM_ROLES ${teamTargets.length} + ระบุชื่อ ${directTargets.length} คน`);
+
+    // ── สร้าง Lark Calendar event ──────────────────────────────────────────
+    try {
+      // ตำแหน่งที่ต้องบันทึกปฏิทินให้ (วิศวะ, ผู้บริหาร, ฝ่ายขาย)
+      const CAL_POSITIONS = [
+        'ผู้บริหาร',
+        'เจ้าหน้าที่ฝ่ายขาย',
+        'วิศวกร',
+        'วิศวกรโครงการ',
+        'ผู้จัดการฝ่ายติดตั้ง',
+        'ผู้จัดการฝ่ายวิศวกรรม',
+      ];
+      const calUserIds = await getLarkUserIdsByPosition(larkToken, CAL_POSITIONS);
+
+      if (calUserIds.length > 0 && f['วันที่เริ่ม'] && f['วันสิ้นสุด']) {
+        const startMs = f['วันที่เริ่ม'];
+        const endMs   = f['วันสิ้นสุด'] + 86400000; // end = วันถัดไป (all-day inclusive)
+        const summary = `[${team}] ${jobNo !== '—' ? jobNo+' · ' : ''}${company}`;
+        const description = [
+          `ทีม: ${team}`,
+          `รายชื่อ: ${membersLabel}`,
+          `จังหวัด: ${province}`,
+          `รายละเอียด: ${detail}`,
+          `รถ: ${car}`,
+          `ช่วงงาน: ${startDate} – ${endDate}`,
+          `📊 Dashboard: ${DASHBOARD_URL}`,
+          `📅 ปฏิทิน: ${CALENDAR_URL}?team=${encodeURIComponent(rawTeams[0]||team)}`,
+        ].join('\n');
+
+        await createLarkCalendarEvents(larkToken, { summary, description, startMs, endMs, color: 1 }, calUserIds);
+        console.log(`[calendar] created for ${calUserIds.length} users`);
+      }
+    } catch(calErr) {
+      console.error('[calendar] create error:', calErr.message);
+    }
   } catch(e) {
     console.error('/notify-assignment error:', e.message);
   }
 });
 
+// ── Lark Calendar: สร้าง event ในปฏิทินส่วนตัว ──────────────────────────────
+async function createLarkCalendarEvents(token, eventData, targetUserIds) {
+  const results = [];
+  for (const userId of targetUserIds) {
+    try {
+      // ดึง calendar_id ของ user นั้น
+      const calR = await axios.get(
+        `https://open.larksuite.com/open-apis/calendar/v4/calendars/primary?user_id_type=user_id`,
+        { headers: { Authorization: `Bearer ${token}`, 'X-Lark-Request-User-ID': userId } }
+      );
+      // ถ้า primary calendar ไม่ได้ → ใช้ user calendar API แทน
+      // สร้าง event ผ่าน calendar.calendar_id ของ user
+      const calId = calR.data?.data?.calendar?.calendar_id;
+      if (!calId) { console.log(`[calendar] no calendar for ${userId}`); continue; }
+
+      const evR = await axios.post(
+        `https://open.larksuite.com/open-apis/calendar/v4/calendars/${calId}/events`,
+        {
+          summary:     eventData.summary,
+          description: eventData.description,
+          start_time:  { timestamp: String(Math.floor(eventData.startMs / 1000)), timezone: 'Asia/Bangkok' },
+          end_time:    { timestamp: String(Math.floor(eventData.endMs / 1000)),   timezone: 'Asia/Bangkok' },
+          color:       eventData.color || 0,
+          visibility:  'default',
+          attendee_ability: 'none',
+        },
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Lark-Request-User-ID': userId } }
+      );
+      results.push({ userId, ok: true, eventId: evR.data?.data?.event?.event_id });
+      console.log(`[calendar] created for ${userId}: ${evR.data?.data?.event?.event_id}`);
+    } catch(e) {
+      console.error(`[calendar] error for ${userId}:`, e.response?.data || e.message);
+      results.push({ userId, ok: false, error: e.message });
+    }
+  }
+  return results;
+}
+
+// ── ดึง Lark User ID ของพนักงานตามตำแหน่ง ─────────────────────────────────
+async function getLarkUserIdsByPosition(token, positions) {
+  try {
+    let allUsers = [], pageToken = '';
+    for (let i = 0; i < 10; i++) {
+      const url = `https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id&department_id=0${pageToken ? '&page_token='+pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      const data = r.data?.data || {};
+      allUsers = allUsers.concat(data.items || []);
+      if (!data.has_more) break;
+      pageToken = data.page_token || '';
+    }
+    // match จาก Lark HR Base (ตำแหน่ง)
+    const emps = await lark.getAllEmployees(token);
+    const matchedLineIds = emps
+      .filter(e => positions.some(p => (e['ตำแหน่ง']||'').toString().trim() === p))
+      .map(e => (e['ชื่อ - นามสกุล']||'').split('(')[0].trim())
+      .filter(Boolean);
+
+    // fuzzy match ชื่อกับ Lark users
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const userIds = [];
+    matchedLineIds.forEach(name => {
+      const nameNorm = normN(name);
+      const found = allUsers.find(u => {
+        const uNorm = normN(u.name||'');
+        return uNorm === nameNorm || uNorm.includes(nameNorm) || nameNorm.includes(uNorm);
+      });
+      if (found?.user_id && !userIds.includes(found.user_id)) {
+        userIds.push(found.user_id);
+      }
+    });
+    return userIds;
+  } catch(e) {
+    console.error('[getLarkUserIds] error:', e.message);
+    return [];
+  }
+}
+
 app.get('/my-lark-id', async (req, res) => {
   try {
     const token = await lark.getToken();
-    // ดึง department list ก่อน
-    const deptR = await axios.get(
-      'https://open.larksuite.com/open-apis/contact/v3/departments/children?department_id=0&user_id_type=user_id&page_size=50',
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const depts = deptR.data?.data?.items || [];
-    const deptIds = ['0', ...depts.map(d => d.department_id)];
-
-    // ดึง users จากทุก department
-    let allUsers = [];
-    for (const deptId of deptIds) {
-      try {
-        const r = await axios.get(
-          `https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id&department_id=${deptId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const users = r.data?.data?.items || [];
-        allUsers = allUsers.concat(users);
-      } catch(e) {}
+    // ดึง users โดยตรงจาก root department (ไม่ต้อง children)
+    let allUsers = [], pageToken = '';
+    for (let i = 0; i < 10; i++) {
+      const url = `https://open.larksuite.com/open-apis/contact/v3/users?page_size=50&user_id_type=user_id&department_id=0${pageToken ? '&page_token='+pageToken : ''}`;
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      const data = r.data?.data || {};
+      allUsers = allUsers.concat(data.items || []);
+      if (!data.has_more) break;
+      pageToken = data.page_token || '';
     }
-
     // dedup
     const seen = new Set();
     allUsers = allUsers.filter(u => {
       if (seen.has(u.user_id)) return false;
-      seen.add(u.user_id);
-      return true;
+      seen.add(u.user_id); return true;
     });
-
     res.json(allUsers.map(u => ({
       name: u.name,
       en_name: u.en_name || '',
       user_id: u.user_id,
+      open_id: u.open_id || '',
       email: u.email || '',
     })));
   } catch(e) {
@@ -2538,6 +2648,7 @@ app.get('/my-lark-id', async (req, res) => {
 });
 
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'tpe-dashboard.html')));
+app.get('/calendar',  (req, res) => res.sendFile(path.join(__dirname, 'tpe-calendar.html')));
 app.get('/fieldwork', (req, res) => res.sendFile(path.join(__dirname, 'fieldwork.html')));
 
 // ── เพิ่มใน index.js ก่อน startServer(PORT) ──────────────────
