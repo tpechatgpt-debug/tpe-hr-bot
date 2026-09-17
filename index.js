@@ -2461,12 +2461,12 @@ app.post('/notify-assignment', async (req, res) => {
               type: 'button', style: 'primary', color: '#1A3358', height: 'sm',
               action: {
                 type: 'uri', label: '📅 ดูปฏิทินชุด',
-                uri: `${RENDER_URL}/calendar?team=${encodeURIComponent(team)}&month=${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`
+                uri: RENDER_URL + '/calendar?team=' + encodeURIComponent(rawTeams[0] || team) + '&month=' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0')
               }
             },
             {
               type: 'text',
-              text: `TPE Job Queue · ${now}`,
+              text: 'TPE Job Queue · ' + now,
               size: 'xxs', color: '#AAAAAA', align: 'center'
             }
           ]
@@ -2492,8 +2492,13 @@ app.post('/notify-assignment', async (req, res) => {
       if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
     }
 
-    const alreadySent   = new Set(targets.map(e => (e['Line ID'] || e['LineID'] || '').toString().trim()).filter(Boolean));
-    const directTargets = directLineIds.filter(lid => lid && !alreadySent.has(lid));
+    // กรองเฉพาะ ALWAYS_NOTIFY ออก ไม่รวมหัวหน้าชุด (ให้ส่งซ้ำได้ถ้าถูกระบุชื่อด้วย)
+    const alwaysNotifyLids = new Set(
+      targets.filter(e => ALWAYS_NOTIFY.includes((e['ตำแหน่ง']||'').toString().trim()))
+             .map(e => (e['Line ID'] || e['LineID'] || '').toString().trim())
+             .filter(Boolean)
+    );
+    const directTargets = directLineIds.filter(lid => lid && !alwaysNotifyLids.has(lid));
     for (const lid of directTargets) {
       await push(lid, msg).catch(e => console.error('push direct error:', lid, e.message));
     }
@@ -3414,6 +3419,140 @@ app.get('/admin/test-leave-webhook', async (req, res) => {
     const d = await r.json();
     res.json({ ok: true, webhookResponse: d });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── ส่ง LINE อย่างเดียว (ไม่ส่ง Lark group) ────────────────────────────────
+app.post('/notify-line-only', async (req, res) => {
+  res.json({ ok: true });
+  try {
+    const rawId = req.body.recordId || '';
+    const recordId = rawId.replace(/[\[\]]/g, '').trim();
+    if (!recordId) { console.error('[notify-line-only] missing recordId'); return; }
+
+    const larkToken = await lark.getToken();
+    const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${process.env.LARK_JOB_BASE_ID}/tables/${process.env.LARK_ASSIGN_TABLE_ID}/records/${recordId}`;
+    const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
+    const f = r.data?.data?.record?.fields || {};
+
+    const rawTeams = Array.isArray(f['ชุด'])
+      ? f['ชุด'].map(t => typeof t === 'object' ? (t?.text || t?.value || '') : t.toString()).filter(Boolean)
+      : (f['ชุด'] ? [f['ชุด'].toString()] : []);
+    const team = rawTeams.join(', ') || '—';
+
+    const empsAll = await lark.getAllEmployees(larkToken);
+    const teamMemberMap2 = {};
+    const nameToLineId = {};
+    empsAll.forEach(e => {
+      const rawN = (e['ชื่อ - นามสกุล'] || '').split('(')[0].trim();
+      const lid  = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      if (rawN) nameToLineId[rawN] = lid;
+      const t = (e['ชุด'] || '').toString().trim();
+      if (!t || !rawN) return;
+      t.split(',').map(x => x.trim()).filter(Boolean).forEach(x => {
+        if (!teamMemberMap2[x]) teamMemberMap2[x] = [];
+        teamMemberMap2[x].push(rawN);
+      });
+    });
+
+    const namedRaw = Array.isArray(f['สมาชิก'])
+      ? f['สมาชิก'].map(m => typeof m === 'object' ? (m.text||m.value||'') : m.toString()).filter(Boolean)
+      : (f['สมาชิก'] ? [f['สมาชิก'].toString()] : []);
+
+    let membersLabel;
+    let directLineIds = [];
+    if (namedRaw.length === 0) {
+      membersLabel = 'ยกชุด';
+    } else {
+      const allTeamMembers = rawTeams.flatMap(t => teamMemberMap2[t] || []);
+      const matched = namedRaw.filter(m =>
+        allTeamMembers.some(tm => tm.includes(m) || m.includes(tm))
+      );
+      membersLabel = matched.length > 0 ? matched.join(', ') : 'ยกชุด';
+      matched.forEach(m => {
+        const lid = nameToLineId[m] ||
+          Object.entries(nameToLineId).find(([n]) => n.includes(m) || m.includes(n))?.[1];
+        if (lid && !directLineIds.includes(lid)) directLineIds.push(lid);
+      });
+    }
+
+    const jobNo     = f['JOB'] || '—';
+    const company   = Array.isArray(f['บริษัท']) ? f['บริษัท'].join(', ') : (f['บริษัท'] || '—');
+    const province  = f['จังหวัด'] || '—';
+    const detail    = f['รายละเอียดงาน'] || '—';
+    const car       = f['รถที่ใช้ออกหน้างาน'] || '—';
+    const fmtDate   = ts => { if (!ts) return '—'; const d = new Date(ts + 7*3600000); return `${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`; };
+    const startDate = fmtDate(f['วันที่เริ่ม']);
+    const endDate   = fmtDate(f['วันสิ้นสุด']);
+    const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+    const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+    const ALWAYS_NOTIFY = ['ผู้บริหาร','เจ้าหน้าที่ฝ่ายขาย','ผู้จัดการฝ่ายผลิต','เจ้าหน้าที่ทรัพยากรมนุษย์'];
+    const TEAM_ROLES = {
+      'ฝ่ายติดตั้ง':  ['ผู้จัดการฝ่ายติดตั้ง'],
+      'ฝ่ายบอยเลอร์': ['หัวหน้าบอยเลอร์'],
+      'ฝ่ายผลิต A':   ['หัวหน้าผลิต A'],
+      'ฝ่ายผลิต B':   ['หัวหน้าผลิต B'],
+    };
+    const rolesForThisTeam = [...ALWAYS_NOTIFY, ...rawTeams.flatMap(t => TEAM_ROLES[t] || [])];
+    const targets = empsAll.filter(e => {
+      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+      const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
+      return lid && rolesForThisTeam.some(r => pos === r);
+    });
+
+    const msg = {
+      type: 'flex',
+      altText: '📋 งานใหม่ ' + jobNo + ' → ' + team,
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#1E3A5F', paddingAll: '16px',
+          contents: [
+            { type: 'text', text: '📋 มอบหมายงานใหม่', color: '#ffffff', weight: 'bold', size: 'md' },
+            { type: 'text', text: team, color: '#C9A227', size: 'sm', margin: 'xs', weight: 'bold' },
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+          contents: [
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'รายชื่อ', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: membersLabel, size: 'sm', flex: 5, wrap: true, color: membersLabel === 'ยกชุด' ? '#C9A227' : '#111827' }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'JOB', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: jobNo, size: 'sm', weight: 'bold', flex: 5, color: '#1E3A5F' }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'บริษัท', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: company, size: 'sm', flex: 5, wrap: true }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'จังหวัด', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: province, size: 'sm', flex: 5 }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'รายละเอียด', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: detail, size: 'sm', flex: 5, wrap: true }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'ช่วงงาน', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: startDate + ' – ' + endDate, size: 'sm', flex: 5 }]},
+            { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: 'รถ', size: 'sm', color: '#888888', flex: 3 }, { type: 'text', text: car, size: 'sm', flex: 5 }]},
+          ]
+        },
+        footer: {
+          type: 'box', layout: 'vertical', paddingAll: '10px', spacing: 'sm',
+          contents: [
+            { type: 'button', style: 'primary', color: '#1A3358', height: 'sm',
+              action: { type: 'uri', label: '📅 ดูปฏิทินชุด',
+                uri: RENDER_URL + '/calendar?team=' + encodeURIComponent(rawTeams[0] || team) + '&month=' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') }},
+            { type: 'text', text: 'TPE Job Queue · ' + now, size: 'xxs', color: '#AAAAAA', align: 'center' }
+          ]
+        }
+      }
+    };
+
+    // ส่ง LINE ทุกคนที่ควรได้รับ
+    for (const emp of targets) {
+      const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
+      if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
+    }
+    const alwaysNotifyLids = new Set(
+      targets.filter(e => ALWAYS_NOTIFY.includes((e['ตำแหน่ง']||'').toString().trim()))
+             .map(e => (e['Line ID'] || e['LineID'] || '').toString().trim()).filter(Boolean)
+    );
+    const directTargets = directLineIds.filter(lid => lid && !alwaysNotifyLids.has(lid));
+    for (const lid of directTargets) {
+      await push(lid, msg).catch(e => console.error('push direct error:', lid, e.message));
+    }
+    console.log('[notify-line-only] ' + jobNo + ' → ' + team + ' → LINE ' + targets.length + ' + ระบุชื่อ ' + directTargets.length + ' คน');
+  } catch(e) {
+    console.error('/notify-line-only error:', e.message);
+  }
 });
 
 startServer(PORT);
