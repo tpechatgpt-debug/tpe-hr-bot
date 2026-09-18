@@ -455,6 +455,7 @@ async function handlePostback(event) {
     await push(hrUserId, '✅ ปฏิเสธคำขอของ ' + (req.empName || 'พนักงาน') + ' แล้ว');
     delete pending[rid];
     if (requestLog[rid]) requestLog[rid].status = 'rejected';
+    await appendAuditLog('reject', req, hrUserId);
     return;
   }
 
@@ -497,6 +498,7 @@ async function handlePostback(event) {
       if (requestLog[rid]) requestLog[rid].status = 'sent';
       // log เดือนแรก (สำหรับ multi-month ใช้ข้อมูลรวม)
       await sheet.log({ name: req.empName, month: req.month, docType: req.docType });
+      await appendAuditLog('approve', req, hrUserId);
 
     } catch(err) {
       console.error('approve error:', err.message);
@@ -593,12 +595,63 @@ app.get('/img/:token', (req, res) => {
   res.send(entry.buffer);
 });
 app.get('/portal', (req, res) => res.sendFile(path.join(__dirname, 'portal.html')));
+// ═══ Leave-today summary (ใช้ cache เดียวกับ getLeaveDatesFromLark) ═══
+async function getLeaveTodaySummary(larkToken) {
+  try {
+    const now = Date.now();
+    let allRecords;
+    if (LARK_LEAVE_ALL_CACHE && (now - LARK_LEAVE_CACHE_TS) < LARK_LEAVE_TTL) {
+      allRecords = LARK_LEAVE_ALL_CACHE;
+    } else {
+      allRecords = [];
+      let pageToken = '';
+      for (let i = 0; i < 5; i++) {
+        const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
+        const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
+        const data = r.data?.data;
+        allRecords = allRecords.concat(data?.items || []);
+        if (!data?.has_more) break;
+        pageToken = data.page_token || '';
+      }
+      LARK_LEAVE_ALL_CACHE = allRecords;
+      LARK_LEAVE_CACHE_TS = now;
+    }
+    const toTD = ts => { const d = new Date(ts + 7 * 3600000); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); };
+    const todayTD = toTD(now);
+    const results = [];
+    allRecords.forEach(item => {
+      const f = item.fields;
+      const start = f['ลาตั้งเเต่วันที่'], end = f['จนถึงวันที่'];
+      if (!start) return;
+      const startD = toTD(start), endD = end ? toTD(end) : new Date(startD);
+      if (todayTD >= startD && todayTD <= endD) {
+        const name = (f['ชื่อ-นามสกุล'] || '').split('(')[0].trim();
+        const type = f['ประเภทการลา'] || 'ลา';
+        if (name) results.push({ name, type });
+      }
+    });
+    return results;
+  } catch (e) { console.error('getLeaveTodaySummary:', e.message); return []; }
+}
+
 app.get('/portal/stats', async (req, res) => {
   try {
-    const [emps, allMonths] = await Promise.all([lark.getAllEmployees(await lark.getToken()), payroll.getAvailableMonths()]);
-    res.json({ employees: emps.length, pending: Object.keys(pending).length, latestMonth: allMonths.length ? allMonths[allMonths.length-1].month : '—' });
-  } catch(e) { res.json({ employees: 0, pending: 0, latestMonth: '—' }); }
+    const larkToken = await lark.getToken();
+    const [emps, allMonths, leaveToday] = await Promise.all([
+      lark.getAllEmployees(larkToken),
+      payroll.getAvailableMonths(),
+      getLeaveTodaySummary(larkToken)
+    ]);
+    res.json({
+      employees: emps.length,
+      pending: Object.keys(pending).length,
+      latestMonth: allMonths.length ? allMonths[allMonths.length - 1].month : '—',
+      leaveToday: leaveToday.length,
+      leaveTodayNames: leaveToday.map(x => `${x.name} (${x.type})`)
+    });
+  } catch (e) { res.json({ employees: 0, pending: 0, latestMonth: '—', leaveToday: 0, leaveTodayNames: [] }); }
 });
+
 app.get('/portal/employees', async (req, res) => {
   try {
     const emps = await lark.getAllEmployees(await lark.getToken());
@@ -700,6 +753,41 @@ app.get('/portal/pending-notify', (req, res) => {
 });
 
 // ── Portal: HR approve/reject ผ่าน Portal (ไม่ผ่าน LINE) ─
+// ════════════════════════════════════════════════════════
+// Audit Log — บันทึกการอนุมัติ/ปฏิเสธคำขอเอกสาร (Sheet tab: AuditLog)
+// ════════════════════════════════════════════════════════
+async function appendAuditLog(action, req2, actor) {
+  try {
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const ts = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+    const row = [ts, action, (req2 && req2.empName) || '', (req2 && req2.docType) || '', (req2 && req2.month) || '', actor || ''];
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sid, range: 'AuditLog!A:F', valueInputOption: 'RAW', requestBody: { values: [row] }
+    });
+  } catch (e) { console.error('appendAuditLog:', e.message); }
+  // หมายเหตุ: ต้องสร้าง sheet tab ชื่อ "AuditLog" เองก่อนใช้งานครั้งแรก (หัวคอลัมน์: เวลา, การกระทำ, พนักงาน, ประเภทเอกสาร, เดือน, ผู้ดำเนินการ)
+}
+
+app.get('/portal/audit-log', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'AuditLog!A:F' });
+    const rows = (r.data.values || []).slice(1); // ข้าม header ถ้ามี
+    const list = rows.slice(-limit).reverse().map(row => ({
+      time: row[0] || '', action: row[1] || '', empName: row[2] || '',
+      docType: row[3] || '', month: row[4] || '', actor: row[5] || ''
+    }));
+    res.json(list);
+  } catch (e) { res.json([]); }
+});
+
 app.post('/portal/approve', express.json(), async (req, res) => {
   const { requestId, action } = req.body;
   if (!requestId || !action) return res.status(400).json({ error: 'missing params' });
@@ -714,6 +802,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
     if (requestLog[requestId]) requestLog[requestId].status = 'rejected';
     // พยายาม push พนักงาน
     await push(req2.empLineId, '❌ คำขอ' + (req2.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ').catch(() => {});
+    await appendAuditLog('reject', req2, 'Portal');
     return res.json({ ok: true, action: 'rejected' });
   }
 
@@ -748,6 +837,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
       if (requestLog[requestId]) requestLog[requestId].status = 'sent';
       await sheet.log({ name: req2.empName, month: req2.month, docType: req2.docType });
 
+      await appendAuditLog('approve', req2, 'Portal');
       return res.json({ ok: true, action: 'approved', pushOk: !pushResult?.fallback });
     } catch (err) {
       return res.status(500).json({ error: err.message });
@@ -3256,6 +3346,54 @@ app.get('/eslip/holidays', async (req, res) => {
 });
 
 // ── ประวัติการลาของพนักงาน (สำหรับ eslip.html) ──────────
+// ════════════════════════════════════════════════════════
+// Leave Trend — สรุปวันลารายเดือน แยกตามประเภท (สำหรับกราฟใน Portal)
+// ════════════════════════════════════════════════════════
+app.get('/portal/leave-trend', async (req, res) => {
+  try {
+    const months = parseInt(req.query.months) || 6;
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const sid = process.env.LOG_SHEET_ID;
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' });
+    const rows = (r.data.values || []).slice(1);
+
+    const now = new Date();
+    const monthKeys = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const TYPES = ['ลากิจ', 'ลาป่วย', 'พักร้อน', 'ไม่รับค่าจ้าง', 'อื่นๆ'];
+    const grid = {};
+    TYPES.forEach(t => { grid[t] = {}; monthKeys.forEach(k => grid[t][k] = 0); });
+
+    rows.forEach(row => {
+      const type = row[2] || '';
+      const dateStr = row[3] || '';
+      const days = parseFloat(row[5]) || 0;
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return;
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthKeys.includes(key)) return;
+      let cat = 'อื่นๆ';
+      if (type.includes('กิจ')) cat = 'ลากิจ';
+      else if (type.includes('ป่วย')) cat = 'ลาป่วย';
+      else if (type.includes('พักร้อน')) cat = 'พักร้อน';
+      else if (type.includes('ไม่รับค่าจ้าง')) cat = 'ไม่รับค่าจ้าง';
+      grid[cat][key] += days;
+    });
+
+    res.json({
+      labels: monthKeys,
+      series: TYPES.map(t => ({ name: t, data: monthKeys.map(k => Math.round(grid[t][k] * 10) / 10) }))
+    });
+  } catch (e) { res.json({ labels: [], series: [] }); }
+});
+
 app.get('/eslip/leave-history', async (req, res) => {
   try {
     const { lineId } = req.query;
