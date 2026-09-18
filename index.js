@@ -274,6 +274,7 @@ async function handleDocRequest(replyToken, userId, larkToken, docType) {
 
   pending[requestId]    = { empName, empLineId: userId, docType, larkToken, payType };
   requestLog[requestId] = { empName, empLineId: userId, docType, payType, status: 'pending', time: Date.now() };
+  savePendingToSheet(requestId, pending[requestId]).catch(() => {});
 
   // ── ดึงเดือน กรองเฉพาะประเภทของพนักงานคนนี้ ──────────────
   const allMonths   = await payroll.getAvailableMonths();
@@ -454,6 +455,7 @@ async function handlePostback(event) {
     if (req.empLineId) await push(req.empLineId, '❌ คำขอ' + (req.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ');
     await push(hrUserId, '✅ ปฏิเสธคำขอของ ' + (req.empName || 'พนักงาน') + ' แล้ว');
     delete pending[rid];
+    deletePendingFromSheet(rid).catch(() => {});
     if (requestLog[rid]) requestLog[rid].status = 'rejected';
     await appendAuditLog('reject', req, hrUserId);
     return;
@@ -495,6 +497,7 @@ async function handlePostback(event) {
       // ส่งรูปทุกเดือน + ลิงก์ PDF รวม
       const sendResult = await sendDocToLine(req.empLineId, htmlArr, pdfBuffer, filename);
       delete pending[rid];
+      deletePendingFromSheet(rid).catch(() => {});
       if (requestLog[rid]) requestLog[rid].status = 'sent';
       // log เดือนแรก (สำหรับ multi-month ใช้ข้อมูลรวม)
       await sheet.log({ name: req.empName, month: req.month, docType: req.docType });
@@ -510,7 +513,7 @@ async function handlePostback(event) {
 // ════════════════════════════════════════════════════════
 // HR อัปโหลด Excel
 // ════════════════════════════════════════════════════════
-app.post('/upload-payroll', upload.single('file'), async (req, res) => {
+app.post('/upload-payroll', requirePortalAuth, upload.single('file'), async (req, res) => {
   res.json({ ok: true, message: 'กำลังประมวลผล...' });
   try {
     const file = req.file;
@@ -634,6 +637,62 @@ async function getLeaveTodaySummary(larkToken) {
   } catch (e) { console.error('getLeaveTodaySummary:', e.message); return []; }
 }
 
+// ════════════════════════════════════════════════════════
+// Pending-request persistence — กัน pending หายเมื่อ Render restart
+// (Sheet tab: PendingRequests — คอลัมน์: requestId, empName, empLineId, docType, larkToken, payType, createdAt)
+// ════════════════════════════════════════════════════════
+async function getPendingSheetClient() {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  return google.sheets({ version: 'v4', auth: await auth.getClient() });
+}
+
+async function savePendingToSheet(requestId, data) {
+  try {
+    const sheets = await getPendingSheetClient();
+    const row = [requestId, data.empName || '', data.empLineId || '', data.docType || '', data.larkToken || '', data.payType || '', new Date().toISOString()];
+    await sheets.spreadsheets.values.append({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'PendingRequests!A:G', valueInputOption: 'RAW', requestBody: { values: [row] } });
+  } catch (e) { console.error('savePendingToSheet:', e.message); }
+}
+
+async function deletePendingFromSheet(requestId) {
+  try {
+    const sheets = await getPendingSheetClient();
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'PendingRequests!A:A' });
+    const rows = r.data.values || [];
+    const rowIdx = rows.findIndex(row => row[0] === requestId);
+    if (rowIdx === -1) return;
+    await sheets.spreadsheets.values.clear({ spreadsheetId: process.env.LOG_SHEET_ID, range: `PendingRequests!A${rowIdx + 1}:G${rowIdx + 1}` });
+  } catch (e) { console.error('deletePendingFromSheet:', e.message); }
+}
+
+async function loadPendingFromSheet() {
+  try {
+    const sheets = await getPendingSheetClient();
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'PendingRequests!A:G' });
+    const rows = r.data.values || [];
+    let restored = 0;
+    rows.forEach(row => {
+      const [requestId, empName, empLineId, docType, larkToken, payType] = row;
+      if (!requestId || pending[requestId]) return;
+      pending[requestId] = { empName, empLineId, docType, larkToken, payType };
+      restored++;
+    });
+    if (restored) console.log(`[PendingRequests] restored ${restored} รายการจาก Sheet`);
+  } catch (e) { console.error('loadPendingFromSheet:', e.message); }
+}
+
+// ════════════════════════════════════════════════════════
+// Lightweight portal auth — กันยิง endpoint ที่แก้ไขข้อมูลตรงๆ โดยไม่ผ่านหน้าเว็บ
+// (ไม่ใช่ security เต็มรูปแบบ — แค่ต้องรู้รหัสผ่าน HR เดียวกับที่ใช้ล็อกอิน Portal)
+// ════════════════════════════════════════════════════════
+const PORTAL_ADMIN_PASS = process.env.PORTAL_ADMIN_PASS || 'tpe2569';
+function requirePortalAuth(req, res, next) {
+  const token = req.headers['x-hr-pass'] || req.query.hrpass || '';
+  if (token !== PORTAL_ADMIN_PASS) return res.status(403).json({ error: 'unauthorized' });
+  next();
+}
+
 app.get('/portal/stats', async (req, res) => {
   try {
     const larkToken = await lark.getToken();
@@ -669,7 +728,7 @@ app.get('/portal/months', async (req, res) => {
 });
 
 // ── Portal: retry สร้าง PDF ใหม่จาก requestLog ─────────
-app.post('/portal/retry', express.json(), async (req, res) => {
+app.post('/portal/retry', requirePortalAuth, express.json(), async (req, res) => {
   const { requestId } = req.body;
   if (!requestId) return res.status(400).json({ error: 'missing requestId' });
 
@@ -714,11 +773,12 @@ app.post('/portal/retry', express.json(), async (req, res) => {
 });
 
 // ── Portal: ลบรายการคำขอออกจากประวัติ ───────────────────
-app.delete('/portal/request/:id', (req, res) => {
+app.delete('/portal/request/:id', requirePortalAuth, (req, res) => {
   const id = req.params.id;
   delete requestLog[id];
   delete pending[id];
   delete pendingNotify[id];
+  deletePendingFromSheet(id).catch(() => {});
   res.json({ ok: true });
 });
 
@@ -788,7 +848,7 @@ app.get('/portal/audit-log', async (req, res) => {
   } catch (e) { res.json([]); }
 });
 
-app.post('/portal/approve', express.json(), async (req, res) => {
+app.post('/portal/approve', requirePortalAuth, express.json(), async (req, res) => {
   const { requestId, action } = req.body;
   if (!requestId || !action) return res.status(400).json({ error: 'missing params' });
 
@@ -799,6 +859,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
 
   if (action === 'reject') {
     delete pending[requestId];
+    deletePendingFromSheet(requestId).catch(() => {});
     if (requestLog[requestId]) requestLog[requestId].status = 'rejected';
     // พยายาม push พนักงาน
     await push(req2.empLineId, '❌ คำขอ' + (req2.docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน') + 'ของคุณถูกปฏิเสธ กรุณาติดต่อ HR โดยตรงครับ').catch(() => {});
@@ -834,6 +895,7 @@ app.post('/portal/approve', express.json(), async (req, res) => {
       }
 
       delete pending[requestId];
+      deletePendingFromSheet(requestId).catch(() => {});
       if (requestLog[requestId]) requestLog[requestId].status = 'sent';
       await sheet.log({ name: req2.empName, month: req2.month, docType: req2.docType });
 
@@ -1932,7 +1994,7 @@ app.get('/eslip/pdf', async (req, res) => {
       const g = name => empRow[col(name)] || '';
       emp = { 'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'), 'ประเภท': g('ประเภท') };
     }
-    const rawName = emp['ชื่อ - นามสกุล'] || '';
+    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
     const empName = payroll.normName(rawName.split('(')[0]);
     const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
     const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
@@ -2185,44 +2247,10 @@ app.get('/eslip/data', async (req, res) => {
 });
 
 // PDF download
-app.get('/eslip/pdf', async (req, res) => {
-  try {
-    const { lineId, docType, month } = req.query;
-    const larkToken = await lark.getToken().catch(() => null);
-    let emp = null;
-    try { if (larkToken) emp = await lark.findByLineId(larkToken, lineId); } catch(e) {}
-    if (!emp) {
-      const { google } = require('googleapis');
-      const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-      const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-      const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
-      const rows = r.data.values || [];
-      const header = rows[0] || [];
-      const col = name => header.findIndex(h => h.trim() === name.trim());
-      const empRow = rows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
-      if (!empRow) return res.status(404).send('not found');
-      const g = name => empRow[col(name)] || '';
-      emp = { 'ชื่อ - นามสกุล': g('ชื่อ - นามสกุล'), 'ประเภท': g('ประเภท') };
-    }
-    const rawName = emp['ชื่อ - นามสกุล'] || emp['ชื่อ-นามสกุล'] || '';
-    const empName = payroll.normName(rawName.split('(')[0]);
-    const rawType = (emp['ประเภท'] || 'รายเดือน').toString().trim();
-    const pt = rawType.includes('รายวัน') ? 'daily' : 'monthly';
-    const empData = await payroll.getEmployeePayroll(empName, month, pt);
-    if (!empData) return res.status(404).send('not found');
-    const pdfBuf = docType === 'payslip'
-      ? await payslip.createFromPayroll(empData)
-      : await cert.createFromPayroll(empData);
-    const docLabel = docType === 'payslip' ? 'สลิปเงินเดือน' : 'ใบรับรองเงินเดือน';
-    const filename = docLabel + '_' + empName + '_' + month + '.pdf';
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    res.send(pdfBuf);
-  } catch(e) { res.status(500).send(e.message); }
-});
 
 
 async function initBackgroundServices() {
+  await loadPendingFromSheet().catch(() => {});
   try {
     const { google } = require('googleapis');
     const auth = new google.auth.GoogleAuth({
@@ -3349,9 +3377,15 @@ app.get('/eslip/holidays', async (req, res) => {
 // ════════════════════════════════════════════════════════
 // Leave Trend — สรุปวันลารายเดือน แยกตามประเภท (สำหรับกราฟใน Portal)
 // ════════════════════════════════════════════════════════
+const LEAVE_TREND_CACHE = {}; // key = months, TTL 10 นาที
 app.get('/portal/leave-trend', async (req, res) => {
   try {
     const months = parseInt(req.query.months) || 6;
+    const cacheKey = String(months);
+    const cached = LEAVE_TREND_CACHE[cacheKey];
+    if (cached && (Date.now() - cached.ts) < 10 * 60 * 1000) {
+      return res.json(cached.data);
+    }
     const { google } = require('googleapis');
     const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
     const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
@@ -3387,10 +3421,12 @@ app.get('/portal/leave-trend', async (req, res) => {
       grid[cat][key] += days;
     });
 
-    res.json({
+    const result = {
       labels: monthKeys,
       series: TYPES.map(t => ({ name: t, data: monthKeys.map(k => Math.round(grid[t][k] * 10) / 10) }))
-    });
+    };
+    LEAVE_TREND_CACHE[cacheKey] = { data: result, ts: Date.now() };
+    res.json(result);
   } catch (e) { res.json({ labels: [], series: [] }); }
 });
 
