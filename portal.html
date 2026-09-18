@@ -641,11 +641,12 @@ function doLogin(){
   if(role){
     document.getElementById('loginWrap').style.display='none';
     const a=document.getElementById('app');a.style.display='flex';a.style.flexDirection='column';
-    sessionStorage.setItem('hr_auth','1');sessionStorage.setItem('hr_role',role);
+    sessionStorage.setItem('hr_auth','1');sessionStorage.setItem('hr_role',role);sessionStorage.setItem('hr_pass_cache',v);
     applyRole(role);initApp();
   }else document.getElementById('loginErr').style.display='block';
 }
-function logout(){sessionStorage.removeItem('hr_auth');sessionStorage.removeItem('hr_role');location.reload();}
+function logout(){sessionStorage.removeItem('hr_auth');sessionStorage.removeItem('hr_role');sessionStorage.removeItem('hr_pass_cache');location.reload();}
+function hrAuthHeaders(extra){return Object.assign({'x-hr-pass':sessionStorage.getItem('hr_pass_cache')||''},extra||{});}
 window.onload=function(){
   if(sessionStorage.getItem('hr_auth')==='1'){
     document.getElementById('loginWrap').style.display='none';
@@ -842,7 +843,7 @@ async function doUpload(file,suffix){
   try{
     const form=new FormData();form.append('file',file);form.append('notifyUserId','Ud983ff5538b43bb594f479c007cf609c');
     const ptEl=document.getElementById('payType'+suffix);form.append('payType',ptEl?ptEl.value:'monthly');
-    const r=await fetch(API+'/upload-payroll',{method:'POST',body:form});const d=await r.json();
+    const r=await fetch(API+'/upload-payroll',{method:'POST',headers:hrAuthHeaders(),body:form});const d=await r.json();
     clearInterval(timer);fill.style.width='100%';label.textContent='เสร็จสิ้น';
     setTimeout(()=>{prog.style.display='none';result.className='upload-result result-ok';result.style.display='block';result.textContent=d.message||'✅ อัปโหลดสำเร็จ';loadStats();loadRecent();loadMonthsForSelector();},500);
   }catch(err){clearInterval(timer);prog.style.display='none';result.className='upload-result result-err';result.style.display='block';result.textContent='❌ '+err.message;}
@@ -875,17 +876,17 @@ async function loadPendingNotify(){
 async function portalApprove(requestId,action){
   if(!confirm('ยืนยัน'+(action==='approve'?'อนุมัติ':'ปฏิเสธ')+'คำขอนี้?'))return;
   try{
-    const r=await fetch(API+'/portal/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,action})});
+    const r=await fetch(API+'/portal/approve',{method:'POST',headers:hrAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify({requestId,action})});
     const data=await r.json();
     if(data.ok){alert((action==='approve'?'อนุมัติ':'ปฏิเสธ')+'สำเร็จ'+(data.pushOk===false?'\n⚠️ ส่ง LINE ไม่ได้':''));loadPendingNotify();loadRequests();}
     else alert('Error: '+(data.error||'unknown'));
   }catch(e){alert('Error: '+e.message);}
 }
-async function deleteRequest(id){if(!confirm('ลบรายการนี้?'))return;try{const r=await fetch(API+'/portal/request/'+id,{method:'DELETE'});const d=await r.json();if(d.ok){loadRequests();loadStats();}else alert('ลบไม่สำเร็จ');}catch(e){alert(e.message);}}
+async function deleteRequest(id){if(!confirm('ลบรายการนี้?'))return;try{const r=await fetch(API+'/portal/request/'+id,{method:'DELETE',headers:hrAuthHeaders()});const d=await r.json();if(d.ok){loadRequests();loadStats();}else alert('ลบไม่สำเร็จ');}catch(e){alert(e.message);}}
 async function retryApprove(id){
   if(!confirm('อนุมัติและสร้าง PDF ใหม่?'))return;
   try{
-    const r=await fetch(API+'/portal/retry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:id})});
+    const r=await fetch(API+'/portal/retry',{method:'POST',headers:hrAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify({requestId:id})});
     const d=await r.json();
     if(d.ok){alert('สำเร็จ'+(d.pushOk===false?'\n⚠️ ส่ง LINE ไม่ได้':''));loadRequests();loadPendingNotify();loadPdfReady();}
     else alert('Error: '+(d.error||'unknown'));
