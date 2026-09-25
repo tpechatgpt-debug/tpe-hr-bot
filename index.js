@@ -3742,20 +3742,23 @@ app.post('/notify-line-only', async (req, res) => {
       }
     };
 
-    // ส่ง LINE ทุกคนที่ควรได้รับ
-    for (const emp of targets) {
+    // ส่ง LINE เฉพาะ TEAM_ROLES (หัวหน้าชุด/ผู้จัดการที่เกี่ยวข้องเท่านั้น)
+    // ไม่รวม ALWAYS_NOTIFY (ผู้บริหาร/ฝ่ายขาย/ผู้จัดการฝ่ายผลิต/HR) เพราะกลุ่มนั้นได้รับผ่าน Lark กลุ่มจาก /notify-assignment ไปแล้วตั้งแต่รอบแรก
+    // ใช้ตัวนี้ตอน retry เท่านั้น จะได้ไม่แจ้งซ้ำคนที่ได้รับไปแล้ว
+    const teamTargets = targets.filter(e => !ALWAYS_NOTIFY.includes(normPos(e['ตำแหน่ง'])));
+    for (const emp of teamTargets) {
       const lid = (emp['Line ID'] || emp['LineID'] || '').toString().trim();
       if (lid) await push(lid, msg).catch(e => console.error('push error:', lid, e.message));
     }
     const alwaysNotifyLids = new Set(
-      targets.filter(e => ALWAYS_NOTIFY.includes((e['ตำแหน่ง']||'').toString().trim()))
+      targets.filter(e => ALWAYS_NOTIFY.includes(normPos(e['ตำแหน่ง'])))
              .map(e => (e['Line ID'] || e['LineID'] || '').toString().trim()).filter(Boolean)
     );
     const directTargets = directLineIds.filter(lid => lid && !alwaysNotifyLids.has(lid));
     for (const lid of directTargets) {
       await push(lid, msg).catch(e => console.error('push direct error:', lid, e.message));
     }
-    console.log('[notify-line-only] ' + jobNo + ' → ' + team + ' → LINE ' + targets.length + ' + ระบุชื่อ ' + directTargets.length + ' คน');
+    console.log('[notify-line-only] ' + jobNo + ' → ' + team + ' → LINE ' + teamTargets.length + ' + ระบุชื่อ ' + directTargets.length + ' คน');
   } catch(e) {
     console.error('/notify-line-only error:', e.message);
   }
