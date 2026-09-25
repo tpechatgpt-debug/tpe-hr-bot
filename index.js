@@ -14,6 +14,13 @@ const sheet    = require('./sheet');
 const telegramBot = require('./telegram');
 const gramJS      = require('./gramjs');
 const app    = express();
+
+// asText: กัน 400 จาก LINE/พังการแสดงผล เวลาฟิลด์ Lark เป็น Lookup/Link (array) แทนที่จะเป็น string ธรรมดา — ใช้ร่วมกันหลายจุด
+function asText(v) {
+  if (Array.isArray(v)) return v.map(x => (x && typeof x === 'object') ? (x.text || x.value || '') : (x ?? '').toString()).filter(Boolean).join(', ');
+  if (v && typeof v === 'object') return v.text || v.value || '';
+  return (v ?? '').toString();
+}
 const upload = multer({ dest: '/tmp/uploads/' });
 app.use(express.json());
 app.use((req, res, next) => {
@@ -2387,7 +2394,7 @@ app.get('/api/dashboard', async (req, res) => {
         teamBreakdown, // [{ team, members[], allTeam }]
         jobNo: jobFields?.['JOB'] || f['JOB'] || '—',
         jobName: jobFields?.['งาน'] || f['รายละเอียดงาน'] || '—',
-        company: f['บริษัท'] || jobFields?.['บริษัท'] || '—',
+        company: asText(f['บริษัท']) || asText(jobFields?.['บริษัท']) || '—',
         province: f['จังหวัด'] || '—',
         startDate: f['วันที่เริ่ม'] || null,
         endDate: f['วันสิ้นสุด'] || null,
@@ -2479,14 +2486,14 @@ app.post('/notify-assignment', async (req, res) => {
     console.log('[notify] membersLabel:', membersLabel);
     console.log('[notify] directLineIds:', directLineIds);
 
-    const jobNo       = f['JOB'] || '—';
+    const jobNo       = asText(f['JOB']) || '—';
     const RENDER_URL  = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
     const DASHBOARD_URL = `${RENDER_URL}/dashboard`;
     const CALENDAR_URL  = `${RENDER_URL}/calendar`;
-    const company   = f['บริษัท'] || '—';
-    const province  = f['จังหวัด'] || '—';
-    const detail    = f['รายละเอียดงาน'] || '—';
-    const car       = f['รถที่ใช้ออกหน้างาน'] || '—';
+    const company   = asText(f['บริษัท']) || '—';
+    const province  = asText(f['จังหวัด']) || '—';
+    const detail    = asText(f['รายละเอียดงาน']) || '—';
+    const car       = asText(f['รถที่ใช้ออกหน้างาน']) || '—';
     const fmtDate   = ts => { if (!ts) return '—'; const d = new Date(ts + 7 * 3600000); return `${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`; };
     const startDate = fmtDate(f['วันที่เริ่ม']);
     const endDate   = fmtDate(f['วันสิ้นสุด']);
@@ -3665,11 +3672,11 @@ app.post('/notify-line-only', async (req, res) => {
       });
     }
 
-    const jobNo     = f['JOB'] || '—';
-    const company   = Array.isArray(f['บริษัท']) ? f['บริษัท'].join(', ') : (f['บริษัท'] || '—');
-    const province  = f['จังหวัด'] || '—';
-    const detail    = f['รายละเอียดงาน'] || '—';
-    const car       = f['รถที่ใช้ออกหน้างาน'] || '—';
+    const jobNo     = asText(f['JOB']) || '—';
+    const company   = asText(f['บริษัท']) || '—';
+    const province  = asText(f['จังหวัด']) || '—';
+    const detail    = asText(f['รายละเอียดงาน']) || '—';
+    const car       = asText(f['รถที่ใช้ออกหน้างาน']) || '—';
     const fmtDate   = ts => { if (!ts) return '—'; const d = new Date(ts + 7*3600000); return `${d.getUTCDate()}/${d.getUTCMonth()+1}/${d.getUTCFullYear()+543}`; };
     const startDate = fmtDate(f['วันที่เริ่ม']);
     const endDate   = fmtDate(f['วันสิ้นสุด']);
@@ -3684,10 +3691,19 @@ app.post('/notify-line-only', async (req, res) => {
       'ฝ่ายผลิต B':   ['หัวหน้าผลิต B'],
     };
     const rolesForThisTeam = [...ALWAYS_NOTIFY, ...rawTeams.flatMap(t => TEAM_ROLES[t] || [])];
+    const normPos = s => (s || '').toString().trim().replace(/\s+/g, ' ');
+    const rolesNorm = rolesForThisTeam.map(normPos);
     const targets = empsAll.filter(e => {
-      const pos = (e['ตำแหน่ง'] || '').toString().trim();
       const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
-      return lid && rolesForThisTeam.some(r => pos === r);
+      return lid && rolesNorm.includes(normPos(e['ตำแหน่ง']));
+    });
+    rawTeams.forEach(t => {
+      (TEAM_ROLES[t] || []).forEach(role => {
+        const person = empsAll.find(e => normPos(e['ตำแหน่ง']) === normPos(role));
+        if (!person) console.warn(`[notify-line-only] ⚠️ ไม่พบพนักงานตำแหน่ง "${role}" (ทีม ${t})`);
+        else if (!(person['Line ID'] || person['LineID'] || '').toString().trim())
+          console.warn(`[notify-line-only] ⚠️ พบ "${role}" คือ ${person['ชื่อ - นามสกุล'] || '(ไม่มีชื่อ)'} แต่ไม่มี Line ID`);
+      });
     });
 
     const msg = {
