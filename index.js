@@ -2504,8 +2504,8 @@ app.post('/notify-assignment', async (req, res) => {
     const TEAM_ROLES = {
       'ฝ่ายติดตั้ง':  ['ผู้จัดการฝ่ายติดตั้ง'],
       'ฝ่ายบอยเลอร์': ['หัวหน้าบอยเลอร์'],
-      'ฝ่ายผลิต A (สุดใจ)':   ['หัวหน้าผลิต A'],
-      'ฝ่ายผลิต B (หนุดดีน)':   ['หัวหน้าผลิต B'],
+      'ฝ่ายผลิต A':   ['หัวหน้าผลิต A'],
+      'ฝ่ายผลิต B':   ['หัวหน้าผลิต B'],
     };
 
     const rolesForThisTeam = [
@@ -2513,11 +2513,27 @@ app.post('/notify-assignment', async (req, res) => {
       ...rawTeams.flatMap(t => TEAM_ROLES[t] || []),
     ];
 
-    const targets = emps.filter(e => {
-      const pos = (e['ตำแหน่ง'] || '').toString().trim();
+    // normPos: กัน exact-match พังเพราะเว้นวรรคเกิน/ซ้ำ (root cause ของบั๊กที่เจอมาแล้วหลายรอบ)
+    const normPos = s => (s || '').toString().trim().replace(/\s+/g, ' ');
+    const rolesNorm = rolesForThisTeam.map(normPos);
+
+    const matchedByPosition = emps.filter(e => rolesNorm.includes(normPos(e['ตำแหน่ง'])));
+    const targets = matchedByPosition.filter(e => {
       const lid = (e['Line ID'] || e['LineID'] || '').toString().trim();
-      if (!lid) return false;
-      return rolesForThisTeam.some(r => pos === r);
+      return !!lid;
+    });
+
+    // ── Diagnostic: ชี้ชัดใน log ว่าทำไมคนที่ควรได้รับถึงไม่ได้รับ (ตำแหน่งไม่เจอ vs เจอแต่ไม่มี Line ID) ──
+    rawTeams.forEach(t => {
+      (TEAM_ROLES[t] || []).forEach(role => {
+        const person = emps.find(e => normPos(e['ตำแหน่ง']) === normPos(role));
+        if (!person) {
+          console.warn(`[notify] ⚠️ ไม่พบพนักงานตำแหน่ง "${role}" (ทีม ${t}) ใน Lark HR Base เลย — เช็คว่าฟิลด์ "ตำแหน่ง" สะกดตรงกับใน TEAM_ROLES ไหม`);
+        } else {
+          const lid = (person['Line ID'] || person['LineID'] || '').toString().trim();
+          if (!lid) console.warn(`[notify] ⚠️ พบ "${role}" คือ ${person['ชื่อ - นามสกุล'] || '(ไม่มีชื่อ)'} แต่ไม่มี Line ID ผูกไว้ในตาราง HR — จะไม่ได้รับ LINE`);
+        }
+      });
     });
 
     console.log('[notify] TEAM_ROLES match:', rawTeams.map(t => TEAM_ROLES[t]));
