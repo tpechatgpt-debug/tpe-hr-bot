@@ -77,7 +77,8 @@ async function saveAttendance(sheets, spreadsheetId, data) {
 }
 
 // ดึงข้อความใหม่จาก Telegram (getUpdates)
-async function pollTelegram(sheets, spreadsheetId) {
+let _lastSaveAlertAt = 0;
+async function pollTelegram(sheets, spreadsheetId, notify) {
   try {
     const params = lastUpdateId === -1
       ? { limit: 100 }  // ครั้งแรก: ดึงทั้งหมด
@@ -108,6 +109,11 @@ async function pollTelegram(sheets, spreadsheetId) {
         lastUpdateId = update.update_id;
       } catch (e) {
         console.error(`[Attendance] ❌ บันทึกไม่สำเร็จ (${data.name} | ${data.date} ${data.time}):`, e.message, '→ จะลองใหม่รอบถัดไป');
+        // แจ้ง HR ทาง LINE ทันทีที่เขียนชีตไม่สำเร็จ (throttle ไม่เกิน 1 ครั้งต่อชั่วโมง กันสแปม เพราะจะ retry ทุก 30 วิ)
+        if (notify && Date.now() - _lastSaveAlertAt > 60 * 60 * 1000) {
+          _lastSaveAlertAt = Date.now();
+          notify(`⚠️ บอทสแกนหน้าเขียน Google Sheet ไม่สำเร็จ\nสาเหตุ: ${e.message}\nกำลังลองใหม่ทุก 30 วิ — ถ้ายังไม่หายภายใน 1 ชม. ควรเช็ค Render logs`);
+        }
         break; // หยุด loop รอบนี้ทันที ไม่ขยับ offset ต่อ กันข้ามข้อความที่ยังไม่สำเร็จ
       }
     }
@@ -117,10 +123,10 @@ async function pollTelegram(sheets, spreadsheetId) {
 }
 
 // เริ่ม polling ทุก 30 วินาที
-function startPolling(sheets, spreadsheetId) {
+function startPolling(sheets, spreadsheetId, notify) {
   console.log('[Attendance] เริ่ม polling Telegram ทุก 30 วินาที');
-  pollTelegram(sheets, spreadsheetId); // poll ทันทีครั้งแรก
-  setInterval(() => pollTelegram(sheets, spreadsheetId), 30 * 1000);
+  pollTelegram(sheets, spreadsheetId, notify); // poll ทันทีครั้งแรก
+  setInterval(() => pollTelegram(sheets, spreadsheetId, notify), 30 * 1000);
 }
 
 module.exports = { startPolling, parseAttendance };
