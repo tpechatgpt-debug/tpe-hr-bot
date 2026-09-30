@@ -33,6 +33,7 @@ app.use((req, res, next) => {
 
 const LINE_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const HR_USER_ID = process.env.HR_LINE_USER_ID;
+const DEV_USER_ID = process.env.DEV_LINE_USER_ID || 'Uc9f0ce4a51421ef589db8834aba0ce75'; // อรุณ ช่วยจวน — Dev ผู้ดูแลระบบ HR
 
 const pending        = {};
 const requestLog     = {};
@@ -2265,9 +2266,12 @@ async function initBackgroundServices() {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
     const sheetsClient = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    try { telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID); }
+    // แจ้งเตือน HR ทาง LINE เมื่อระบบ scan/backfill มีปัญหา — จะได้รู้ทันทีแทนที่จะมาเจอเองทีหลัง
+    // แจ้งเตือนเทคนิคไปหา Dev (อรุณ) โดยตรง แทน HR เพราะเป็นเรื่องที่ต้องแก้โค้ด/infra ไม่ใช่งาน HR
+    const notifyAdmin = (msg) => push(DEV_USER_ID, msg).catch(() => {});
+    try { telegramBot.startPolling(sheetsClient, process.env.LOG_SHEET_ID, notifyAdmin); }
     catch(e) { console.error('Telegram polling error:', e.message); }
-    try { gramJS.startGramJS(sheetsClient, process.env.LOG_SHEET_ID); }
+    try { gramJS.startGramJS(sheetsClient, process.env.LOG_SHEET_ID, notifyAdmin); }
     catch(e) { console.error('GramJS error:', e.message); }
   } catch(e) {
     console.error('initBackgroundServices error:', e.message);
