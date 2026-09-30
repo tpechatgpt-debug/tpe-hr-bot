@@ -3169,13 +3169,29 @@ app.get('/fieldwork/history', async (req, res) => {
   }
 });
 
+let _fieldworkCapacityCheckedAt = 0;
 async function ensureFieldworkSheet(sheets, spreadsheetId) {
   try {
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
-    const exists = meta.data.sheets.some(s => s.properties.title === 'FieldworkAttendance');
-    if (!exists) {
-      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ addSheet: { properties: { title: 'FieldworkAttendance' } } }] } });
+    const sheetProps = meta.data.sheets.find(s => s.properties.title === 'FieldworkAttendance');
+    if (!sheetProps) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ addSheet: { properties: { title: 'FieldworkAttendance', gridProperties: { rowCount: 5000, columnCount: 10 } } } }] } });
       await sheets.spreadsheets.values.append({ spreadsheetId, range: 'FieldworkAttendance!A1', valueInputOption: 'RAW', requestBody: { values: [['วันที่','เวลา','LINE ID','ชื่อ','ทีม','ประเภท','JOB','บริษัท','GPS','Maps Link']] } });
+      return;
+    }
+    // ── auto-ขยายแถวกัน "ชีตเต็ม" (Sheets API append จะพังเงียบๆ ถ้าแถวในกริดหมด) ──
+    // เช็คไม่เกินทุก 30 นาที กัน quota Sheets API หมด
+    if (Date.now() - _fieldworkCapacityCheckedAt < 30 * 60 * 1000) return;
+    _fieldworkCapacityCheckedAt = Date.now();
+    const rowCount = sheetProps.properties.gridProperties.rowCount;
+    const valuesRes = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'FieldworkAttendance!A:A' });
+    const usedRows = (valuesRes.data.values || []).length;
+    if (rowCount - usedRows < 200) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: { requests: [{ appendDimension: { sheetId: sheetProps.properties.sheetId, dimension: 'ROWS', length: 3000 } }] }
+      });
+      console.log(`[FieldworkAttendance] ⚠️ ใกล้เต็ม (ใช้ ${usedRows}/${rowCount} แถว) → ขยายเพิ่ม 3000 แถวอัตโนมัติ`);
     }
   } catch(e) { console.error('ensureFieldworkSheet error:', e.message); }
 }
