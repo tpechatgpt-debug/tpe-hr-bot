@@ -34,25 +34,41 @@ function parseAttendance(text) {
   };
 }
 
-// บันทึกลง Google Sheets sheet "Attendance"
+let _attendanceCapacityCheckedAt = 0;
+// บันทึกลง Google Sheets sheet "Attendance" — throw ถ้าล้มเหลว (ให้ pollTelegram ตัดสินใจว่าจะ retry ไหม)
 async function saveAttendance(sheets, spreadsheetId, data) {
   const sheetName = 'Attendance';
-  try {
-    const meta = await sheets.spreadsheets.get({ spreadsheetId });
-    const exists = meta.data.sheets.some(s => s.properties.title === sheetName);
-    if (!exists) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] }
-      });
-      await sheets.spreadsheets.values.append({
-        spreadsheetId, range: `${sheetName}!A1`, valueInputOption: 'RAW',
-        requestBody: { values: [['วันที่', 'เวลา', 'ID', 'ชื่อ', 'โหมด', 'บันทึกเมื่อ']] }
-      });
-    }
-  } catch(e) { console.error('sheet check:', e.message); }
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  let sheetProps = meta.data.sheets.find(s => s.properties.title === sheetName);
+  if (!sheetProps) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests: [{ addSheet: { properties: { title: sheetName, gridProperties: { rowCount: 5000, columnCount: 6 } } } }] }
+    });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId, range: `${sheetName}!A1`, valueInputOption: 'RAW',
+      requestBody: { values: [['วันที่', 'เวลา', 'ID', 'ชื่อ', 'โหมด', 'บันทึกเมื่อ']] }
+    });
+  } else if (Date.now() - _attendanceCapacityCheckedAt > 30 * 60 * 1000) {
+    // ── auto-ขยายแถวกัน "ชีตเต็ม" เช็คไม่เกินทุก 30 นาที ──
+    _attendanceCapacityCheckedAt = Date.now();
+    try {
+      const rowCount = sheetProps.properties.gridProperties.rowCount;
+      const valuesRes = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${sheetName}!A:A` });
+      const usedRows = (valuesRes.data.values || []).length;
+      if (rowCount - usedRows < 200) {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: { requests: [{ appendDimension: { sheetId: sheetProps.properties.sheetId, dimension: 'ROWS', length: 3000 } }] }
+        });
+        console.log(`[Attendance] ⚠️ ใกล้เต็ม (ใช้ ${usedRows}/${rowCount} แถว) → ขยายเพิ่ม 3000 แถวอัตโนมัติ`);
+      }
+    } catch (e) { console.error('[Attendance] capacity check error:', e.message); }
+  }
 
   const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+  // ไม่ครอบ try/catch ตรงนี้ — ถ้า append พังต้องปล่อยให้ error หลุดออกไป
+  // เพื่อให้ pollTelegram รู้ว่าบันทึกไม่สำเร็จ แล้วไม่ขยับ lastUpdateId (กันข้อมูลหาย)
   await sheets.spreadsheets.values.append({
     spreadsheetId, range: `${sheetName}!A:F`, valueInputOption: 'RAW',
     requestBody: { values: [[data.date, data.time, data.id, data.name, data.mode, now]] }
@@ -71,20 +87,29 @@ async function pollTelegram(sheets, spreadsheetId) {
     });
     const updates = r.data.result || [];
     for (const update of updates) {
-      lastUpdateId = update.update_id;
       const msg = update.message;
-      if (!msg) continue;
+      if (!msg) { lastUpdateId = update.update_id; continue; } // ไม่ใช่ message (เช่น edited_message) ข้ามได้ปลอดภัย
 
       // Log ทุก message เพื่อ debug
       console.log(`[Attendance] msg from chat_id=${msg.chat.id} type=${msg.chat.type} text=${(msg.text||'').slice(0,50)}`);
 
-      // รับทุก chat ID (ไม่ filter) เพื่อ debug
       const data = parseAttendance(msg.text);
       if (!data) {
         console.log('[Attendance] parse failed — ไม่ใช่ข้อความ attendance');
+        lastUpdateId = update.update_id; // ไม่ใช่ข้อความสแกน ข้ามได้ปลอดภัย ไม่มีข้อมูลจะหาย
         continue;
       }
-      await saveAttendance(sheets, spreadsheetId, data);
+
+      // ── สำคัญ: ขยับ lastUpdateId ก็ต่อเมื่อบันทึกสำเร็จเท่านั้น ──
+      // กันเคส Sheet เขียนไม่ได้ (เช่นแถวเต็ม) แล้ว Telegram ทำเหมือนข้อความนี้ถูกอ่านไปแล้ว
+      // ทั้งที่ไม่เคยถูกบันทึกจริง (นี่คือสาเหตุที่ทำให้ข้อมูลหายไปตั้งแต่ 24/09)
+      try {
+        await saveAttendance(sheets, spreadsheetId, data);
+        lastUpdateId = update.update_id;
+      } catch (e) {
+        console.error(`[Attendance] ❌ บันทึกไม่สำเร็จ (${data.name} | ${data.date} ${data.time}):`, e.message, '→ จะลองใหม่รอบถัดไป');
+        break; // หยุด loop รอบนี้ทันที ไม่ขยับ offset ต่อ กันข้ามข้อความที่ยังไม่สำเร็จ
+      }
     }
   } catch(e) {
     console.error('[Attendance] poll error:', e.message);
