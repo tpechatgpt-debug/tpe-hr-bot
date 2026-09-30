@@ -101,7 +101,7 @@ async function saveAttendance(sheets, spreadsheetId, data) {
 }
 
 // เริ่ม GramJS client
-async function startGramJS(sheets, spreadsheetId) {
+async function startGramJS(sheets, spreadsheetId, notify) {
   if (!SESSION) {
     console.log('[GramJS] ไม่มี TELEGRAM_SESSION — ข้าม');
     return;
@@ -167,9 +167,11 @@ async function startGramJS(sheets, spreadsheetId) {
       console.log('[GramJS] ดึงย้อนหลังเสร็จ ✅');
     } catch(e) {
       console.error('[GramJS] ดึงย้อนหลังไม่สำเร็จ:', e.message);
+      if (notify) notify(`⚠️ GramJS ดึงข้อความย้อนหลังไม่สำเร็จ\nสาเหตุ: ${e.message}\nถ้าเป็น AUTH_KEY_UNREGISTERED แปลว่า TELEGRAM_SESSION หมดอายุ ต้องสร้างใหม่`);
     }
   } catch(e) {
     console.error('[GramJS] เชื่อมต่อไม่สำเร็จ:', e.message);
+    if (notify) notify(`⚠️ GramJS เชื่อมต่อ Telegram ไม่สำเร็จ\nสาเหตุ: ${e.message}\nฟีเจอร์ backfill ย้อนหลังจะใช้ไม่ได้จนกว่าจะแก้`);
   }
 }
 
