@@ -346,6 +346,7 @@ body.mobile-view .sel-input{min-width:0;width:100%}
           <button class="nav-item" onclick='gotoPage("requests",this)'><span class="ni">&#9719;</span>ประวัติคำขอ</button>
           <button class="nav-item" onclick='gotoPage("audit",this)'><span class="ni">&#128203;</span>ประวัติการอนุมัติ</button>
           <button class="nav-item" onclick='gotoPage("ot",this)'><span class="ni">&#128295;</span>คำขอ OT</button>
+          <button class="nav-item" onclick='gotoPage("otdash",this)'><span class="ni">&#128202;</span>แดชบอร์ด OT</button>
           <button class="nav-item" id="nav-pending" onclick='gotoPage("pending",this)'>
             <span class="ni">&#128276;</span>คำขอรอ HR
             <span id="pending-badge" style="display:none" class="nav-badge">0</span>
@@ -509,6 +510,45 @@ body.mobile-view .sel-input{min-width:0;width:100%}
               <button class="btn btn-primary btn-sm" onclick="downloadOtPdf()">📄 PDF (รายงานผู้บริหาร)</button>
             </div>
           <div id="otReqList"><div class="loading-msg"><span class="spinner"></span>Loading...</div></div></div>
+        </div>
+
+        <!-- OT DASHBOARD -->
+        <div class="page" id="page-otdash">
+          <div class="card">
+            <div class="card-title">แดชบอร์ด OT
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="month" id="otDashMonth" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px">
+                <button class="btn btn-primary btn-sm" onclick="loadOtDashboard()">Reload</button>
+              </div>
+            </div>
+            <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+              <div class="kpi-card kc-blue"><div class="kpi-icon">&#9203;</div><div class="kpi-label">OT รวม</div><div class="kpi-val" id="otkTotal">&#x2014;</div><div class="kpi-sub">ชั่วโมง</div></div>
+              <div class="kpi-card kc-gold"><div class="kpi-icon">&#128176;</div><div class="kpi-label">ประเมินค่าใช้จ่าย</div><div class="kpi-val" id="otkCost">&#x2014;</div><div class="kpi-sub">บาท (×1.5)</div></div>
+              <div class="kpi-card kc-red"><div class="kpi-icon">&#128197;</div><div class="kpi-label">วันที่ OT สูงสุด</div><div class="kpi-val" id="otkPeakDate" style="font-size:16px">&#x2014;</div><div class="kpi-sub" id="otkPeakDateH"></div></div>
+              <div class="kpi-card kc-green"><div class="kpi-icon">&#128295;</div><div class="kpi-label">JOB ที่กิน OT มากสุด</div><div class="kpi-val" id="otkTopJob" style="font-size:16px">&#x2014;</div><div class="kpi-sub" id="otkTopJobH"></div></div>
+            </div>
+          </div>
+
+          <div class="chart-card" style="margin-bottom:18px">
+            <div class="chart-card-hdr"><div><div class="chart-title">แนวโน้มรายวัน</div><div class="chart-sub">ชั่วโมง OT สุทธิต่อวัน</div></div></div>
+            <div style="position:relative;height:220px"><canvas id="otChartTrend"></canvas></div>
+          </div>
+
+          <div class="two-col">
+            <div class="chart-card">
+              <div class="chart-card-hdr"><div><div class="chart-title">แยกตาม JOB</div><div class="chart-sub">15 อันดับแรก</div></div></div>
+              <div style="position:relative;height:260px"><canvas id="otChartJob"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-hdr"><div><div class="chart-title">แยกตามทีม</div></div></div>
+              <div style="position:relative;height:260px"><canvas id="otChartTeam"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px">
+            <div class="card-title">รายบุคคล</div>
+            <div id="otDashPersonTable"><div class="loading-msg"><span class="spinner"></span>Loading...</div></div>
+          </div>
         </div>
 
         <!-- PENDING -->
@@ -684,6 +724,7 @@ function gotoPage(id,btn){
   if(id==='requests')loadRequests();
   if(id==='audit')loadAuditLog();
   if(id==='ot')loadOtRequests();
+  if(id==='otdash')loadOtDashboard();
   if(id==='months')loadMonths();
   if(id==='pending'){loadPendingNotify();loadPdfReady();}
   if(id==='attendance')initAttSelectors();
@@ -838,6 +879,68 @@ async function loadAuditLog(){
   }catch(e){box.innerHTML='<div class="empty-msg">โหลดไม่สำเร็จ</div>';}
 }
 
+
+
+let otChartTrendInstance=null, otChartJobInstance=null, otChartTeamInstance=null;
+async function loadOtDashboard(){
+  const monthEl = document.getElementById('otDashMonth');
+  if(!monthEl.value) monthEl.value = new Date().toISOString().slice(0,7);
+  const month = monthEl.value;
+  document.getElementById('otDashPersonTable').innerHTML = '<div class="loading-msg"><span class="spinner"></span>Loading...</div>';
+  try{
+    const d = await (await fetch(API+'/portal/ot-report?month='+month)).json();
+
+    setEl('otkTotal', d.totalHours || 0);
+    setEl('otkCost', d.totalCost !== null ? '฿'+d.totalCost.toLocaleString() : '—');
+    setEl('otkPeakDate', d.peakDate ? d.peakDate.date : '—');
+    setEl('otkPeakDateH', d.peakDate ? d.peakDate.hours+' ชม.' : '');
+    setEl('otkTopJob', d.topJob ? d.topJob.jobNo : '—');
+    setEl('otkTopJobH', d.topJob ? d.topJob.totalHours+' ชม. · '+d.topJob.peopleCount+' คน' : '');
+
+    // Trend line
+    if(otChartTrendInstance) otChartTrendInstance.destroy();
+    const trendCtx = document.getElementById('otChartTrend');
+    if(trendCtx){
+      otChartTrendInstance = new Chart(trendCtx, {
+        type:'line',
+        data:{ labels: d.byDate.map(x=>x.date.slice(5)), datasets:[{label:'ชม. OT', data:d.byDate.map(x=>x.hours), borderColor:'#2563EB', backgroundColor:'rgba(37,99,235,0.08)', fill:true, tension:0.3, pointRadius:3}] },
+        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, title:{display:true,text:'ชม.',font:{size:10}}}}}
+      });
+    }
+
+    // Job bar
+    if(otChartJobInstance) otChartJobInstance.destroy();
+    const jobCtx = document.getElementById('otChartJob');
+    if(jobCtx){
+      const top = d.byJob.slice(0,15);
+      otChartJobInstance = new Chart(jobCtx, {
+        type:'bar',
+        data:{ labels: top.map(x=>x.jobNo), datasets:[{label:'ชม. OT', data:top.map(x=>x.totalHours), backgroundColor:'#1B3E6F', borderRadius:4}] },
+        options:{responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}}}
+      });
+    }
+
+    // Team bar
+    if(otChartTeamInstance) otChartTeamInstance.destroy();
+    const teamCtx = document.getElementById('otChartTeam');
+    if(teamCtx){
+      otChartTeamInstance = new Chart(teamCtx, {
+        type:'bar',
+        data:{ labels: d.byTeam.map(x=>x.team), datasets:[{label:'ชม. OT', data:d.byTeam.map(x=>x.hours), backgroundColor:['#1B3E6F','#2563EB','#16A765','#D97706','#DC2626','#7C3AED'], borderRadius:4}] },
+        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+      });
+    }
+
+    // Person table
+    const pBox = document.getElementById('otDashPersonTable');
+    if(!d.byPerson.length){ pBox.innerHTML='<div class="empty-msg">ไม่มีข้อมูล</div>'; }
+    else{
+      pBox.innerHTML = `<table class="tbl"><thead><tr><th>ชื่อ</th><th>ทีม</th><th>OT รวม (ชม.)</th><th>ประเมินค่าใช้จ่าย</th><th>JOB</th></tr></thead><tbody>${
+        d.byPerson.map(p=>`<tr><td style="font-weight:600">${p.name}</td><td>${p.team}</td><td>${p.totalHours}</td><td>${p.estimatedCost!==null?'฿'+p.estimatedCost.toLocaleString():'—'}</td><td style="font-size:11px;color:var(--text3)">${p.jobs.map(j=>j.jobNo+' ('+j.hours+')').join(', ')}</td></tr>`).join('')
+      }</tbody></table>`;
+    }
+  }catch(e){ document.getElementById('otDashPersonTable').innerHTML='<div class="empty-msg">โหลดไม่สำเร็จ</div>'; }
+}
 
 function downloadOtCsv(){
   const month = document.getElementById('otReportMonth').value || new Date().toISOString().slice(0,7);
