@@ -982,6 +982,18 @@ async function buildOtReportData(sid, fromDate, toDate) {
   };
 }
 
+// ── JSON สำหรับแดชบอร์ดใน Portal (เบากว่า CSV/PDF ไม่ต้อง generate ไฟล์) ──
+app.get('/portal/ot-report', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const fromDate = `${month}-01`;
+    const toDate = `${month}-31`;
+    const sid = process.env.LOG_SHEET_ID;
+    const data = await buildOtReportData(sid, fromDate, toDate);
+    res.json(data);
+  } catch (e) { console.error('/portal/ot-report error:', e.message); res.json({ byPerson: [], byJob: [], byDate: [], byTeam: [], totalHours: 0, totalCost: null, peakDate: null, topJob: null }); }
+});
+
 // ── CSV สำหรับ HR ทำเงินเดือน: รายคน × รายวัน × JOB ──
 app.get('/portal/ot-report/csv', async (req, res) => {
   try {
