@@ -501,7 +501,13 @@ body.mobile-view .sel-input{min-width:0;width:100%}
 
         <!-- OT REQUESTS -->
         <div class="page" id="page-ot">
-          <div class="card"><div class="card-title">คำขอ OT<button class="btn btn-primary btn-sm" onclick="loadOtRequests()">Reload</button></div>
+          <div class="card">
+            <div class="card-title">คำขอ OT<button class="btn btn-primary btn-sm" onclick="loadOtRequests()">Reload</button></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+              <input type="month" id="otReportMonth" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px">
+              <button class="btn btn-primary btn-sm" onclick="downloadOtCsv()">📊 CSV (HR ทำเงินเดือน)</button>
+              <button class="btn btn-primary btn-sm" onclick="downloadOtPdf()">📄 PDF (รายงานผู้บริหาร)</button>
+            </div>
           <div id="otReqList"><div class="loading-msg"><span class="spinner"></span>Loading...</div></div></div>
         </div>
 
@@ -832,6 +838,15 @@ async function loadAuditLog(){
   }catch(e){box.innerHTML='<div class="empty-msg">โหลดไม่สำเร็จ</div>';}
 }
 
+
+function downloadOtCsv(){
+  const month = document.getElementById('otReportMonth').value || new Date().toISOString().slice(0,7);
+  window.open(API+'/portal/ot-report/csv?month='+month, '_blank');
+}
+function downloadOtPdf(){
+  const month = document.getElementById('otReportMonth').value || new Date().toISOString().slice(0,7);
+  window.open(API+'/portal/ot-report/pdf?month='+month, '_blank');
+}
 async function loadOtRequests(){
   const box=document.getElementById('otReqList');
   if(!box)return;
@@ -844,19 +859,14 @@ async function loadOtRequests(){
       const typeIcon = b.type==='ล่วงหน้า'?'🕐':'📋';
       const rows = b.members.map(m=>{
         const reqRange = `${b.start}-${b.end}`;
-        let actualStr = '—', diffStr = '';
-        if(m.actualCheckin || m.actualCheckout){
-          actualStr = `${m.actualCheckin||'?'} – ${m.actualCheckout||'?'}`;
-          // เทียบเวลาสิ้นสุดคร่าวๆ เป็นนาที
-          try{
-            const toMin = t => { const [h,mi] = t.split(':').map(Number); return h*60+mi; };
-            if(m.actualCheckout && b.end){
-              const diff = toMin(m.actualCheckout) - toMin(b.end);
-              if(Math.abs(diff) >= 30) diffStr = `<span style="color:${diff>0?'#D97706':'#2563EB'}">${diff>0?'+':''}${diff} นาที</span>`;
-            }
-          }catch(e){}
+        const actualStr = (m.actualCheckin || m.actualCheckout) ? `${m.actualCheckin||'?'} – ${m.actualCheckout||'?'}` : '—';
+        let otStr = '—';
+        if(m.otCalc){
+          const c = m.otCalc;
+          const lateTag = c.isLate ? `<br><span style="font-size:10.5px;color:${c.excused?'#9CA3AF':'#DC2626'}">${c.excused?'สาย '+c.lateMinutes+' นาที (มีลา ไม่หัก)':'สาย '+c.lateMinutes+' นาที (หักแล้ว)'}</span>` : '';
+          otStr = `${c.netOtHours} ชม.${c.netOtHours!==c.actualOtHours?` <span style="color:var(--text3);font-size:10.5px">(จริง ${c.actualOtHours})</span>`:''}${lateTag}`;
         }
-        return `<tr><td>${m.name}</td><td>${reqRange}</td><td>${actualStr}</td><td>${diffStr||'—'}</td></tr>`;
+        return `<tr><td>${m.name}</td><td>${reqRange}</td><td>${actualStr}</td><td>${otStr}</td></tr>`;
       }).join('');
       return `<div class="card" style="margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
@@ -866,7 +876,7 @@ async function loadOtRequests(){
           </div>
           <span style="font-size:11px;font-weight:700;color:${statusColor};white-space:nowrap">${b.status}</span>
         </div>
-        <table class="tbl"><thead><tr><th>ชื่อ</th><th>OT ที่ขอ</th><th>เช็คอิน-เอาท์จริง</th><th>ส่วนต่าง</th></tr></thead>
+        <table class="tbl"><thead><tr><th>ชื่อ</th><th>OT ที่ขอ</th><th>เช็คอิน-เอาท์จริง</th><th>OT คำนวณจริง</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>`;
     }).join('');
