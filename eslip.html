@@ -497,6 +497,11 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
           <div class="qa-label">งานวันนี้</div>
           <div class="qa-desc" id="qaJobDesc">ดูงานที่ได้รับมอบหมาย</div>
         </div>
+        <div class="qa-btn" onclick="showPage('ot')">
+          <div class="qa-icon">🛠️</div>
+          <div class="qa-label">ขอทำโอที</div>
+          <div class="qa-desc">ขอล่วงหน้า / รายงานย้อนหลัง</div>
+        </div>
         <div class="qa-btn" onclick="showPage('welfare')" style="border-color:#BBF7D0;background:#F0FDF4">
           <div class="qa-icon">🎁</div>
           <div class="qa-label">สวัสดิการ</div>
@@ -762,12 +767,107 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
+  <!-- ═══ ขอทำโอที ═══ -->
+  <div class="page" id="page-ot">
+    <div class="hdr">
+      <div class="hdr-inner">
+        <button class="hdr-back" onclick="showPage('home')">←</button>
+        <div style="flex:1">
+          <div class="hdr-title">ขอทำโอที</div>
+          <div class="hdr-sub">กรอกแทนทั้งทีมได้ในครั้งเดียว</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 18px 40px">
+      <div style="margin-bottom:14px">
+        <div class="ot-sec-label">ทีมของคุณ</div>
+        <div class="ot-card" style="display:flex;align-items:center;gap:10px">
+          <div style="width:38px;height:38px;border-radius:10px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔧</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#111827" id="otTeamName">กำลังโหลด...</div>
+            <div style="font-size:11px;color:#6B7280;margin-top:1px">ตรวจจากโปรไฟล์อัตโนมัติ</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div class="ot-sec-label">เลือกคนที่ทำโอที</div>
+        <div class="ot-card" id="otMemberList"><div class="sk sk-h"></div></div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div class="ot-sec-label">วันและเวลาที่ทำโอที</div>
+        <div class="ot-card">
+          <div class="ot-field">
+            <label class="ot-field-label">วันที่</label>
+            <input type="date" id="otDate">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="ot-field" style="flex:1;margin-bottom:0">
+              <label class="ot-field-label">เริ่ม</label>
+              <input type="time" id="otStart" value="18:00">
+            </div>
+            <div style="color:#9CA3AF;font-size:13px;padding-top:18px">—</div>
+            <div class="ot-field" style="flex:1;margin-bottom:0">
+              <label class="ot-field-label">ถึง</label>
+              <input type="time" id="otEnd" value="20:00">
+            </div>
+          </div>
+          <div id="otTypeBadgeWrap" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div class="ot-sec-label">เลขที่งาน <span style="font-weight:400;color:#9CA3AF">(ไม่บังคับ)</span></div>
+        <div class="ot-card">
+          <div class="ot-field" style="margin-bottom:0">
+            <input type="text" id="otJobNo" placeholder="เช่น 26-108">
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div class="ot-sec-label">เหตุผล</div>
+        <div class="ot-card">
+          <div class="ot-field" style="margin-bottom:0">
+            <textarea id="otReason" rows="3" placeholder="ระบุเหตุผลที่ต้องทำโอที..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <button class="ot-submit-btn" id="otSubmitBtn" onclick="submitOtRequest()">ส่งคำขอ</button>
+      <div style="text-align:center;font-size:10.5px;color:#9CA3AF;margin-top:8px">ส่งแล้วรอผลแจ้งกลับทาง LINE เมื่อ HR อนุมัติ</div>
+    </div>
+  </div>
+
 </div>
+
+<style>
+.ot-sec-label{font-size:10px;font-weight:700;color:#9CA3AF;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.ot-card{background:#fff;border:0.5px solid #E5E7EB;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ot-member-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:0.5px solid #E5E7EB}
+.ot-member-row:last-child{border-bottom:none}
+.ot-member-check{width:22px;height:22px;border-radius:7px;border:2px solid #D1D5DB;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;cursor:pointer;transition:all .15s}
+.ot-member-check.on{background:#1B3E6F;border-color:#1B3E6F}
+.ot-member-name{flex:1;font-size:13.5px;font-weight:600;color:#111827;cursor:pointer}
+.ot-member-pos{font-size:11px;color:#9CA3AF;margin-top:1px}
+.ot-field{margin-bottom:14px}
+.ot-field-label{font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;display:block}
+.ot-field input,.ot-field textarea{width:100%;padding:12px 14px;border:1.5px solid #E5E7EB;border-radius:11px;font-family:'Sarabun',sans-serif;font-size:14px;color:#111827;background:#fff;outline:none}
+.ot-field input:focus,.ot-field textarea:focus{border-color:#2563EB}
+.ot-type-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:11px;font-size:12.5px;font-weight:700}
+.ot-type-badge.future{background:#EFF6FF;color:#2563EB}
+.ot-type-badge.past{background:#FFF7ED;color:#D97706}
+.ot-submit-btn{width:100%;padding:15px;background:linear-gradient(135deg,#1B3E6F,#2563EB);border:none;border-radius:14px;color:#fff;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.ot-submit-btn:active{opacity:.88;transform:scale(.98)}
+.ot-submit-btn:disabled{background:#D1D5DB}
+</style>
 
 <script>
 const API='https://tpe-hr-bot.onrender.com';
 const LIFF_ID='2010255039-6dQLsh35';
-let empData=null, attData=[], currentDoc=null, currentYear=null;
+let empData=null, attData=[], currentDoc=null, currentYear=null, myLineId=null;
+let otState={initialized:false, members:[]};
 
 function leaveLabel(type){
   const t=(type||'').trim();
@@ -801,6 +901,7 @@ async function init(){
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login();return;}
     const p=await liff.getProfile();
+    myLineId=p.userId;
     ['hdrAvatar','phAvatar'].forEach(id=>document.getElementById(id).src=p.pictureUrl||'');
     await loadEmp(p.userId);
   }catch(e){document.getElementById('phName').textContent='เกิดข้อผิดพลาด';}
@@ -907,6 +1008,7 @@ function showPage(page){
   if(checkinBtn)checkinBtn.classList.toggle('active-checkin', page==='field');
   if(page==='field'&&!fieldState.initialized){fieldState.initialized=true;initFieldPage();}
   if(page==='welfare')loadHolidayWelfare();
+  if(page==='ot'&&!otState.initialized){otState.initialized=true;initOtPage();}
 logAction(page,page);
 }
 
@@ -1411,7 +1513,85 @@ return`<div class="welfare-benefit-item"${isLast?' style="border-bottom:none"':'
     }).join('');
   }catch(e){el.innerHTML='<div style="padding:14px 16px;font-size:13px;color:#9CA3AF">โหลดไม่สำเร็จ</div>';}
 }
-  
+
+// ═══ ขอทำโอที ═══
+async function initOtPage(){
+  document.getElementById('otDate').value = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
+  updateOtTypeBadge();
+  document.getElementById('otDate').addEventListener('change', updateOtTypeBadge);
+  document.getElementById('otStart').addEventListener('change', updateOtTypeBadge);
+  try{
+    const r = await fetch(`${API}/ot/my-team?lineId=${myLineId}`);
+    const d = await r.json();
+    if(d.error){ document.getElementById('otTeamName').textContent='ไม่พบข้อมูลทีม'; return; }
+    document.getElementById('otTeamName').textContent = d.team || '—';
+    otState.members = d.members || [];
+    renderOtMembers();
+  }catch(e){ document.getElementById('otTeamName').textContent='โหลดไม่สำเร็จ'; }
+}
+
+function renderOtMembers(){
+  const box = document.getElementById('otMemberList');
+  if(!otState.members.length){ box.innerHTML='<div style="font-size:13px;color:#9CA3AF">ไม่พบสมาชิกในทีม</div>'; return; }
+  box.innerHTML = otState.members.map((m,i)=>{
+    const isMe = m.lineId === myLineId;
+    return `<div class="ot-member-row" onclick="toggleOtMember(${i})">
+      <div class="ot-member-check ${isMe?'on':''}" id="otChk${i}">${isMe?'✓':''}</div>
+      <div class="ot-member-name">${m.name}<div class="ot-member-pos">${m.position||''}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function toggleOtMember(i){
+  const chk = document.getElementById('otChk'+i);
+  const on = chk.classList.toggle('on');
+  chk.textContent = on ? '✓' : '';
+}
+
+function updateOtTypeBadge(){
+  const d = document.getElementById('otDate').value;
+  const t = document.getElementById('otStart').value || '00:00';
+  if(!d) return;
+  const otDT = new Date(`${d}T${t}:00+07:00`);
+  const wrap = document.getElementById('otTypeBadgeWrap');
+  if(otDT > new Date()){
+    wrap.innerHTML = '<span class="ot-type-badge future">🕐 ขอล่วงหน้า — ส่งก่อนเริ่มงานจริง</span>';
+  }else{
+    wrap.innerHTML = '<span class="ot-type-badge past">📋 รายงานย้อนหลัง — ส่งเป็นรายงานขออนุมัติ</span>';
+  }
+}
+
+async function submitOtRequest(){
+  const selected = otState.members.filter((m,i)=>document.getElementById('otChk'+i)?.classList.contains('on'));
+  if(!selected.length){ alert('กรุณาเลือกอย่างน้อย 1 คน'); return; }
+  const date = document.getElementById('otDate').value;
+  const startTime = document.getElementById('otStart').value;
+  const endTime = document.getElementById('otEnd').value;
+  const jobNo = document.getElementById('otJobNo').value.trim();
+  const reason = document.getElementById('otReason').value.trim();
+  if(!date || !startTime){ alert('กรุณาระบุวันที่และเวลาเริ่ม'); return; }
+  const btn = document.getElementById('otSubmitBtn');
+  btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+  try{
+    const r = await fetch(`${API}/ot/request`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        requesterLineId: myLineId, requesterName: empData?.name || '—',
+        members: selected.map(m=>({name:m.name, lineId:m.lineId})),
+        date, startTime, endTime, jobNo, reason
+      })
+    });
+    const d = await r.json();
+    if(d.ok){
+      alert('ส่งคำขอเรียบร้อย รอผลแจ้งกลับทาง LINE');
+      showPage('home');
+    }else{
+      alert('เกิดข้อผิดพลาด: '+(d.error||'ไม่ทราบสาเหตุ'));
+    }
+  }catch(e){ alert('เกิดข้อผิดพลาด: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='ส่งคำขอ'; }
+}
+
 </script>
 </body>
 </html>
