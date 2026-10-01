@@ -839,6 +839,45 @@ async function appendAuditLog(action, req2, actor) {
   // หมายเหตุ: ต้องสร้าง sheet tab ชื่อ "AuditLog" เองก่อนใช้งานครั้งแรก (หัวคอลัมน์: เวลา, การกระทำ, พนักงาน, ประเภทเอกสาร, เดือน, ผู้ดำเนินการ)
 }
 
+// ── Portal: รายการคำขอ OT พร้อม join กับ FieldworkAttendance (เช็คอิน/เช็คเอาท์จริง) ──
+app.get('/portal/ot-requests', async (req, res) => {
+  try {
+    const sheets = await getOtSheetsClient();
+    const sid = process.env.LOG_SHEET_ID;
+    const [otRes, fwRes] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `${OT_SHEET}!A:O` }).catch(() => ({ data: { values: [] } })),
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' }).catch(() => ({ data: { values: [] } })),
+    ]);
+    const otRows = (otRes.data.values || []).slice(1);
+    const fwRows = (fwRes.data.values || []).slice(1);
+
+    // normalize date: OT ใช้ yyyy-mm-dd, FieldworkAttendance ใช้ dd/mm/yyyy
+    const toISO = dmy => { const [d, m, y] = (dmy || '').split('/'); return d && m && y ? `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` : ''; };
+
+    const batches = {};
+    otRows.forEach(row => {
+      const [batchId, name, lineId, team, date, start, end, jobNo, reason, type, status, reqName, reqLineId] = row;
+      if (!batchId) return;
+      if (!batches[batchId]) batches[batchId] = { batchId, team, date, start, end, jobNo, reason, type, status, requester: reqName, members: [] };
+      // หา checkin/checkout จริงของคนนี้ วันนี้ (+ JOB ถ้ามี)
+      const matches = fwRows.filter(f => {
+        const [fDate, , , fName, , fType, fJob] = f;
+        const sameDate = toISO(fDate) === date;
+        const sameName = (f[3] || '').trim() === (name || '').trim();
+        const sameJob = jobNo && jobNo !== '—' ? (f[6] || '') === jobNo : true;
+        return sameDate && sameName && sameJob;
+      });
+      const checkin = matches.find(f => f[5] === 'checkin');
+      const checkout = matches.find(f => f[5] === 'checkout');
+      batches[batchId].members.push({
+        name, actualCheckin: checkin ? checkin[1] : null, actualCheckout: checkout ? checkout[1] : null
+      });
+    });
+
+    res.json(Object.values(batches).reverse());
+  } catch (e) { console.error('/portal/ot-requests error:', e.message); res.json([]); }
+});
+
 app.get('/portal/audit-log', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
@@ -3421,6 +3460,223 @@ app.get('/eslip/holidays', async (req, res) => {
 // Leave Trend — สรุปวันลารายเดือน แยกตามประเภท (สำหรับกราฟใน Portal)
 // ════════════════════════════════════════════════════════
 const LEAVE_TREND_CACHE = {}; // key = months, TTL 10 นาที
+// ════════════════════════════════════════════════════════
+// OT Request / Approval — ขอทำโอทีเป็นกลุ่ม, HR อนุมัติผ่าน Lark, แจ้งผลกลับตัวแทนทาง LINE
+// Sheet tab: OTRequests — คอลัมน์:
+// batchId, ชื่อ, LineId, ทีม, วันที่, เวลาเริ่ม, เวลาสิ้นสุด, JOB, เหตุผล, ประเภท,
+// สถานะ, ตัวแทนชื่อ, ตัวแทนLineId, token, เวลาบันทึก
+// ════════════════════════════════════════════════════════
+const OT_SHEET = 'OTRequests';
+let _otCapacityCheckedAt = 0;
+
+async function getOtSheetsClient() {
+  const { google } = require('googleapis');
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  return google.sheets({ version: 'v4', auth: await auth.getClient() });
+}
+
+async function ensureOtSheet(sheets, spreadsheetId) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  let sheetProps = meta.data.sheets.find(s => s.properties.title === OT_SHEET);
+  if (!sheetProps) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId, requestBody: { requests: [{ addSheet: { properties: { title: OT_SHEET, gridProperties: { rowCount: 3000, columnCount: 15 } } } }] }
+    });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId, range: `${OT_SHEET}!A1`, valueInputOption: 'RAW',
+      requestBody: { values: [['batchId','ชื่อ','LineId','ทีม','วันที่','เวลาเริ่ม','เวลาสิ้นสุด','JOB','เหตุผล','ประเภท','สถานะ','ตัวแทนชื่อ','ตัวแทนLineId','token','เวลาบันทึก']] }
+    });
+    return;
+  }
+  if (Date.now() - _otCapacityCheckedAt < 30 * 60 * 1000) return;
+  _otCapacityCheckedAt = Date.now();
+  try {
+    const rowCount = sheetProps.properties.gridProperties.rowCount;
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${OT_SHEET}!A:A` });
+    const used = (r.data.values || []).length;
+    if (rowCount - used < 200) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ appendDimension: { sheetId: sheetProps.properties.sheetId, dimension: 'ROWS', length: 2000 } }] } });
+      console.log(`[OTRequests] ⚠️ ใกล้เต็ม (${used}/${rowCount}) → ขยายเพิ่ม 2000 แถว`);
+    }
+  } catch (e) { console.error('[OTRequests] capacity check error:', e.message); }
+}
+
+// ── ทีมของตัวแทน + รายชื่อเพื่อนร่วมทีม (สำหรับ LIFF ติ๊กเลือก) ──
+app.get('/ot/my-team', async (req, res) => {
+  try {
+    const lineId = req.query.lineId;
+    if (!lineId) return res.status(400).json({ error: 'missing lineId' });
+    const larkToken = await lark.getToken();
+    const me = await lark.findByLineId(larkToken, lineId);
+    if (!me) return res.status(404).json({ error: 'employee not found' });
+    const team = (me['ชุด'] || '').toString().trim();
+    const emps = await lark.getAllEmployees(larkToken);
+    const members = emps
+      .filter(e => (e['ชุด'] || '').toString().trim() === team)
+      .map(e => ({
+        name: (e['ชื่อ - นามสกุล'] || e['ชื่อ-นามสกุล'] || '').toString().split('(')[0].trim(),
+        lineId: (e['Line ID'] || e['LineID'] || '').toString().trim(),
+        position: (e['ตำแหน่ง'] || '').toString().trim(),
+      }))
+      .filter(m => m.name);
+    res.json({ team: team || '—', members });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── สร้างคำขอ OT (จาก LIFF) ──
+app.post('/ot/request', express.json(), async (req, res) => {
+  try {
+    const { requesterLineId, requesterName, members, date, startTime, endTime, jobNo, reason } = req.body;
+    if (!requesterLineId || !Array.isArray(members) || !members.length || !date || !startTime) {
+      return res.status(400).json({ error: 'missing required fields' });
+    }
+    const larkToken = await lark.getToken();
+    const requester = await lark.findByLineId(larkToken, requesterLineId);
+    const team = (requester?.['ชุด'] || '').toString().trim() || '—';
+
+    const otDateTime = new Date(`${date}T${startTime}:00+07:00`);
+    const type = otDateTime > new Date() ? 'ล่วงหน้า' : 'ย้อนหลัง';
+
+    const batchId = 'OT' + Date.now();
+    const token = require('crypto').randomBytes(12).toString('hex');
+    const now = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+
+    const sheets = await getOtSheetsClient();
+    const sid = process.env.LOG_SHEET_ID;
+    await ensureOtSheet(sheets, sid);
+
+    const rows = members.map(m => [
+      batchId, m.name || '—', m.lineId || '', team, date, startTime, endTime || '—',
+      jobNo || '—', reason || '—', type, 'รออนุมัติ', requesterName || '—', requesterLineId, token, now
+    ]);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sid, range: `${OT_SHEET}!A:O`, valueInputOption: 'RAW', requestBody: { values: rows }
+    });
+
+    // ── แจ้ง HR ผ่าน Lark (ฟรี ไม่กิน LINE quota) ──
+    const RENDER_URL = process.env.RENDER_URL || 'https://tpe-hr-bot.onrender.com';
+    const approveUrl = `${RENDER_URL}/ot/approve/${batchId}?token=${token}`;
+    const nameList = members.map(m => `• ${m.name}`).join('\n');
+    const typeLabel = type === 'ล่วงหน้า' ? '🕐 ขอล่วงหน้า' : '📋 รายงานย้อนหลัง';
+    const larkText = `🛠️ คำขอทำโอที (${typeLabel})\nทีม: ${team}\nวันที่: ${date}  เวลา: ${startTime}-${endTime || '—'}\nJOB: ${jobNo || '—'}\nเหตุผล: ${reason || '—'}\nตัวแทนที่ส่ง: ${requesterName || '—'}\n\nรายชื่อ (${members.length} คน):\n${nameList}\n\n👉 กดอนุมัติ/ปฏิเสธที่นี่:\n${approveUrl}`;
+    await axios.post(process.env.LARK_OT_WEBHOOK_URL || process.env.LARK_WEBHOOK_URL, { msg_type: 'text', content: { text: larkText } }).catch(e => console.error('OT Lark notify error:', e.message));
+
+    res.json({ ok: true, batchId });
+  } catch (e) { console.error('/ot/request error:', e.message); res.status(500).json({ error: e.message }); }
+});
+
+// ── หน้าเว็บอนุมัติ (เปิดจากลิงก์ใน Lark) ──
+app.get('/ot/approve/:batchId', async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { token } = req.query;
+    const sheets = await getOtSheetsClient();
+    const sid = process.env.LOG_SHEET_ID;
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `${OT_SHEET}!A:O` });
+    const rows = (r.data.values || []).slice(1);
+    const batch = rows.filter(row => row[0] === batchId);
+    if (!batch.length) return res.status(404).send('<h2>ไม่พบคำขอนี้</h2>');
+    if (batch[0][13] !== token) return res.status(403).send('<h2>ลิงก์ไม่ถูกต้อง</h2>');
+
+    const status = batch[0][10];
+    const team = batch[0][3], date = batch[0][4], start = batch[0][5], end = batch[0][6];
+    const jobNo = batch[0][7], reason = batch[0][8], type = batch[0][9], requester = batch[0][11];
+    const names = batch.map(row => row[1]);
+
+    res.send(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>อนุมัติ OT</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;background:#F7F8FA;color:#111827;max-width:460px;margin:0 auto;padding:20px 18px 40px}
+.card{background:#fff;border:0.5px solid #E5E7EB;border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:16px}
+.title{font-size:17px;font-weight:800;margin-bottom:4px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:14px}
+.badge.future{background:#EFF6FF;color:#2563EB}.badge.past{background:#FFF7ED;color:#D97706}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #F3F4F6;font-size:13.5px}
+.row:last-child{border-bottom:none}
+.row .l{color:#6B7280}.row .v{font-weight:600;text-align:right}
+.names{margin-top:10px;font-size:13px;line-height:1.8}
+.btns{display:flex;gap:10px}
+.btn{flex:1;padding:15px;border:none;border-radius:14px;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.btn-ok{background:linear-gradient(135deg,#16A34A,#15803D);color:#fff}
+.btn-no{background:#fff;border:1.5px solid #DC2626;color:#DC2626}
+.result{display:none;text-align:center;padding:30px 0;font-size:15px;font-weight:700}
+#formArea.hide{display:none}
+</style></head><body>
+<div class="card">
+  <div class="title">คำขอทำโอที</div>
+  <span class="badge ${type==='ล่วงหน้า'?'future':'past'}">${type==='ล่วงหน้า'?'🕐 ขอล่วงหน้า':'📋 รายงานย้อนหลัง'}</span>
+  <div class="row"><span class="l">ทีม</span><span class="v">${team}</span></div>
+  <div class="row"><span class="l">วันที่</span><span class="v">${date}</span></div>
+  <div class="row"><span class="l">เวลา</span><span class="v">${start}-${end}</span></div>
+  <div class="row"><span class="l">JOB</span><span class="v">${jobNo}</span></div>
+  <div class="row"><span class="l">เหตุผล</span><span class="v">${reason}</span></div>
+  <div class="row"><span class="l">ตัวแทนที่ส่ง</span><span class="v">${requester}</span></div>
+  <div class="names"><b>รายชื่อ (${names.length} คน):</b><br>${names.map(n=>'• '+n).join('<br>')}</div>
+</div>
+${status !== 'รออนุมัติ' ? `<div class="card" style="text-align:center;font-weight:700">สถานะ: ${status}</div>` : `
+<div id="formArea" class="btns">
+  <button class="btn btn-ok" onclick="act('approved')">✅ อนุมัติ</button>
+  <button class="btn btn-no" onclick="act('rejected')">❌ ปฏิเสธ</button>
+</div>`}
+<div id="result" class="result"></div>
+<script>
+async function act(action){
+  document.getElementById('formArea').classList.add('hide');
+  const res = document.getElementById('result');
+  res.style.display='block'; res.textContent='กำลังบันทึก...';
+  try{
+    const r = await fetch('/ot/approve/${batchId}/action', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action, token:'${token}'})});
+    const d = await r.json();
+    res.textContent = d.ok ? (action==='approved' ? '✅ อนุมัติเรียบร้อย' : '❌ ปฏิเสธเรียบร้อย') : 'เกิดข้อผิดพลาด: '+(d.error||'');
+  }catch(e){ res.textContent = 'เกิดข้อผิดพลาด: '+e.message; }
+}
+</script>
+</body></html>`);
+  } catch (e) { res.status(500).send('<h2>เกิดข้อผิดพลาด: ' + e.message + '</h2>'); }
+});
+
+// ── บันทึกผลอนุมัติ/ปฏิเสธ + แจ้งตัวแทนทาง LINE ──
+app.post('/ot/approve/:batchId/action', express.json(), async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { action, token } = req.body;
+    if (!['approved', 'rejected'].includes(action)) return res.status(400).json({ error: 'invalid action' });
+
+    const sheets = await getOtSheetsClient();
+    const sid = process.env.LOG_SHEET_ID;
+    const r = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `${OT_SHEET}!A:O` });
+    const rows = r.data.values || [];
+    const dataRows = rows.slice(1);
+    const batchRowIdx = dataRows.map((row, i) => ({ row, i })).filter(x => x.row[0] === batchId);
+    if (!batchRowIdx.length) return res.status(404).json({ error: 'not found' });
+    if (batchRowIdx[0].row[13] !== token) return res.status(403).json({ error: 'invalid token' });
+    if (batchRowIdx[0].row[10] !== 'รออนุมัติ') return res.json({ ok: true, already: true });
+
+    const statusLabel = action === 'approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธแล้ว';
+    const updates = batchRowIdx.map(x => ({
+      range: `${OT_SHEET}!K${x.i + 2}`, // คอลัมน์ K = สถานะ (1-indexed, +2 เพราะมี header แถว 1)
+      values: [[statusLabel]]
+    }));
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: sid, requestBody: { valueInputOption: 'RAW', data: updates }
+    });
+
+    // ── แจ้งผลกลับตัวแทนทาง LINE (1 ครั้งต่อคำขอ) ──
+    const first = batchRowIdx[0].row;
+    const team = first[3], date = first[4], start = first[5], end = first[6];
+    const requesterLineId = first[12];
+    const names = batchRowIdx.map(x => x.row[1]);
+    const icon = action === 'approved' ? '✅' : '❌';
+    const msg = `${icon} คำขอ OT ${statusLabel}\nทีม: ${team}\nวันที่: ${date} เวลา: ${start}-${end}\nรายชื่อ: ${names.join(', ')}`;
+    if (requesterLineId) await push(requesterLineId, msg).catch(() => {});
+
+    res.json({ ok: true });
+  } catch (e) { console.error('/ot/approve action error:', e.message); res.status(500).json({ error: e.message }); }
+});
+
 app.get('/portal/leave-trend', async (req, res) => {
   try {
     const months = parseInt(req.query.months) || 6;
