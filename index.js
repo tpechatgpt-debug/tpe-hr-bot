@@ -839,20 +839,272 @@ async function appendAuditLog(action, req2, actor) {
   // หมายเหตุ: ต้องสร้าง sheet tab ชื่อ "AuditLog" เองก่อนใช้งานครั้งแรก (หัวคอลัมน์: เวลา, การกระทำ, พนักงาน, ประเภทเอกสาร, เดือน, ผู้ดำเนินการ)
 }
 
+// ── คำนวณ OT จากเวลาเข้า-ออกจริง ใช้เกณฑ์เดียวกับระบบ Attendance หลัก ──
+// (ใช้แสดงผลในหน้า Portal "คำขอ OT" เท่านั้น ไม่กระทบสูตรคำนวณเงินเดือนจริง)
+function calcOtFromTimes(checkinTime, checkoutTime) {
+  const toMin = t => { if (!t) return null; const [h, m, s] = t.split(':').map(Number); return h * 60 + m + (s || 0) / 60; };
+  const result = { lateMinutes: 0, isLate: false, actualOtHours: 0 };
+  const inM = toMin(checkinTime);
+  if (inM !== null && inM > 8 * 60 + 0.98) { // หลัง 08:00:59
+    result.isLate = true;
+    result.lateMinutes = Math.round(inM - (8 * 60 + 1)); // นับจาก 08:01
+  }
+  const outM = toMin(checkoutTime);
+  if (outM !== null) {
+    if (outM >= 17 * 60 + 30 && outM < 17 * 60 + 55) result.actualOtHours = 0.5;
+    else if (outM >= 17 * 60 + 55 && outM < 18 * 60 + 25) result.actualOtHours = 1.0;
+    else if (outM >= 18 * 60 + 25 && outM < 18 * 60 + 55) result.actualOtHours = 1.5;
+    else if (outM >= 18 * 60 + 55 && outM < 19 * 60 + 25) result.actualOtHours = 2.0;
+    else if (outM >= 19 * 60 + 25 && outM < 19 * 60 + 55) result.actualOtHours = 2.5;
+    else if (outM >= 19 * 60 + 55 && outM < 20 * 60 + 25) result.actualOtHours = 3.0;
+    else if (outM >= 20 * 60 + 25 && outM < 20 * 60 + 55) result.actualOtHours = 3.5;
+    else if (outM >= 20 * 60 + 55 && outM < 21 * 60 + 25) result.actualOtHours = 4.0;
+    else if (outM >= 21 * 60 + 25 && outM < 21 * 60 + 55) result.actualOtHours = 4.5;
+    else if (outM >= 21 * 60 + 55 && outM < 22 * 60 + 25) result.actualOtHours = 5.0;
+    else if (outM >= 22 * 60 + 55) result.actualOtHours = 5.5; // เกิน 22:55 ปัดรวมเป็น 5.5+ (เพดานคร่าวๆ สำหรับหน้าจอนี้)
+  }
+  // หักสายออกจาก OT ถ้าสาย (เฉพาะตอนยังไม่เช็ค "มีลา/แจ้ง" — ใส่พารามิเตอร์ hasExcuse เพิ่มทีหลังได้)
+  result.netOtHours = result.actualOtHours;
+  if (result.isLate) {
+    const lateHours = result.lateMinutes / 60;
+    result.netOtHours = Math.max(0, Math.round((result.actualOtHours - lateHours) * 2) / 2); // ปัดเข้าขั้น 0.5
+  }
+  return result;
+}
+
+// ════════════════════════════════════════════════════════
+// OT Report — รายงานละเอียดสำหรับผู้บริหาร (เทรนด์/JOB/ทีม + ประเมินค่าใช้จ่าย)
+// และรายงานสำหรับ HR ทำเงินเดือน (รายคน × รายวัน × JOB)
+// ════════════════════════════════════════════════════════
+async function buildOtReportData(sid, fromDate, toDate) {
+  const sheets = await getOtSheetsClient();
+  const [otRes, fwRes, leaveRes] = await Promise.all([
+    sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `${OT_SHEET}!A:O` }).catch(() => ({ data: { values: [] } })),
+    sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' }).catch(() => ({ data: { values: [] } })),
+    sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }).catch(() => ({ data: { values: [] } })),
+  ]);
+  const otRows = (otRes.data.values || []).slice(1).filter(r => r[4] >= fromDate && r[4] <= toDate && r[10] === 'อนุมัติแล้ว');
+  const fwRows = (fwRes.data.values || []).slice(1);
+  const leaveRows = (leaveRes.data.values || []).slice(1);
+
+  const toISO = dmy => { const [d, m, y] = (dmy || '').split('/'); return d && m && y ? `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` : ''; };
+  const parseD = dmy => { const [d, m, y] = (dmy || '').split('/').map(Number); return d && m && y ? new Date(y, m - 1, d) : null; };
+  function hasLeaveOnDate(name, isoDate) {
+    const target = new Date(isoDate);
+    return leaveRows.some(row => {
+      if ((row[1] || '').trim() !== name.trim()) return false;
+      const s = parseD(row[3]), e = parseD(row[4]);
+      return s && e && target >= s && target <= e;
+    });
+  }
+
+  // ── ดึง payType + lineId ของพนักงานทั้งหมด (สำหรับ lookup ค่าแรง) ──
+  const larkToken = await lark.getToken();
+  const emps = await lark.getAllEmployees(larkToken);
+  const empMeta = {};
+  emps.forEach(e => {
+    const n = (e['ชื่อ - นามสกุล'] || e['ชื่อ-นามสกุล'] || '').toString().split('(')[0].trim();
+    if (!n) return;
+    const rawType = (e['ประเภท'] || 'รายเดือน').toString().trim();
+    empMeta[n] = { payType: rawType.includes('รายวัน') ? 'daily' : 'monthly' };
+  });
+
+  const detail = []; // รายแถว สำหรับ CSV (HR ใช้)
+  const byPerson = {}, byJob = {}, byDate = {}, byTeam = {};
+
+  for (const row of otRows) {
+    const [batchId, name, lineId, team, date, start, end, jobNo, reason, type, status] = row;
+    if (!batchId) continue;
+
+    const fw = fwRows.filter(f => toISO(f[0]) === date && (f[3] || '').trim() === (name || '').trim() && (jobNo && jobNo !== '—' ? (f[6] || '') === jobNo : true));
+    const checkin = fw.find(f => f[5] === 'checkin'), checkout = fw.find(f => f[5] === 'checkout');
+    const otCalc = calcOtFromTimes(checkin ? checkin[1] : null, checkout ? checkout[1] : null);
+    if (otCalc.isLate && hasLeaveOnDate(name, date)) { otCalc.netOtHours = otCalc.actualOtHours; otCalc.excused = true; }
+    const hours = otCalc.netOtHours || 0;
+
+    detail.push({ date, team, name, jobNo: jobNo || '—', requestedRange: `${start}-${end}`, actualCheckin: checkin ? checkin[1] : '', actualCheckout: checkout ? checkout[1] : '', netHours: hours, lateMinutes: otCalc.lateMinutes || 0, excused: !!otCalc.excused });
+
+    if (!byPerson[name]) byPerson[name] = { name, team, totalHours: 0, byJob: {} };
+    byPerson[name].totalHours += hours;
+    byPerson[name].byJob[jobNo || '—'] = (byPerson[name].byJob[jobNo || '—'] || 0) + hours;
+
+    const jKey = jobNo || '—';
+    if (!byJob[jKey]) byJob[jKey] = { jobNo: jKey, totalHours: 0, people: new Set() };
+    byJob[jKey].totalHours += hours; byJob[jKey].people.add(name);
+
+    byDate[date] = (byDate[date] || 0) + hours;
+    byTeam[team] = (byTeam[team] || 0) + hours;
+  }
+
+  // ── ประเมินค่าใช้จ่าย (OT 1.5 เท่าของค่าแรง/ชม. มาตรฐานวันทำงานปกติ — เป็นค่าประมาณ ไม่ใช่ตัวเลขทางกฎหมายที่แม่นยำ 100%) ──
+  const monthOf = iso => iso.slice(0, 7).replace('-', '');
+  const wageCache = {};
+  async function getHourlyRate(name, isoDate) {
+    const meta = empMeta[name];
+    if (!meta) return null;
+    const month = isoDate.slice(0, 7); // yyyy-mm — getAvailableMonths ใช้รูปแบบนี้ตรงๆ หรือใกล้เคียง ลองหลาย format
+    const cacheKey = name + '_' + month;
+    if (wageCache[cacheKey] !== undefined) return wageCache[cacheKey];
+    try {
+      const p = await payroll.getEmployeePayroll(name, month, meta.payType);
+      const rate = p && p.baseWage ? p.baseWage / 8 : null;
+      wageCache[cacheKey] = rate;
+      return rate;
+    } catch (e) { wageCache[cacheKey] = null; return null; }
+  }
+
+  let totalCost = 0, costAvailable = false;
+  for (const name of Object.keys(byPerson)) {
+    const p = byPerson[name];
+    const rate = await getHourlyRate(name, fromDate);
+    if (rate) {
+      p.estimatedCost = Math.round(p.totalHours * rate * 1.5);
+      totalCost += p.estimatedCost;
+      costAvailable = true;
+    } else {
+      p.estimatedCost = null;
+    }
+  }
+
+  const byJobArr = Object.values(byJob).map(j => ({ jobNo: j.jobNo, totalHours: Math.round(j.totalHours * 10) / 10, peopleCount: j.people.size })).sort((a, b) => b.totalHours - a.totalHours);
+  const byPersonArr = Object.values(byPerson).map(p => ({ ...p, totalHours: Math.round(p.totalHours * 10) / 10, byJob: undefined, jobs: Object.entries(p.byJob).map(([j, h]) => ({ jobNo: j, hours: Math.round(h * 10) / 10 })).sort((a, b) => b.hours - a.hours) })).sort((a, b) => b.totalHours - a.totalHours);
+  const byDateArr = Object.entries(byDate).map(([date, hours]) => ({ date, hours: Math.round(hours * 10) / 10 })).sort((a, b) => a.date.localeCompare(b.date));
+  const byTeamArr = Object.entries(byTeam).map(([team, hours]) => ({ team, hours: Math.round(hours * 10) / 10 })).sort((a, b) => b.hours - a.hours);
+
+  const peakDate = byDateArr.length ? byDateArr.reduce((a, b) => b.hours > a.hours ? b : a) : null;
+  const topJob = byJobArr.length ? byJobArr[0] : null;
+
+  return {
+    fromDate, toDate, detail, byPerson: byPersonArr, byJob: byJobArr, byDate: byDateArr, byTeam: byTeamArr,
+    totalHours: Math.round(Object.values(byDate).reduce((a, b) => a + b, 0) * 10) / 10,
+    totalCost: costAvailable ? totalCost : null,
+    peakDate, topJob,
+  };
+}
+
+// ── CSV สำหรับ HR ทำเงินเดือน: รายคน × รายวัน × JOB ──
+app.get('/portal/ot-report/csv', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const fromDate = `${month}-01`;
+    const toDate = `${month}-31`;
+    const sid = process.env.LOG_SHEET_ID;
+    const data = await buildOtReportData(sid, fromDate, toDate);
+
+    const header = ['วันที่', 'ทีม', 'ชื่อ', 'JOB', 'OT ที่ขอ', 'เช็คอินจริง', 'เช็คเอาท์จริง', 'OT สุทธิ (ชม.)', 'สายกี่นาที', 'มีลา(ไม่หัก)'];
+    const lines = [header.join(',')];
+    data.detail.forEach(d => {
+      lines.push([d.date, d.team, d.name, d.jobNo, d.requestedRange, d.actualCheckin, d.actualCheckout, d.netHours, d.lateMinutes, d.excused ? 'ใช่' : ''].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+    });
+    const csv = '\uFEFF' + lines.join('\r\n'); // BOM กัน Excel อ่านภาษาไทยเพี้ยน
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="OT_Report_${month}.csv"`);
+    res.send(csv);
+  } catch (e) { console.error('/portal/ot-report/csv error:', e.message); res.status(500).send('เกิดข้อผิดพลาด: ' + e.message); }
+});
+
+// ── PDF สำหรับผู้บริหาร: เทรนด์ / แยกตาม JOB / แยกตามทีม / ประเมินค่าใช้จ่าย ──
+app.get('/portal/ot-report/pdf', async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const fromDate = `${month}-01`;
+    const toDate = `${month}-31`;
+    const sid = process.env.LOG_SHEET_ID;
+    const data = await buildOtReportData(sid, fromDate, toDate);
+    const [y, m] = month.split('-');
+    const thMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    const thMonth = `${thMonths[parseInt(m)]} ${parseInt(y) + 543}`;
+
+    const maxDateH = Math.max(1, ...data.byDate.map(d => d.hours));
+    const maxJobH = Math.max(1, ...data.byJob.map(j => j.totalHours));
+    const maxTeamH = Math.max(1, ...data.byTeam.map(t => t.hours));
+
+    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;color:#111827;font-size:12px;padding:0}
+h1{font-size:20px;color:#1B3E6F;margin-bottom:2px}
+.sub{font-size:12px;color:#6B7280;margin-bottom:20px}
+.kpi-row{display:flex;gap:12px;margin-bottom:20px}
+.kpi{flex:1;background:#F7F8FA;border-radius:10px;padding:14px;text-align:center}
+.kpi-val{font-size:22px;font-weight:800;color:#1B3E6F}
+.kpi-label{font-size:10px;color:#6B7280;margin-top:3px}
+.sec-title{font-size:13px;font-weight:700;color:#111827;margin:22px 0 10px;border-left:4px solid #1B3E6F;padding-left:8px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar-label{width:90px;font-size:10.5px;color:#374151;flex-shrink:0;text-align:right}
+.bar-track{flex:1;background:#F3F4F6;border-radius:5px;height:16px;position:relative}
+.bar-fill{background:linear-gradient(90deg,#1B3E6F,#2563EB);height:100%;border-radius:5px}
+.bar-val{width:50px;font-size:10.5px;font-weight:700;color:#111827}
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+th{background:#1B3E6F;color:#fff;padding:7px 8px;text-align:left}
+td{padding:6px 8px;border-bottom:1px solid #E5E7EB}
+tr:nth-child(even) td{background:#F9FAFB}
+.insight{background:#FFF7ED;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;font-size:11px;color:#92400E;margin-bottom:16px}
+</style></head><body>
+<h1>รายงานโอทีประจำเดือน ${thMonth}</h1>
+<div class="sub">TPE HR — ข้อมูลเฉพาะคำขอที่อนุมัติแล้ว</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-val">${data.totalHours}</div><div class="kpi-label">ชั่วโมง OT รวม</div></div>
+  <div class="kpi"><div class="kpi-val">${data.totalCost !== null ? '฿' + data.totalCost.toLocaleString() : '—'}</div><div class="kpi-label">ประเมินค่าใช้จ่าย (×1.5)</div></div>
+  <div class="kpi"><div class="kpi-val">${data.peakDate ? data.peakDate.date : '—'}</div><div class="kpi-label">วันที่ OT สูงสุด</div></div>
+  <div class="kpi"><div class="kpi-val">${data.topJob ? data.topJob.jobNo : '—'}</div><div class="kpi-label">JOB ที่กิน OT มากสุด</div></div>
+</div>
+
+${data.topJob ? `<div class="insight">💡 JOB <b>${data.topJob.jobNo}</b> ใช้ OT รวม <b>${data.topJob.totalHours} ชม.</b> (${data.topJob.peopleCount} คน) — มากที่สุดในเดือนนี้ ควรพิจารณาว่าเป็นปัญหาเชิงกระบวนการที่แก้ได้ (เช่น วางแผนกำลังคนล่วงหน้า) หรือเป็นลักษณะงานที่หลีกเลี่ยงไม่ได้</div>` : ''}
+
+<div class="sec-title">แนวโน้มรายวัน</div>
+${data.byDate.map(d => `<div class="bar-row"><div class="bar-label">${d.date.slice(5)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.hours/maxDateH*100)}%"></div></div><div class="bar-val">${d.hours} ชม.</div></div>`).join('') || '<div style="color:#9CA3AF">ไม่มีข้อมูล</div>'}
+
+<div class="sec-title">แยกตาม JOB (เรียงจากมากไปน้อย)</div>
+${data.byJob.slice(0,15).map(j => `<div class="bar-row"><div class="bar-label">${j.jobNo}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(j.totalHours/maxJobH*100)}%"></div></div><div class="bar-val">${j.totalHours} ชม.</div></div>`).join('') || '<div style="color:#9CA3AF">ไม่มีข้อมูล</div>'}
+
+<div class="sec-title">แยกตามทีม</div>
+${data.byTeam.map(t => `<div class="bar-row"><div class="bar-label">${t.team}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(t.hours/maxTeamH*100)}%"></div></div><div class="bar-val">${t.hours} ชม.</div></div>`).join('') || '<div style="color:#9CA3AF">ไม่มีข้อมูล</div>'}
+
+<div class="sec-title">รายบุคคล (เรียงตาม OT มากสุด)</div>
+<table><thead><tr><th>ชื่อ</th><th>ทีม</th><th>OT รวม (ชม.)</th><th>ประเมินค่าใช้จ่าย</th><th>JOB ที่ทำ</th></tr></thead><tbody>
+${data.byPerson.map(p => `<tr><td>${p.name}</td><td>${p.team}</td><td>${p.totalHours}</td><td>${p.estimatedCost !== null ? '฿'+p.estimatedCost.toLocaleString() : '—'}</td><td>${p.jobs.map(j=>j.jobNo+' ('+j.hours+')').join(', ')}</td></tr>`).join('')}
+</tbody></table>
+
+<div style="margin-top:20px;font-size:9.5px;color:#9CA3AF">* ค่าใช้จ่ายเป็นค่าประมาณจากอัตราค่าแรง/วัน ÷ 8 × 1.5 (OT วันทำงานปกติ) ไม่รวม OT วันหยุด/นักขัตฤกษ์ที่อัตราต่างกัน และต้องมีข้อมูลเงินเดือนเดือนนั้นอัปโหลดแล้วจึงจะคำนวณได้</div>
+</body></html>`;
+
+    const pdfBuf = await payslip.htmlToPdfBuffer(html);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="OT_Report_${month}.pdf"`);
+    res.send(pdfBuf);
+  } catch (e) { console.error('/portal/ot-report/pdf error:', e.message); res.status(500).send('เกิดข้อผิดพลาด: ' + e.message); }
+});
+
 // ── Portal: รายการคำขอ OT พร้อม join กับ FieldworkAttendance (เช็คอิน/เช็คเอาท์จริง) ──
 app.get('/portal/ot-requests', async (req, res) => {
   try {
     const sheets = await getOtSheetsClient();
     const sid = process.env.LOG_SHEET_ID;
-    const [otRes, fwRes] = await Promise.all([
+    const [otRes, fwRes, leaveRes] = await Promise.all([
       sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `${OT_SHEET}!A:O` }).catch(() => ({ data: { values: [] } })),
       sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'FieldworkAttendance!A:J' }).catch(() => ({ data: { values: [] } })),
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }).catch(() => ({ data: { values: [] } })),
     ]);
     const otRows = (otRes.data.values || []).slice(1);
     const fwRows = (fwRes.data.values || []).slice(1);
+    const leaveRows = (leaveRes.data.values || []).slice(1);
 
-    // normalize date: OT ใช้ yyyy-mm-dd, FieldworkAttendance ใช้ dd/mm/yyyy
+    // normalize date: OT ใช้ yyyy-mm-dd, FieldworkAttendance/Leave ใช้ dd/mm/yyyy
     const toISO = dmy => { const [d, m, y] = (dmy || '').split('/'); return d && m && y ? `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` : ''; };
+    const parseD = dmy => { const [d, m, y] = (dmy || '').split('/').map(Number); return d && m && y ? new Date(y, m - 1, d) : null; };
+
+    // เช็คว่าคนนี้มีลาคาบวันนี้ไหม (ใช้ "ยกเว้นหักสาย" ตามที่ตกลงกันไว้)
+    function hasLeaveOnDate(name, isoDate) {
+      const target = new Date(isoDate);
+      return leaveRows.some(row => {
+        const rName = (row[1] || '').trim();
+        if (rName !== name.trim()) return false;
+        const start = parseD(row[3]), end = parseD(row[4]);
+        if (!start || !end) return false;
+        return target >= start && target <= end;
+      });
+    }
 
     const batches = {};
     otRows.forEach(row => {
@@ -869,9 +1121,20 @@ app.get('/portal/ot-requests', async (req, res) => {
       });
       const checkin = matches.find(f => f[5] === 'checkin');
       const checkout = matches.find(f => f[5] === 'checkout');
-      batches[batchId].members.push({
-        name, actualCheckin: checkin ? checkin[1] : null, actualCheckout: checkout ? checkout[1] : null
-      });
+      const actualCheckin = checkin ? checkin[1] : null;
+      const actualCheckout = checkout ? checkout[1] : null;
+
+      let otCalc = null;
+      if (actualCheckin || actualCheckout) {
+        otCalc = calcOtFromTimes(actualCheckin, actualCheckout);
+        if (otCalc.isLate && hasLeaveOnDate(name, date)) {
+          // มีลาคาบวันนี้ → ไม่หักสาย (ตามที่ตกลง: "ถ้ามีลาหรือแจ้งก็ไม่ต้องหัก")
+          otCalc.netOtHours = otCalc.actualOtHours;
+          otCalc.excused = true;
+        }
+      }
+
+      batches[batchId].members.push({ name, actualCheckin, actualCheckout, otCalc });
     });
 
     res.json(Object.values(batches).reverse());
