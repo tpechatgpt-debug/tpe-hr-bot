@@ -2483,9 +2483,15 @@ async function fetchAllLarkLeaveRecords(larkToken) {
   }
   let allRecords = [];
   let pageToken = '';
-  for (let i = 0; i < 5; i++) {
+  // สำคัญ: Lark API ตอบ HTTP 200 ได้แม้ตอน error จริง (เช่น rate-limit/token หมดอายุ) โดยใส่ error ไว้ใน body.code
+  // ต้องเช็ค code ให้ชัด ถ้าไม่ใช่ 0 ให้ throw ทันที ห้ามตีความว่า "ไม่มีข้อมูล" เด็ดขาด
+  // (บั๊กนี้คือสาเหตุที่ reconcileLeaveSheet() เคยเข้าใจผิดว่า Lark ไม่มีข้อมูลเลย แล้วลบแถวใน Sheet ไปเกือบทั้งหมด)
+  for (let i = 0; i < 50; i++) {
     const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
     const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
+    if (r.data?.code !== 0) {
+      throw new Error(`Lark API error code=${r.data?.code} msg=${r.data?.msg || 'unknown'}`);
+    }
     const data = r.data?.data;
     allRecords = allRecords.concat(data?.items || []);
     if (!data?.has_more) break;
@@ -2593,7 +2599,10 @@ async function getLeaveUsageForEmployee(larkToken, empName) {
 
 // ── ส่วนที่ 3: Reconcile — ลบแถวใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว ──
 //    (เพราะ webhook sync ตอนบันทึก/แก้ไขใบลา ไม่มี delete-event — ถ้าลบใบลาใน Lark, Sheet จะไม่ลบตาม)
-async function reconcileLeaveSheet() {
+// dryRun=true (ค่าเริ่มต้นเสมอ): แค่ตรวจและรายงาน ไม่ลบจริง — ป้องกันเหตุซ้ำจากครั้งก่อนที่ลบผิดเพราะตีความ
+// Lark API error ว่าเป็น "ไม่มีข้อมูล" แล้วลบเกือบทั้งชีท ต้องสั่ง dryRun=false ผ่าน admin endpoint เท่านั้นถึงจะลบจริง
+// และมี safety guard: ถ้าสัดส่วนที่จะลบเกิน 10% ของทั้งหมด (หรือเกิน 15 แถว) จะไม่ลบ ให้คนตรวจสอบเองก่อน
+async function reconcileLeaveSheet(dryRun = true) {
   const { google } = require('googleapis');
   const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
   const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
@@ -2609,20 +2618,41 @@ async function reconcileLeaveSheet() {
   const leaveSheetId = leaveSheetMeta.properties.sheetId;
   // บังคับดึง Lark ใหม่ ไม่ใช้ cache เก่า เพื่อให้เช็ค record ที่ถูกลบล่าสุดจริงๆ
   LARK_LEAVE_ALL_CACHE = null;
-  const allLarkRecords = await fetchAllLarkLeaveRecords(larkToken);
+  let allLarkRecords;
+  try {
+    allLarkRecords = await fetchAllLarkLeaveRecords(larkToken);
+  } catch (e) {
+    console.log('[reconcileLeaveSheet] ดึง Lark records ไม่ได้ ข้ามรอบนี้ (ไม่แตะ Sheet):', e.message);
+    return { skipped: true, reason: e.message };
+  }
   const liveRecordIds = new Set(allLarkRecords.map(r => r.record_id).filter(Boolean));
   const existing = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:A' });
   const idRows = (existing.data.values || []); // idRows[0] = header
+  const rowsWithId = idRows.slice(1).filter(r => (r[0]||'').trim()).length;
+  // Safety guard: ถ้า Lark คืนจำนวน record น้อยผิดปกติเทียบกับที่มีใน Sheet (เช่น API error แต่ไม่ throw)
+  // ให้ถือว่าดึงมาไม่สมบูรณ์ ห้ามเอาไปตัดสินว่าแถวไหน "ไม่มีใน Lark แล้ว" เด็ดขาด
+  if (rowsWithId > 20 && liveRecordIds.size < rowsWithId * 0.5) {
+    console.log(`[reconcileLeaveSheet] ผิดปกติ: Lark มี ${liveRecordIds.size} รายการ แต่ Sheet มี ${rowsWithId} แถวที่มี record_id — ข้ามรอบนี้ ไม่ลบ (อาจดึง Lark มาไม่ครบ)`);
+    return { skipped: true, reason: 'lark-count-too-low', larkCount: liveRecordIds.size, sheetRowsWithId: rowsWithId };
+  }
   const rowsToDelete = []; // เก็บ 0-based row index (รวม header) ของแถวที่ต้องลบ
+  const recordIdsToDelete = [];
   for (let i = 1; i < idRows.length; i++) {
     const recordId = (idRows[i][0] || '').trim();
     if (recordId && !liveRecordIds.has(recordId)) {
       rowsToDelete.push(i); // 0-based index ตรงกับ grid row index ใน Sheets API
+      recordIdsToDelete.push(recordId);
     }
   }
   if (rowsToDelete.length === 0) {
     console.log('[reconcileLeaveSheet] ไม่มีแถวค้าง ข้อมูลตรงกับ Lark แล้ว');
-    return { checked: idRows.length - 1, deleted: 0 };
+    return { checked: idRows.length - 1, toDelete: 0, deleted: 0 };
+  }
+  // Safety guard อีกชั้น: ถ้าจะลบเกิน 10% ของทั้งหมด (และเกิน 15 แถว) ให้หยุดรอตรวจสอบคนก่อน ไม่ลบอัตโนมัติ
+  const tooMany = rowsToDelete.length > 15 && rowsToDelete.length > rowsWithId * 0.1;
+  if (dryRun || tooMany) {
+    console.log(`[reconcileLeaveSheet] พบ ${rowsToDelete.length} แถวที่ไม่มีใน Lark แล้ว (dryRun=${dryRun}, tooMany=${tooMany}) — ยังไม่ลบ ต้องสั่ง dryRun=false ผ่าน /admin/reconcile-leave ด้วยตนเอง`);
+    return { checked: idRows.length - 1, toDelete: rowsToDelete.length, deleted: 0, dryRun: true, blockedByGuard: tooMany, recordIdsToDelete };
   }
   // ลบจากแถวล่างขึ้นบน (descending) ป้องกัน index เลื่อนระหว่างลบ
   rowsToDelete.sort((a, b) => b - a);
@@ -2635,15 +2665,17 @@ async function reconcileLeaveSheet() {
   Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
   LARK_LEAVE_ALL_CACHE = null;
   console.log(`[reconcileLeaveSheet] ลบแถวที่ไม่มีใน Lark แล้วออกจาก Sheet: ${rowsToDelete.length} แถว`);
-  return { checked: idRows.length - 1, deleted: rowsToDelete.length };
+  return { checked: idRows.length - 1, toDelete: rowsToDelete.length, deleted: rowsToDelete.length, recordIdsDeleted: recordIdsToDelete };
 }
 
-// Admin: สั่ง reconcile ใบลา Sheet ↔ Lark ด้วยตนเอง (เผื่ออยากเช็ค/ลบค้างทันที ไม่ต้องรอ 30 นาที)
+// Admin: ตรวจ/ลบแถวค้างใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว
+// ค่าเริ่มต้นคือ "ตรวจอย่างเดียว ไม่ลบ" (dry run) — ต้องใส่ &dryRun=0 เพื่อให้ลบจริง (ควรดูผล dry run ก่อนทุกครั้ง)
 app.get('/admin/reconcile-leave', async (req, res) => {
-  const { password } = req.query;
+  const { password, dryRun } = req.query;
   if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
   try {
-    const result = await reconcileLeaveSheet();
+    const isDryRun = dryRun !== '0' && dryRun !== 'false';
+    const result = await reconcileLeaveSheet(isDryRun);
     res.json(result);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -2725,11 +2757,23 @@ async function initBackgroundServices() {
   } catch(e) {
     console.error('initBackgroundServices error:', e.message);
   }
-  // ── Reconcile ใบลา Sheet ↔ Lark: ลบแถวค้างที่ถูกลบใน Lark ไปแล้ว รันทันทีตอน start แล้วทุก 30 นาที ──
-  reconcileLeaveSheet().catch(e => console.error('reconcileLeaveSheet (startup) error:', e.message));
-  setInterval(() => {
-    reconcileLeaveSheet().catch(e => console.error('reconcileLeaveSheet (interval) error:', e.message));
-  }, 30 * 60 * 1000);
+  // ── Reconcile ใบลา Sheet ↔ Lark: ตรวจหาแถวค้าง (dry run เสมอ — ไม่ลบอัตโนมัติ) รันตอน start แล้วทุก 30 นาที
+  //    ถ้าพบแถวค้าง จะแจ้ง Dev ทาง LINE ให้เข้าไปตรวจและสั่งลบเองผ่าน /admin/reconcile-leave?dryRun=0 ──
+  const runReconcileDryRun = async (label) => {
+    try {
+      const r = await reconcileLeaveSheet(true);
+      if (r && r.toDelete > 0) {
+        console.log(`[reconcileLeaveSheet ${label}] พบแถวค้าง ${r.toDelete} แถว รอให้ตรวจสอบและลบเองผ่าน admin endpoint`);
+        push(DEV_USER_ID, `⚠️ [เช็ควันลา] พบแถวใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว ${r.toDelete} แถว (${label})\nเข้าไปตรวจก่อนสั่งลบที่ /admin/reconcile-leave?password=tpe2569&dryRun=0`).catch(() => {});
+      } else if (r && r.skipped) {
+        console.log(`[reconcileLeaveSheet ${label}] ข้าม: ${r.reason}`);
+      }
+    } catch (e) {
+      console.error(`reconcileLeaveSheet (${label}) error:`, e.message);
+    }
+  };
+  runReconcileDryRun('startup');
+  setInterval(() => runReconcileDryRun('interval'), 30 * 60 * 1000);
 }
 
 // ── Job Queue: ดึงงานวันนี้ของช่าง ──────────────────────
