@@ -2453,6 +2453,7 @@ async function getLeaveDatesFromLark(larkToken, empName, empId) {
     }
     const myLeaves = allRecords.filter(item => {
       const n = normN((item.fields['ชื่อ-นามสกุล']||'').split('(')[0].trim());
+      if (!n) return false; // บั๊กสำคัญ: ชื่อว่าง ('') จะ .includes() ตรงกับทุกคนเสมอ ต้องกันไว้ ไม่งั้นข้อมูลจะปนกันข้ามคน
       return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
     });
     const leaveMap = {};
@@ -2557,6 +2558,7 @@ async function getLeaveUsageFromLark(larkToken, empName) {
   const allRecords = await fetchAllLarkLeaveRecords(larkToken);
   const myLeaves = allRecords.filter(item => {
     const n = normN(getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
+    if (!n) return false; // ชื่อว่าง ('') จะ .includes() ตรงกับทุกคนเสมอ ต้องกันไว้ ไม่งั้นข้อมูลของคนอื่นจะปนเข้ามา
     return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
   });
   const used = emptyUsedBuckets();
@@ -2613,6 +2615,7 @@ app.get('/admin/debug-lark-leave', async (req, res) => {
     const empNorm = normN(name);
     const matched = allRecords.filter(item => {
       const n = normN(getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
+      if (!n) return false;
       return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
     });
     const detail = matched.map(item => {
