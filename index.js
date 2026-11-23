@@ -171,42 +171,16 @@ if (!employee) {
       }
       if (msg === 'เช็ควันลา') {
         try {
-          const { google } = require('googleapis');
-          const auth = new google.auth.GoogleAuth({
-            credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-          });
-          const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-          const sid = process.env.LOG_SHEET_ID;
-          const empR = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' });
-          const empRows = empR.data.values || [];
-          const header = empRows[0] || [];
-          const col = (name) => header.findIndex(h => h.trim() === name.trim());
-          const empRow = empRows.slice(1).find(row => (row[col('Line ID')]||'').trim() === userId);
-          if (!empRow) { await reply(replyToken, createLeaveCard(employee, imgUrl)); return; }
-          const g = (name) => parseFloat(empRow[col(name)]) || 0;
-          const gs = (name) => empRow[col(name)] || '0';
-          const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
-          // ── ลาคงเหลือ: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet) — ถ้า Lark ดึงไม่ได้ จะ throw แล้วตกไปที่ catch ด้านล่าง (โชว์การ์ดแบบไม่คำนวณ) ──
-          const { used: usedDays } = await getLeaveUsageForEmployee(larkToken, empName);
-          const calc = (total, type) => Math.max(0, g(total) - usedDays[type]).toString();
-          const empForCard = {
-            'ชื่อ - นามสกุล':   empRow[col('ชื่อ - นามสกุล')] || empName,
-            'สิทธิ์พักร้อน':    gs('สิทธิ์พักร้อน'),
-            'คงเหลือพักร้อน':   calc('สิทธิ์พักร้อน', 'พักร้อน'),
-            'สิทธิ์ลากิจ':      gs('สิทธิ์ลากิจ'),
-            'คงเหลือลากิจ':     calc('สิทธิ์ลากิจ', 'ลากิจ'),
-            'สิทธิ์ลาป่วย':     gs('สิทธิ์ลาป่วย'),
-            'คงเหลือลาป่วย':    calc('สิทธิ์ลาป่วย', 'ลาป่วย'),
-            'สิทธิ์วันเกิด':    gs('สิทธิ์วันเกิด'),
-            'คงเหลือลาวันเกิด': calc('สิทธิ์วันเกิด', 'วันเกิด'),
-            'สิทธิ์ลาคลอด':    gs('สิทธิ์ลาคลอด'),
-            'คงเหลือลาคลอด':   calc('สิทธิ์ลาคลอด', 'ลาคลอด'),
-          };
-          await reply(replyToken, createLeaveCard(empForCard, imgUrl));
+          // ── Lark เป็นแหล่งความจริงเดียว: สิทธิ์/คงเหลือ อ่านจากเรคคอร์ดพนักงานใน Lark ตรงๆ ไม่คำนวณเอง ไม่แตะ Sheet ──
+          const hasBalance = employee && employee['คงเหลือพักร้อน'] !== undefined;
+          if (!hasBalance) {
+            await reply(replyToken, 'ตอนนี้ดึงข้อมูลวันลาจาก Lark ไม่ได้ ลองใหม่อีกครั้งในอีกสักครู่นะครับ');
+            return;
+          }
+          await reply(replyToken, createLeaveCard(employee, imgUrl));
         } catch(e) {
           console.error('เช็ควันลา error:', e.message);
-          await reply(replyToken, createLeaveCard(employee, imgUrl));
+          await reply(replyToken, 'ตอนนี้ดึงข้อมูลวันลาไม่ได้ ลองใหม่อีกครั้งนะครับ');
         }
       } else {
         await reply(replyToken, {
@@ -585,23 +559,7 @@ app.get('/portal', (req, res) => res.sendFile(path.join(__dirname, 'portal.html'
 async function getLeaveTodaySummary(larkToken) {
   try {
     const now = Date.now();
-    let allRecords;
-    if (LARK_LEAVE_ALL_CACHE && (now - LARK_LEAVE_CACHE_TS) < LARK_LEAVE_TTL) {
-      allRecords = LARK_LEAVE_ALL_CACHE;
-    } else {
-      allRecords = [];
-      let pageToken = '';
-      for (let i = 0; i < 5; i++) {
-        const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
-        const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
-        const data = r.data?.data;
-        allRecords = allRecords.concat(data?.items || []);
-        if (!data?.has_more) break;
-        pageToken = data.page_token || '';
-      }
-      LARK_LEAVE_ALL_CACHE = allRecords;
-      LARK_LEAVE_CACHE_TS = now;
-    }
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken); // ตัวดึงกลาง ครบทุกหน้า
     const toTD = ts => { const d = new Date(ts + 7 * 3600000); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); };
     const todayTD = toTD(now);
     const results = [];
@@ -1780,15 +1738,7 @@ app.get('/admin/leave-map', async (req, res) => {
     }));
 
     // ดึง leave records
-    let allRecords = [], pageToken = '';
-    for (let i = 0; i < 5; i++) {
-      const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100${pageToken ? '&page_token=' + pageToken : ''}`;
-      const r = await axios.get(url, { headers: { Authorization: `Bearer ${larkToken}` } });
-      const data = r.data?.data;
-      allRecords = allRecords.concat(data?.items || []);
-      if (!data?.has_more) break;
-      pageToken = data.page_token || '';
-    }
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken); // ตัวดึงกลาง ครบทุกหน้า
 
     // สร้าง leaveMap: { empName: { 'dd/mm/yyyy': leaveType } }
     const leaveMap = {};
@@ -1921,24 +1871,20 @@ const type = getRaw(fields['ประเภทการลา']);
       const normN2 = s => (s||'').replace(/\s+/g,'').toLowerCase();
       const nameNorm = normN2(name.split('(')[0]);
       console.log('[LeaveWebhook] notify: nameNorm=', nameNorm);
-      const empRows2 = (await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' })).data.values || [];
-      const header2 = empRows2[0] || [];
-      const col2 = n => header2.findIndex(h => h.trim() === n.trim());
-      const empRow2 = empRows2.slice(1).find(row => normN2((row[col2('ชื่อ - นามสกุล')]||'').split('(')[0]) === nameNorm);
+      // ── หาพนักงานและวันลาคงเหลือจากตารางพนักงานใน Lark ตรงๆ (ไม่แตะ Sheet) — ถ้า Lark ดึงไม่ได้ จะ throw แล้วข้าม notify รอบนี้ไปเฉยๆ ──
+      const emps2 = await lark.getAllEmployees(larkToken);
+      const empRow2 = emps2.find(e => normN2(getRawLarkField(e['ชื่อ - นามสกุล']).split('(')[0]) === nameNorm);
       console.log('[LeaveWebhook] empRow2 found:', !!empRow2);
       if (empRow2) {
-        console.log('[LeaveWebhook] lineId2:', (empRow2[col2('Line ID')]||'').trim());
-        const lineId2 = (empRow2[col2('Line ID')]||'').trim();
+        const lineId2 = getRawLarkField(empRow2['Line ID'] ?? empRow2['LineID'] ?? empRow2['Line_ID']).trim();
+        console.log('[LeaveWebhook] lineId2:', lineId2);
         if (lineId2) {
-          // ── วันลาคงเหลือ: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet) — ถ้า Lark ดึงไม่ได้ จะ throw แล้วข้าม notify รอบนี้ไปเฉยๆ ──
-          const { used: used2 } = await getLeaveUsageForEmployee(larkToken, name.split('(')[0].trim());
-          const g2 = n => parseFloat(empRow2[col2(n)])||0;
           const remaining = {
-            ลากิจ:   Math.max(0, g2('สิทธิ์ลากิจ')   - used2['ลากิจ']),
-            ลาป่วย:  Math.max(0, g2('สิทธิ์ลาป่วย')  - used2['ลาป่วย']),
-            พักร้อน: Math.max(0, g2('สิทธิ์พักร้อน') - used2['พักร้อน']),
-            วันเกิด: Math.max(0, g2('สิทธิ์วันเกิด') - used2['วันเกิด']),
-            ลาคลอด:  Math.max(0, g2('สิทธิ์ลาคลอด') - used2['ลาคลอด']),
+            ลากิจ:   larkNum(empRow2['คงเหลือลากิจ']),
+            ลาป่วย:  larkNum(empRow2['คงเหลือลาป่วย']),
+            พักร้อน: larkNum(empRow2['คงเหลือพักร้อน']),
+            วันเกิด: larkNum(empRow2['คงเหลือลาวันเกิด']),
+            ลาคลอด:  larkNum(empRow2['คงเหลือลาคลอด']),
           };
           const leaveIcon = type.includes('ป่วย')?'🤒':type.includes('กิจ')?'📋':type.includes('พักร้อน')?'🏖':type.includes('เกิด')?'🎂':type.includes('คลอด')?'👶':'📅';
           const leaveColor = type.includes('กิจ')?'#DC2626':type.includes('ป่วย')?'#2563EB':type.includes('พักร้อน')?'#16A34A':type.includes('ไม่รับค่าจ้าง')?'#7C3AED':type.includes('เกิด')?'#EC4899':type.includes('คลอด')?'#EC4899':'#1B3E6F';
@@ -2432,30 +2378,9 @@ async function getLeaveDatesFromLark(larkToken, empName, empId) {
     const axios = require('axios');
     const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
     const empNorm = normN(empName);
-    // ใช้ cache ถ้ายังไม่หมดอายุ
-    let allRecords;
-    const now = Date.now();
-    if (LARK_LEAVE_ALL_CACHE && (now - LARK_LEAVE_CACHE_TS) < LARK_LEAVE_TTL) {
-      allRecords = LARK_LEAVE_ALL_CACHE;
-    } else {
-      allRecords = [];
-      let pageToken = '';
-      for (let i = 0; i < 5; i++) {
-        const url = 'https://open.larksuite.com/open-apis/bitable/v1/apps/T1RhbpctWafjxGsoVVtlSJaGgJf/tables/tbl0fDzMNrGBOVwu/records?page_size=100' + (pageToken ? '&page_token=' + pageToken : '');
-        const r = await axios.get(url, { headers: { Authorization: 'Bearer ' + larkToken } });
-        const data = r.data?.data;
-        allRecords = allRecords.concat(data?.items || []);
-        if (!data?.has_more) break;
-        pageToken = data.page_token || '';
-      }
-      LARK_LEAVE_ALL_CACHE = allRecords;
-      LARK_LEAVE_CACHE_TS = now;
-    }
-    const myLeaves = allRecords.filter(item => {
-      const n = normN((item.fields['ชื่อ-นามสกุล']||'').split('(')[0].trim());
-      if (!n) return false; // บั๊กสำคัญ: ชื่อว่าง ('') จะ .includes() ตรงกับทุกคนเสมอ ต้องกันไว้ ไม่งั้นข้อมูลจะปนกันข้ามคน
-      return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
-    });
+    // ใช้ตัวดึงกลาง (ครบทุกหน้า + เช็ค error + cache) แทนการวนดึงเองที่เคยตัดที่ 500 แถว
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken);
+    const myLeaves = matchLeaveRecordsForEmp(allRecords, empName);
     const leaveMap = {};
     myLeaves.forEach(item => {
       const f = item.fields;
@@ -2544,6 +2469,15 @@ function formatThaiDate(d) {
   if (!d) return '';
   return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
 }
+// แปลงค่าตัวเลขจากฟิลด์ Lark (รองรับ number / string / formula-lookup ที่มาเป็น array หรือ object)
+function larkNum(v) {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  if (Array.isArray(v)) return larkNum(v[0]);
+  if (typeof v === 'object') return larkNum(v.value ?? v.text);
+  const n = parseFloat(String(v).replace(/,/g, ''));
+  return isNaN(n) ? 0 : n;
+}
 const getRawLarkField = v => {
   if (v == null) return '';
   if (Array.isArray(v)) return v.map(x => typeof x === 'object' ? (x.text||x.value||'') : x).join(', ');
@@ -2558,14 +2492,8 @@ function larkRecordName(item) { return getRawLarkField(item.fields['ชื่อ
 function matchLeaveRecordsForEmp(allRecords, empName, mode) {
   const empNorm = normLeaveName(empName);
   if (!empNorm) return [];
-  const exact = allRecords.filter(item => normLeaveName(larkRecordName(item)) === empNorm);
-  if (mode === 'exact') return exact;
-  if (exact.length) return exact;
-  return allRecords.filter(item => {
-    const n = normLeaveName(larkRecordName(item));
-    if (!n) return false;
-    return n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
-  });
+  // ตรงเป๊ะเท่านั้น — เคยมี fuzzy สำรอง แต่ทำให้ชื่อที่มีคำของอีกคนอยู่ข้างใน (เช่น สุวรรณานนท์ ⊃ วรรณา) ดึงใบลาของคนอื่นมา
+  return allRecords.filter(item => normLeaveName(larkRecordName(item)) === empNorm);
 }
 
 // วันลาที่ใช้ไปแล้ว + รายการใบลา (ปีลาปัจจุบัน) — ดึงตรงจาก Lark เท่านั้น; throw ถ้าดึงไม่ได้ ให้ caller จัดการ
@@ -2665,34 +2593,29 @@ app.get('/admin/leave-audit', async (req, res) => {
     const larkToken = await lark.getToken();
     LARK_LEAVE_ALL_CACHE = null;
     const allRecords = await fetchAllLarkLeaveRecords(larkToken);
-    const { google } = require('googleapis');
-    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    const empR = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
-    const empRows = empR.data.values || [];
-    const header = empRows[0] || [];
-    const col = n => header.findIndex(h => h.trim() === n.trim());
-    const nameCol = col('ชื่อ - นามสกุล');
-    const rightsKeys = { ลากิจ:'สิทธิ์ลากิจ', ลาป่วย:'สิทธิ์ลาป่วย', พักร้อน:'สิทธิ์พักร้อน', วันเกิด:'สิทธิ์วันเกิด', ลาคลอด:'สิทธิ์ลาคลอด' };
+    const emps = await lark.getAllEmployees(larkToken);
+    const keys = { ลากิจ:'ลากิจ', ลาป่วย:'ลาป่วย', พักร้อน:'พักร้อน', วันเกิด:'ลาวันเกิด', ลาคลอด:'ลาคลอด' };
     const empNorms = new Set();
-    const rows = empRows.slice(1).filter(r => (r[nameCol]||'').trim()).map(r => {
-      const empName = (r[nameCol]||'').split('(')[0].trim();
+    const rows = emps.filter(e => getRawLarkField(e['ชื่อ - นามสกุล']).trim()).map(e => {
+      const empName = getRawLarkField(e['ชื่อ - นามสกุล']).split('(')[0].trim();
       empNorms.add(normLeaveName(empName));
-      const exact = matchLeaveRecordsForEmp(allRecords, empName, 'exact');
-      const live = matchLeaveRecordsForEmp(allRecords, empName);
-      const used = emptyUsedBuckets();
-      let unbucketed = 0;
-      live.forEach(item => {
+      const mine = matchLeaveRecordsForEmp(allRecords, empName);
+      const fromRecords = emptyUsedBuckets();
+      mine.forEach(item => {
         const f = item.fields;
         const startD = thaiDateFromLarkField(f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่']);
         if (!startD || !inLeaveYearWindow(startD)) return;
         const b = bucketLeaveType(getRawLarkField(f['ประเภทการลา']));
-        const d = parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0;
-        if (b) used[b] += d; else unbucketed += d;
+        if (b) fromRecords[b] += parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0;
       });
-      const remaining = {};
-      Object.keys(rightsKeys).forEach(k => { remaining[k] = Math.max(0, (parseFloat(r[col(rightsKeys[k])])||0) - used[k]); });
-      return { name: empName, exactRecords: exact.length, usedFuzzyFallback: exact.length === 0 && live.length > 0, matchedRecords: live.length, used, remaining, unpaidOrOtherDays: unbucketed };
+      const larkRemaining = {}, larkRights = {}, diffUsed = {};
+      Object.keys(keys).forEach(k => {
+        larkRights[k] = larkNum(e['สิทธิ์' + keys[k]]);
+        larkRemaining[k] = larkNum(e['คงเหลือ' + keys[k]]);
+        const usedByLark = larkRights[k] - larkRemaining[k];
+        if (Math.abs(usedByLark - fromRecords[k]) > 0.001) diffUsed[k] = { larkUsed: usedByLark, fromRecords: fromRecords[k] };
+      });
+      return { name: empName, recordsMatched: mine.length, larkRights, larkRemaining, usedFromRecords: fromRecords, mismatch: diffUsed };
     });
     const unmatched = {}; let blank = 0;
     allRecords.forEach(item => {
@@ -2701,7 +2624,7 @@ app.get('/admin/leave-audit', async (req, res) => {
       if (!n) { blank++; return; }
       if (!empNorms.has(n)) { const k = raw.trim(); unmatched[k] = (unmatched[k]||0) + 1; }
     });
-    res.json({ larkTotal: allRecords.length, blankNameRecords: blank, larkNamesNotMatchingAnyEmployeeExactly: unmatched, employees: rows });
+    res.json({ larkTotal: allRecords.length, blankNameRecords: blank, larkNamesNotMatchingAnyEmployeeExactly: unmatched, employeesWithMismatch: rows.filter(r => Object.keys(r.mismatch).length).map(r => ({ name: r.name, mismatch: r.mismatch })), employees: rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -4202,44 +4125,35 @@ app.get('/eslip/leave-history', async (req, res) => {
   try {
     const { lineId } = req.query;
     if (!lineId) return res.status(400).json({ error: 'missing lineId' });
-    const { google } = require('googleapis');
-    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-    const sid = process.env.LOG_SHEET_ID;
-    // สิทธิ์ลา ("Employees!A:AB") ยังอ่านจาก Sheet เหมือนเดิม — เป็นค่าที่ Lark ไม่มีให้
-    const empR = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' });
-    const empRows = empR.data.values || [];
-    const header = empRows[0] || [];
-    const col = n => header.findIndex(h => h.trim() === n.trim());
-    const empRow = empRows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
-    if (!empRow) return res.status(404).json({ error: 'not found' });
-    const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
-    const now = new Date();
-    const g = n => parseFloat(empRow[col(n)])||0;
-    const rights = {
-      ลากิจ:   empRow[col('สิทธิ์ลากิจ')]   || '0',
-      ลาป่วย:  empRow[col('สิทธิ์ลาป่วย')]  || '0',
-      พักร้อน: empRow[col('สิทธิ์พักร้อน')] || '0',
-      วันเกิด: empRow[col('สิทธิ์วันเกิด')] || '0',
-      ลาคลอด:  empRow[col('สิทธิ์ลาคลอด')] || '0',
-    };
-    // ── วันลาที่ใช้ไปแล้ว + ประวัติใบลา: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet "Leave") ──
+    // ── ทุกอย่างอ่านจาก Lark ตรงๆ: สิทธิ์/คงเหลือ จากตารางพนักงาน, ประวัติใบลาจากตารางใบลา (ไม่แตะ Sheet) ──
     const larkTokenLH = await lark.getToken();
-    const { used, records: larkRecords } = await getLeaveUsageForEmployee(larkTokenLH, empName);
+    const emp = await lark.getEmployeeByLineId(larkTokenLH, lineId);
+    if (!emp) return res.status(404).json({ error: 'not found' });
+    const empName = getRawLarkField(emp['ชื่อ - นามสกุล']).split('(')[0].trim();
+    const now = new Date();
+    const keys = { ลากิจ:'ลากิจ', ลาป่วย:'ลาป่วย', พักร้อน:'พักร้อน', วันเกิด:'ลาวันเกิด', ลาคลอด:'ลาคลอด' };
+    const rights = {}, remaining = {}, used = {};
+    Object.keys(keys).forEach(k => {
+      const r = larkNum(emp['สิทธิ์' + (k === 'วันเกิด' ? 'วันเกิด' : keys[k])]);
+      const left = larkNum(emp['คงเหลือ' + keys[k]]);
+      rights[k] = String(r);
+      remaining[k] = left;
+      used[k] = r - left; // ใช้ไปแล้ว = สิทธิ์ − คงเหลือ ตามที่ Lark คำนวณ
+    });
     const leaveSource = 'lark';
-    const records = larkRecords.slice().sort((a,b) => {
+    const allLeave = await fetchAllLarkLeaveRecords(larkTokenLH);
+    const records = matchLeaveRecordsForEmp(allLeave, empName).map(item => {
+      const f = item.fields;
+      const startD = thaiDateFromLarkField(f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่']);
+      const endD = thaiDateFromLarkField(f['จนถึงวันที่']) || startD;
+      return { type: getRawLarkField(f['ประเภทการลา']), start: formatThaiDate(startD), end: formatThaiDate(endD), days: parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0, startD };
+    }).filter(r => r.startD && inLeaveYearWindow(r.startD)).map(({ startD, ...r }) => r).sort((a,b) => {
       const parseD = s => { const [dd,mm,yyyy]=(s||'').split('/').map(Number); return yyyy*10000+mm*100+dd; };
       return parseD(b.start) - parseD(a.start);
     });
     res.json({
       empName, rights, used, leaveSource,
-      remaining: {
-        ลากิจ:   Math.max(0, g('สิทธิ์ลากิจ')   - used['ลากิจ']),
-        ลาป่วย:  Math.max(0, g('สิทธิ์ลาป่วย')  - used['ลาป่วย']),
-        พักร้อน: Math.max(0, g('สิทธิ์พักร้อน') - used['พักร้อน']),
-        วันเกิด: Math.max(0, g('สิทธิ์วันเกิด') - used['วันเกิด']),
-        ลาคลอด:  Math.max(0, g('สิทธิ์ลาคลอด') - used['ลาคลอด']),
-      },
+      remaining,
       records,
       rangeFrom: `26/12/${now.getFullYear()-1}`,
       rangeTo: `25/12/${now.getFullYear()}`,
