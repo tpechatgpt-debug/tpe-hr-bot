@@ -187,8 +187,7 @@ if (!employee) {
           const g = (name) => parseFloat(empRow[col(name)]) || 0;
           const gs = (name) => empRow[col(name)] || '0';
           const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
-          // ── ลาคงเหลือ: ดึงจาก Lark โดยตรงก่อนเสมอ (สดตรงกับของจริง รวมถึงรายการที่ถูกลบใน Lark)
-          //     fallback ไป Sheet เฉพาะตอน Lark ดึงไม่ได้จริงๆ (เช่น โควต้าหมด/เน็ตเวิร์กมีปัญหา) ──
+          // ── ลาคงเหลือ: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet) — ถ้า Lark ดึงไม่ได้ จะ throw แล้วตกไปที่ catch ด้านล่าง (โชว์การ์ดแบบไม่คำนวณ) ──
           const { used: usedDays } = await getLeaveUsageForEmployee(larkToken, empName);
           const calc = (total, type) => Math.max(0, g(total) - usedDays[type]).toString();
           const empForCard = {
@@ -1217,6 +1216,7 @@ const LEAVE_CACHE = {}; // key = lineId
 let LARK_LEAVE_ALL_CACHE = null; // cache ข้อมูลใบลาทั้งหมดจาก Lark
 let LARK_LEAVE_CACHE_TS = 0;
 const LARK_LEAVE_TTL = 10 * 60 * 1000; // 10 นาที
+let LARK_LEAVE_LAST_TOTAL = null; // จำนวนรวมที่ Lark รายงานล่าสุด ใช้เช็คว่าดึงมาครบจริงก่อนเชื่อผลไปลบอะไร
 
 app.get('/eslip/attendance', async (req, res) => {
   try {
@@ -1930,7 +1930,7 @@ const type = getRaw(fields['ประเภทการลา']);
         console.log('[LeaveWebhook] lineId2:', (empRow2[col2('Line ID')]||'').trim());
         const lineId2 = (empRow2[col2('Line ID')]||'').trim();
         if (lineId2) {
-          // ── วันลาคงเหลือ: ดึงจาก Lark โดยตรงก่อนเสมอ, fallback Sheet เฉพาะตอน Lark ดึงไม่ได้จริง ──
+          // ── วันลาคงเหลือ: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet) — ถ้า Lark ดึงไม่ได้ จะ throw แล้วข้าม notify รอบนี้ไปเฉยๆ ──
           const { used: used2 } = await getLeaveUsageForEmployee(larkToken, name.split('(')[0].trim());
           const g2 = n => parseFloat(empRow2[col2(n)])||0;
           const remaining = {
@@ -2483,6 +2483,7 @@ async function fetchAllLarkLeaveRecords(larkToken) {
   }
   let allRecords = [];
   let pageToken = '';
+  let reportedTotal = null;
   // สำคัญ: Lark API ตอบ HTTP 200 ได้แม้ตอน error จริง (เช่น rate-limit/token หมดอายุ) โดยใส่ error ไว้ใน body.code
   // ต้องเช็ค code ให้ชัด ถ้าไม่ใช่ 0 ให้ throw ทันที ห้ามตีความว่า "ไม่มีข้อมูล" เด็ดขาด
   // (บั๊กนี้คือสาเหตุที่ reconcileLeaveSheet() เคยเข้าใจผิดว่า Lark ไม่มีข้อมูลเลย แล้วลบแถวใน Sheet ไปเกือบทั้งหมด)
@@ -2493,12 +2494,18 @@ async function fetchAllLarkLeaveRecords(larkToken) {
       throw new Error(`Lark API error code=${r.data?.code} msg=${r.data?.msg || 'unknown'}`);
     }
     const data = r.data?.data;
+    if (reportedTotal === null && typeof data?.total === 'number') reportedTotal = data.total;
     allRecords = allRecords.concat(data?.items || []);
     if (!data?.has_more) break;
     pageToken = data.page_token || '';
   }
+  // เช็คว่าดึงมาครบตามที่ Lark รายงานจริงไหม — ถ้าไม่ครบ (เช่น hit page cap หรือ view filter บัง) ห้ามใช้ต่อ
+  if (reportedTotal !== null && allRecords.length < reportedTotal) {
+    throw new Error(`ดึง Lark leave records ไม่ครบ: ได้ ${allRecords.length}/${reportedTotal} รายการ`);
+  }
   LARK_LEAVE_ALL_CACHE = allRecords;
   LARK_LEAVE_CACHE_TS = now;
+  LARK_LEAVE_LAST_TOTAL = reportedTotal;
   return allRecords;
 }
 
@@ -2521,164 +2528,59 @@ function inLeaveYearWindow(d) {
   return d >= cutoffStart && d <= cutoffEnd;
 }
 
-// วันลาที่ใช้ไปแล้ว (ปีลาปัจจุบัน) — ดึงตรงจาก Lark; throw ถ้าดึงไม่ได้ ให้ caller fallback ไป Sheet
+function thaiDateFromLarkField(ts) {
+  if (!ts) return null;
+  if (typeof ts === 'string' && ts.includes('/')) {
+    const [dd, mm, yyyy] = ts.split('/').map(Number);
+    if (!dd || !mm || !yyyy) return null;
+    return new Date(Date.UTC(yyyy, mm-1, dd));
+  }
+  const num = parseInt(ts); if (isNaN(num)) return null;
+  const d = new Date(num + 7*3600000);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+function formatThaiDate(d) {
+  if (!d) return '';
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+}
+const getRawLarkField = v => {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.map(x => typeof x === 'object' ? (x.text||x.value||'') : x).join(', ');
+  if (typeof v === 'object') return v.text || v.value || '';
+  return String(v);
+};
+
+// วันลาที่ใช้ไปแล้ว + รายการใบลา (ปีลาปัจจุบัน) — ดึงตรงจาก Lark เท่านั้น; throw ถ้าดึงไม่ได้ ให้ caller จัดการ
 async function getLeaveUsageFromLark(larkToken, empName) {
   const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
   const empNorm = normN(empName);
   const allRecords = await fetchAllLarkLeaveRecords(larkToken);
-  const getRaw = v => {
-    if (v == null) return '';
-    if (Array.isArray(v)) return v.map(x => typeof x === 'object' ? (x.text||x.value||'') : x).join(', ');
-    if (typeof v === 'object') return v.text || v.value || '';
-    return String(v);
-  };
   const myLeaves = allRecords.filter(item => {
-    const n = normN(getRaw(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
+    const n = normN(getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
     return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
   });
   const used = emptyUsedBuckets();
+  const records = [];
   myLeaves.forEach(item => {
     const f = item.fields;
-    const type = getRaw(f['ประเภทการลา']);
-    const days = parseFloat(getRaw(f['ลาทั้งสิ้น'])) || 0;
-    const start = f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่'];
-    if (!start) return;
-    const toTD = ts => {
-      if (typeof ts === 'string' && ts.includes('/')) {
-        const [dd, mm, yyyy] = ts.split('/').map(Number);
-        if (!dd || !mm || !yyyy) return null;
-        return new Date(Date.UTC(yyyy, mm-1, dd));
-      }
-      const num = parseInt(ts); if (isNaN(num)) return null;
-      const d = new Date(num + 7*3600000);
-      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    };
-    const startD = toTD(start);
+    const type = getRawLarkField(f['ประเภทการลา']);
+    const days = parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0;
+    const startD = thaiDateFromLarkField(f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่']);
     if (!startD || !inLeaveYearWindow(startD)) return;
+    const endD = thaiDateFromLarkField(f['จนถึงวันที่']) || startD;
     const bucket = bucketLeaveType(type);
     if (bucket) used[bucket] += days;
+    records.push({ type, start: formatThaiDate(startD), end: formatThaiDate(endD), days });
   });
-  return used;
+  return { used, records };
 }
 
-// วันลาที่ใช้ไปแล้ว — fallback จาก Sheet (ใช้เฉพาะตอน Lark ดึงไม่ได้จริง)
-async function getLeaveUsageFromSheetsData(empName) {
-  const { google } = require('googleapis');
-  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-  const r = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Leave!A:G' });
-  const leaveRows = (r.data.values || []).slice(1);
-  const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
-  const empNorm = normN(empName);
-  const myLeaves = leaveRows.filter(row => normN((row[1]||'').split('(')[0]) === empNorm);
-  const used = emptyUsedBuckets();
-  myLeaves.forEach(row => {
-    const type = row[2] || '';
-    const days = parseFloat(row[5]) || 0;
-    const parts = (row[3]||'').split('/');
-    if (parts.length !== 3) return;
-    const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
-    if (!inLeaveYearWindow(d)) return;
-    const bucket = bucketLeaveType(type);
-    if (bucket) used[bucket] += days;
-  });
-  return used;
-}
-
-// รวม: ดึงจาก Lark ก่อนเสมอ, fallback Sheet เฉพาะตอน Lark ดึงไม่ได้จริง (error/โควต้าหมด)
+// วันลาที่ใช้ไปแล้ว — ดึงจาก Lark โดยตรงเท่านั้น ไม่พึ่ง Sheet อีกต่อไป (เลิกเชื่อมกับ Sheet ตามที่สั่ง)
+// ถ้า Lark ดึงไม่ได้ (error/โควต้าหมด) จะ throw ออกไปให้ caller จัดการ (เช่น แจ้งผู้ใช้ว่าระบบไม่พร้อมใช้งานชั่วคราว)
 async function getLeaveUsageForEmployee(larkToken, empName) {
-  try {
-    const used = await getLeaveUsageFromLark(larkToken, empName);
-    return { used, source: 'lark' };
-  } catch (e) {
-    console.log('[getLeaveUsageForEmployee] Lark error → fallback Sheets:', e.message);
-    const used = await getLeaveUsageFromSheetsData(empName);
-    return { used, source: 'sheets' };
-  }
+  const { used, records } = await getLeaveUsageFromLark(larkToken, empName);
+  return { used, records, source: 'lark' };
 }
-
-// ── ส่วนที่ 3: Reconcile — ลบแถวใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว ──
-//    (เพราะ webhook sync ตอนบันทึก/แก้ไขใบลา ไม่มี delete-event — ถ้าลบใบลาใน Lark, Sheet จะไม่ลบตาม)
-// dryRun=true (ค่าเริ่มต้นเสมอ): แค่ตรวจและรายงาน ไม่ลบจริง — ป้องกันเหตุซ้ำจากครั้งก่อนที่ลบผิดเพราะตีความ
-// Lark API error ว่าเป็น "ไม่มีข้อมูล" แล้วลบเกือบทั้งชีท ต้องสั่ง dryRun=false ผ่าน admin endpoint เท่านั้นถึงจะลบจริง
-// และมี safety guard: ถ้าสัดส่วนที่จะลบเกิน 10% ของทั้งหมด (หรือเกิน 15 แถว) จะไม่ลบ ให้คนตรวจสอบเองก่อน
-async function reconcileLeaveSheet(dryRun = true) {
-  const { google } = require('googleapis');
-  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-  const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
-  const sid = process.env.LOG_SHEET_ID;
-  let larkToken;
-  try { larkToken = await lark.getToken(); } catch (e) {
-    console.log('[reconcileLeaveSheet] ดึง Lark token ไม่ได้ ข้ามรอบนี้:', e.message);
-    return { skipped: true, reason: e.message };
-  }
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: sid });
-  const leaveSheetMeta = meta.data.sheets.find(s => s.properties.title === 'Leave');
-  if (!leaveSheetMeta) return { skipped: true, reason: 'ไม่พบชีท Leave' };
-  const leaveSheetId = leaveSheetMeta.properties.sheetId;
-  // บังคับดึง Lark ใหม่ ไม่ใช้ cache เก่า เพื่อให้เช็ค record ที่ถูกลบล่าสุดจริงๆ
-  LARK_LEAVE_ALL_CACHE = null;
-  let allLarkRecords;
-  try {
-    allLarkRecords = await fetchAllLarkLeaveRecords(larkToken);
-  } catch (e) {
-    console.log('[reconcileLeaveSheet] ดึง Lark records ไม่ได้ ข้ามรอบนี้ (ไม่แตะ Sheet):', e.message);
-    return { skipped: true, reason: e.message };
-  }
-  const liveRecordIds = new Set(allLarkRecords.map(r => r.record_id).filter(Boolean));
-  const existing = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:A' });
-  const idRows = (existing.data.values || []); // idRows[0] = header
-  const rowsWithId = idRows.slice(1).filter(r => (r[0]||'').trim()).length;
-  // Safety guard: ถ้า Lark คืนจำนวน record น้อยผิดปกติเทียบกับที่มีใน Sheet (เช่น API error แต่ไม่ throw)
-  // ให้ถือว่าดึงมาไม่สมบูรณ์ ห้ามเอาไปตัดสินว่าแถวไหน "ไม่มีใน Lark แล้ว" เด็ดขาด
-  if (rowsWithId > 20 && liveRecordIds.size < rowsWithId * 0.5) {
-    console.log(`[reconcileLeaveSheet] ผิดปกติ: Lark มี ${liveRecordIds.size} รายการ แต่ Sheet มี ${rowsWithId} แถวที่มี record_id — ข้ามรอบนี้ ไม่ลบ (อาจดึง Lark มาไม่ครบ)`);
-    return { skipped: true, reason: 'lark-count-too-low', larkCount: liveRecordIds.size, sheetRowsWithId: rowsWithId };
-  }
-  const rowsToDelete = []; // เก็บ 0-based row index (รวม header) ของแถวที่ต้องลบ
-  const recordIdsToDelete = [];
-  for (let i = 1; i < idRows.length; i++) {
-    const recordId = (idRows[i][0] || '').trim();
-    if (recordId && !liveRecordIds.has(recordId)) {
-      rowsToDelete.push(i); // 0-based index ตรงกับ grid row index ใน Sheets API
-      recordIdsToDelete.push(recordId);
-    }
-  }
-  if (rowsToDelete.length === 0) {
-    console.log('[reconcileLeaveSheet] ไม่มีแถวค้าง ข้อมูลตรงกับ Lark แล้ว');
-    return { checked: idRows.length - 1, toDelete: 0, deleted: 0 };
-  }
-  // Safety guard อีกชั้น: ถ้าจะลบเกิน 10% ของทั้งหมด (และเกิน 15 แถว) ให้หยุดรอตรวจสอบคนก่อน ไม่ลบอัตโนมัติ
-  const tooMany = rowsToDelete.length > 15 && rowsToDelete.length > rowsWithId * 0.1;
-  if (dryRun || tooMany) {
-    console.log(`[reconcileLeaveSheet] พบ ${rowsToDelete.length} แถวที่ไม่มีใน Lark แล้ว (dryRun=${dryRun}, tooMany=${tooMany}) — ยังไม่ลบ ต้องสั่ง dryRun=false ผ่าน /admin/reconcile-leave ด้วยตนเอง`);
-    return { checked: idRows.length - 1, toDelete: rowsToDelete.length, deleted: 0, dryRun: true, blockedByGuard: tooMany, recordIdsToDelete };
-  }
-  // ลบจากแถวล่างขึ้นบน (descending) ป้องกัน index เลื่อนระหว่างลบ
-  rowsToDelete.sort((a, b) => b - a);
-  const requests = rowsToDelete.map(rowIdx => ({
-    deleteDimension: {
-      range: { sheetId: leaveSheetId, dimension: 'ROWS', startIndex: rowIdx, endIndex: rowIdx + 1 },
-    },
-  }));
-  await sheets.spreadsheets.batchUpdate({ spreadsheetId: sid, requestBody: { requests } });
-  Object.keys(LEAVE_CACHE).forEach(k => delete LEAVE_CACHE[k]);
-  LARK_LEAVE_ALL_CACHE = null;
-  console.log(`[reconcileLeaveSheet] ลบแถวที่ไม่มีใน Lark แล้วออกจาก Sheet: ${rowsToDelete.length} แถว`);
-  return { checked: idRows.length - 1, toDelete: rowsToDelete.length, deleted: rowsToDelete.length, recordIdsDeleted: recordIdsToDelete };
-}
-
-// Admin: ตรวจ/ลบแถวค้างใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว
-// ค่าเริ่มต้นคือ "ตรวจอย่างเดียว ไม่ลบ" (dry run) — ต้องใส่ &dryRun=0 เพื่อให้ลบจริง (ควรดูผล dry run ก่อนทุกครั้ง)
-app.get('/admin/reconcile-leave', async (req, res) => {
-  const { password, dryRun } = req.query;
-  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
-  try {
-    const isDryRun = dryRun !== '0' && dryRun !== 'false';
-    const result = await reconcileLeaveSheet(isDryRun);
-    res.json(result);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
 
 // Debug: ดู Leave table fields
 app.get('/eslip/debug-leave', async (req, res) => {
@@ -2757,23 +2659,6 @@ async function initBackgroundServices() {
   } catch(e) {
     console.error('initBackgroundServices error:', e.message);
   }
-  // ── Reconcile ใบลา Sheet ↔ Lark: ตรวจหาแถวค้าง (dry run เสมอ — ไม่ลบอัตโนมัติ) รันตอน start แล้วทุก 30 นาที
-  //    ถ้าพบแถวค้าง จะแจ้ง Dev ทาง LINE ให้เข้าไปตรวจและสั่งลบเองผ่าน /admin/reconcile-leave?dryRun=0 ──
-  const runReconcileDryRun = async (label) => {
-    try {
-      const r = await reconcileLeaveSheet(true);
-      if (r && r.toDelete > 0) {
-        console.log(`[reconcileLeaveSheet ${label}] พบแถวค้าง ${r.toDelete} แถว รอให้ตรวจสอบและลบเองผ่าน admin endpoint`);
-        push(DEV_USER_ID, `⚠️ [เช็ควันลา] พบแถวใน Sheet "Leave" ที่ไม่มีอยู่จริงใน Lark แล้ว ${r.toDelete} แถว (${label})\nเข้าไปตรวจก่อนสั่งลบที่ /admin/reconcile-leave?password=tpe2569&dryRun=0`).catch(() => {});
-      } else if (r && r.skipped) {
-        console.log(`[reconcileLeaveSheet ${label}] ข้าม: ${r.reason}`);
-      }
-    } catch (e) {
-      console.error(`reconcileLeaveSheet (${label}) error:`, e.message);
-    }
-  };
-  runReconcileDryRun('startup');
-  setInterval(() => runReconcileDryRun('interval'), 30 * 60 * 1000);
 }
 
 // ── Job Queue: ดึงงานวันนี้ของช่าง ──────────────────────
@@ -4196,30 +4081,15 @@ app.get('/eslip/leave-history', async (req, res) => {
     const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
     const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
     const sid = process.env.LOG_SHEET_ID;
-    const [empR, leaveR] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' }),
-      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Leave!A:G' }),
-    ]);
+    // สิทธิ์ลา ("Employees!A:AB") ยังอ่านจาก Sheet เหมือนเดิม — เป็นค่าที่ Lark ไม่มีให้
+    const empR = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Employees!A:AB' });
     const empRows = empR.data.values || [];
     const header = empRows[0] || [];
     const col = n => header.findIndex(h => h.trim() === n.trim());
     const empRow = empRows.slice(1).find(row => (row[col('Line ID')]||'').trim() === lineId);
     if (!empRow) return res.status(404).json({ error: 'not found' });
     const empName = (empRow[col('ชื่อ - นามสกุล')]||'').split('(')[0].trim();
-    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
-    const empNorm = normN(empName);
     const now = new Date();
-    const cutoffStart = new Date(now.getFullYear()-1, 11, 26);
-    const cutoffEnd   = new Date(now.getFullYear(), 11, 25);
-    const leaveRows = (leaveR.data.values || []).slice(1);
-    const myLeaves = leaveRows.filter(row => {
-      const rn = normN((row[1]||'').split('(')[0]);
-      if (rn !== empNorm) return false;
-      const parts = (row[3]||'').split('/');
-      if (parts.length !== 3) return false;
-      const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
-      return d >= cutoffStart && d <= cutoffEnd;
-    });
     const g = n => parseFloat(empRow[col(n)])||0;
     const rights = {
       ลากิจ:   empRow[col('สิทธิ์ลากิจ')]   || '0',
@@ -4228,14 +4098,11 @@ app.get('/eslip/leave-history', async (req, res) => {
       วันเกิด: empRow[col('สิทธิ์วันเกิด')] || '0',
       ลาคลอด:  empRow[col('สิทธิ์ลาคลอด')] || '0',
     };
-    // ── วันลาที่ใช้ไปแล้ว: ดึงจาก Lark โดยตรงก่อนเสมอ, fallback Sheet เฉพาะตอน Lark ดึงไม่ได้จริง ──
-    let larkTokenLH = null;
-    try { larkTokenLH = await lark.getToken(); } catch(e) {}
-    const { used, source: leaveSource } = await getLeaveUsageForEmployee(larkTokenLH, empName);
-    // รายการประวัติใบลา (สำหรับแสดงรายละเอียด) ยังอิงจาก Sheet เหมือนเดิม
-    const records = myLeaves.map(row => ({
-      type: row[2]||'', start: row[3]||'', end: row[4]||'', days: parseFloat(row[5])||0,
-    })).sort((a,b) => {
+    // ── วันลาที่ใช้ไปแล้ว + ประวัติใบลา: ดึงจาก Lark โดยตรงเท่านั้น (เลิกเชื่อมกับ Sheet "Leave") ──
+    const larkTokenLH = await lark.getToken();
+    const { used, records: larkRecords } = await getLeaveUsageForEmployee(larkTokenLH, empName);
+    const leaveSource = 'lark';
+    const records = larkRecords.slice().sort((a,b) => {
       const parseD = s => { const [dd,mm,yyyy]=(s||'').split('/').map(Number); return yyyy*10000+mm*100+dd; };
       return parseD(b.start) - parseD(a.start);
     });
