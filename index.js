@@ -2600,6 +2600,47 @@ app.get('/eslip/debug-leave', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Debug: ดูว่าโค้ดจับ leave record ของพนักงานคนนี้จาก Lark ได้อะไรบ้าง (เทียบกับที่เห็นจริงใน Lark)
+app.get('/admin/debug-lark-leave', async (req, res) => {
+  const { password, name } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  if (!name) return res.status(400).json({ error: 'missing name' });
+  try {
+    const larkToken = await lark.getToken();
+    LARK_LEAVE_ALL_CACHE = null; // บังคับดึงใหม่ ไม่เอา cache
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken);
+    const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
+    const empNorm = normN(name);
+    const matched = allRecords.filter(item => {
+      const n = normN(getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
+      return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
+    });
+    const detail = matched.map(item => {
+      const f = item.fields;
+      const type = getRawLarkField(f['ประเภทการลา']);
+      const days = parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0;
+      const startD = thaiDateFromLarkField(f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่']);
+      const endD = thaiDateFromLarkField(f['จนถึงวันที่']) || startD;
+      return {
+        record_id: item.record_id,
+        nameRaw: getRawLarkField(f['ชื่อ-นามสกุล'] || f['ชื่อ - นามสกุล']),
+        type, days,
+        startRaw: f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่'],
+        start: formatThaiDate(startD),
+        end: formatThaiDate(endD),
+        bucket: bucketLeaveType(type),
+        inCutoffWindow: startD ? inLeaveYearWindow(startD) : false,
+      };
+    });
+    res.json({
+      searchName: name,
+      totalFetchedFromLark: allRecords.length,
+      matchedCount: matched.length,
+      detail,
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Debug: ดู raw Lark fields
 app.get('/eslip/debug-emp', async (req, res) => {
   try {
