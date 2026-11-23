@@ -2551,16 +2551,29 @@ const getRawLarkField = v => {
   return String(v);
 };
 
+// จับคู่ใบลาใน Lark กับพนักงาน: เอาชื่อตรงเป๊ะ (ตัดวงเล็บตำแหน่ง/ช่องว่างออก) ก่อนเสมอ
+// ถ้าไม่เจอตรงเลยสักแถว ค่อย fallback แบบ fuzzy (ชื่อว่างไม่เคยถูกจับคู่กับใคร)
+function normLeaveName(s) { return (s||'').toString().split('(')[0].replace(/\s+/g,'').toLowerCase(); }
+function larkRecordName(item) { return getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']); }
+function matchLeaveRecordsForEmp(allRecords, empName, mode) {
+  const empNorm = normLeaveName(empName);
+  if (!empNorm) return [];
+  const exact = allRecords.filter(item => normLeaveName(larkRecordName(item)) === empNorm);
+  if (mode === 'exact') return exact;
+  if (exact.length) return exact;
+  return allRecords.filter(item => {
+    const n = normLeaveName(larkRecordName(item));
+    if (!n) return false;
+    return n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
+  });
+}
+
 // วันลาที่ใช้ไปแล้ว + รายการใบลา (ปีลาปัจจุบัน) — ดึงตรงจาก Lark เท่านั้น; throw ถ้าดึงไม่ได้ ให้ caller จัดการ
 async function getLeaveUsageFromLark(larkToken, empName) {
   const normN = s => (s||'').replace(/\s+/g,'').toLowerCase();
   const empNorm = normN(empName);
   const allRecords = await fetchAllLarkLeaveRecords(larkToken);
-  const myLeaves = allRecords.filter(item => {
-    const n = normN(getRawLarkField(item.fields['ชื่อ-นามสกุล'] || item.fields['ชื่อ - นามสกุล']).split('(')[0]);
-    if (!n) return false; // ชื่อว่าง ('') จะ .includes() ตรงกับทุกคนเสมอ ต้องกันไว้ ไม่งั้นข้อมูลของคนอื่นจะปนเข้ามา
-    return n===empNorm||n.includes(empNorm)||empNorm.includes(n)||(n.length>=4&&empNorm.includes(n.slice(0,4)));
-  });
+  const myLeaves = matchLeaveRecordsForEmp(allRecords, empName);
   const used = emptyUsedBuckets();
   const records = [];
   myLeaves.forEach(item => {
@@ -2641,6 +2654,74 @@ app.get('/admin/debug-lark-leave', async (req, res) => {
       matchedCount: matched.length,
       detail,
     });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Audit: ตรวจวันลาของทุกคน เทียบสิทธิ์ใน Sheet Employees กับใบลาใน Lark + ชี้จุดที่ชื่อไม่ตรง/จับคู่กำกวม
+app.get('/admin/leave-audit', async (req, res) => {
+  const { password } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const larkToken = await lark.getToken();
+    LARK_LEAVE_ALL_CACHE = null;
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken);
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    const empR = await sheets.spreadsheets.values.get({ spreadsheetId: process.env.LOG_SHEET_ID, range: 'Employees!A:AB' });
+    const empRows = empR.data.values || [];
+    const header = empRows[0] || [];
+    const col = n => header.findIndex(h => h.trim() === n.trim());
+    const nameCol = col('ชื่อ - นามสกุล');
+    const rightsKeys = { ลากิจ:'สิทธิ์ลากิจ', ลาป่วย:'สิทธิ์ลาป่วย', พักร้อน:'สิทธิ์พักร้อน', วันเกิด:'สิทธิ์วันเกิด', ลาคลอด:'สิทธิ์ลาคลอด' };
+    const empNorms = new Set();
+    const rows = empRows.slice(1).filter(r => (r[nameCol]||'').trim()).map(r => {
+      const empName = (r[nameCol]||'').split('(')[0].trim();
+      empNorms.add(normLeaveName(empName));
+      const exact = matchLeaveRecordsForEmp(allRecords, empName, 'exact');
+      const live = matchLeaveRecordsForEmp(allRecords, empName);
+      const used = emptyUsedBuckets();
+      let unbucketed = 0;
+      live.forEach(item => {
+        const f = item.fields;
+        const startD = thaiDateFromLarkField(f['ลาตั้งเเต่วันที่'] || f['ลาตั้งแต่วันที่']);
+        if (!startD || !inLeaveYearWindow(startD)) return;
+        const b = bucketLeaveType(getRawLarkField(f['ประเภทการลา']));
+        const d = parseFloat(getRawLarkField(f['ลาทั้งสิ้น'])) || 0;
+        if (b) used[b] += d; else unbucketed += d;
+      });
+      const remaining = {};
+      Object.keys(rightsKeys).forEach(k => { remaining[k] = Math.max(0, (parseFloat(r[col(rightsKeys[k])])||0) - used[k]); });
+      return { name: empName, exactRecords: exact.length, usedFuzzyFallback: exact.length === 0 && live.length > 0, matchedRecords: live.length, used, remaining, unpaidOrOtherDays: unbucketed };
+    });
+    const unmatched = {}; let blank = 0;
+    allRecords.forEach(item => {
+      const raw = larkRecordName(item);
+      const n = normLeaveName(raw);
+      if (!n) { blank++; return; }
+      if (!empNorms.has(n)) { const k = raw.trim(); unmatched[k] = (unmatched[k]||0) + 1; }
+    });
+    res.json({ larkTotal: allRecords.length, blankNameRecords: blank, larkNamesNotMatchingAnyEmployeeExactly: unmatched, employees: rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Debug: สรุปรายชื่อทั้งหมดใน Leave table ของ Lark (จำนวนแถวต่อชื่อ) + ตัวอย่างแถวที่ชื่อว่าง
+app.get('/admin/debug-lark-names', async (req, res) => {
+  const { password } = req.query;
+  if (password !== 'tpe2569') return res.status(401).json({ error: 'unauthorized' });
+  try {
+    const larkToken = await lark.getToken();
+    LARK_LEAVE_ALL_CACHE = null;
+    const allRecords = await fetchAllLarkLeaveRecords(larkToken);
+    const counts = {};
+    const blanks = [];
+    allRecords.forEach(item => {
+      const raw = item.fields['ชื่อ-นามสกุล'];
+      const n = getRawLarkField(raw || item.fields['ชื่อ - นามสกุล']).split('(')[0].trim();
+      if (!n) { if (blanks.length < 5) blanks.push({ record_id: item.record_id, fields: item.fields }); counts['(ว่าง)'] = (counts['(ว่าง)']||0) + 1; }
+      else counts[n] = (counts[n]||0) + 1;
+    });
+    res.json({ total: allRecords.length, distinctNames: Object.keys(counts).length, counts, blankSamples: blanks });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
